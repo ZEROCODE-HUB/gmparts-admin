@@ -30,6 +30,9 @@ export default function OrdenPagoList() {
   const rows = items.filter((c) =>
     ((c.proveedor || "") + (c.serie || "") + (c.numero || "")).toLowerCase().includes(q.toLowerCase())
   );
+  const [page, setPage] = useState(0);
+  const totalPages = Math.ceil(rows.length / 20);
+  const pageRows = rows.slice(page * 20, (page + 1) * 20);
 
   return (
     <div>
@@ -74,6 +77,7 @@ export default function OrdenPagoList() {
     </div>
   );
 }
+
 
 
 

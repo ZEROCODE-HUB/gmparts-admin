@@ -64,6 +64,9 @@ function PagoModal({ cuenta, onClose, onRegistrarPago }) {
       </div>
     </Modal>
   );
+  const [page, setPage] = useState(0);
+  const totalPages = Math.ceil(rows.length / 20);
+  const pageRows = rows.slice(page * 20, (page + 1) * 20);
 }
 
 export default function CuentasCobrar({ kind = "Cobrar" }) {
@@ -155,6 +158,7 @@ export default function CuentasCobrar({ kind = "Cobrar" }) {
     </div>
   );
 }
+
 
 
 

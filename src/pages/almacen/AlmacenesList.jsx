@@ -26,6 +26,9 @@ export default function AlmacenesList() {
   const rows = items.filter((a) =>
     (a.Nombre + a.Direccion + a.Ciudad).toLowerCase().includes(q.toLowerCase())
   );
+  const [page, setPage] = useState(0);
+  const totalPages = Math.ceil(rows.length / 20);
+  const pageRows = rows.slice(page * 20, (page + 1) * 20);
 
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
   const openNew = () => { setEditing(null); setForm(empty); setModalOpen(true); };
@@ -94,4 +97,5 @@ export default function AlmacenesList() {
     </div>
   );
 }
+
 

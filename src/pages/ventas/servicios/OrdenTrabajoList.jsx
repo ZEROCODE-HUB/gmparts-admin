@@ -38,6 +38,9 @@ export default function OrdenTrabajoList() {
   const rows = items.filter((c) =>
     (`${c.cliente} ${c.serie || ""} ${c.numero || ""} ${c.placa || ""}`).toLowerCase().includes(q.toLowerCase())
   );
+  const [page, setPage] = useState(0);
+  const totalPages = Math.ceil(rows.length / 20);
+  const pageRows = rows.slice(page * 20, (page + 1) * 20);
 
   const facturar = (ot) => {
     const itemsFact = db.getOTFacturaItems(ot);
@@ -87,6 +90,7 @@ export default function OrdenTrabajoList() {
     </div>
   );
 }
+
 
 
 

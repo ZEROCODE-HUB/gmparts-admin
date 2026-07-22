@@ -70,6 +70,9 @@ export default function ClientesList() {
       .toLowerCase()
       .includes(q.toLowerCase())
   );
+  const [page, setPage] = useState(0);
+  const totalPages = Math.ceil(rows.length / 20);
+  const pageRows = rows.slice(page * 20, (page + 1) * 20);
 
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
@@ -162,4 +165,5 @@ export default function ClientesList() {
     </div>
   );
 }
+
 

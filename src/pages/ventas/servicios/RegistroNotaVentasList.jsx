@@ -37,6 +37,9 @@ export default function RegistroNotaVentasList() {
   const rows = items.filter((c) =>
     ((c.cliente || "") + (c.serie || "") + (c.numero || "")).toLowerCase().includes(q.toLowerCase())
   );
+  const [page, setPage] = useState(0);
+  const totalPages = Math.ceil(rows.length / 20);
+  const pageRows = rows.slice(page * 20, (page + 1) * 20);
 
   const abrirCanje = (nota) => {
     setCanjeTarget(nota);
@@ -188,4 +191,5 @@ export default function RegistroNotaVentasList() {
     </div>
   );
 }
+
 
