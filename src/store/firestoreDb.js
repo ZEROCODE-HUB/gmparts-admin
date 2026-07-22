@@ -106,6 +106,20 @@ export async function deleteCatalogEntry(docKey, id) {
   await deleteDoc(doc(db, mapDocKeyToCollection(docKey), id));
 }
 
+// Convierte Timestamps de Firestore a strings ISO para evitar React error #31
+function prepareDoc(data) {
+  const result = {};
+  for (const key in data) {
+    const val = data[key];
+    if (val && typeof val.toDate === "function") {
+      result[key] = val.toDate().toISOString().split("T")[0];
+    } else {
+      result[key] = val;
+    }
+  }
+  return result;
+}
+
 // ---- Maestros (Fase D2) ----
 // Hook genérico en tiempo real para cualquier colección Firestore.
 // `constraints` es un arreglo de restricciones de firebase/firestore (where/orderBy).
@@ -116,7 +130,7 @@ export function useFirestoreCollection(collectionName, constraints = []) {
     const col = collection(db, collectionName);
     const q = constraints.length ? query(col, ...constraints) : col;
     const unsub = onSnapshot(q, (snap) => {
-      setItems(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setItems(snap.docs.map((d) => ({ id: d.id, ...prepareDoc(d.data()) })));
       setLoading(false);
     }, () => setLoading(false));
     return unsub;
