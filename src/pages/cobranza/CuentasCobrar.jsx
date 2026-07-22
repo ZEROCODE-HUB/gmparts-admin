@@ -59,14 +59,11 @@ function PagoModal({ cuenta, onClose, onRegistrarPago }) {
               <span className="text-sm font-medium">{cuenta.clientenombre || ""}</span>
             </div>
           </div>
-          <Btn className="w-full justify-center mt-4" disabled={!montoValido} onClick={() => { onRegistrarPago(cuenta.id, { metodoPago, monto, fecha: fechaPago }); onClose(); }}>Crear pago</Btn>
+      <Btn className="w-full justify-center mt-4" disabled={!montoValido} onClick={() => { onRegistrarPago(cuenta.id, { metodoPago, monto, fecha: fechaPago }); onClose(); }}>Crear pago</Btn>
         </div>
       </div>
     </Modal>
   );
-  const [page, setPage] = useState(0);
-  const totalPages = Math.ceil(rows.length / 20);
-  const pageRows = rows.slice(page * 20, (page + 1) * 20);
 }
 
 export default function CuentasCobrar({ kind = "Cobrar" }) {
@@ -76,6 +73,9 @@ export default function CuentasCobrar({ kind = "Cobrar" }) {
 
   const items = all.filter((c) => c.tipoCuenta === kind);
   const title = kind === "Cobrar" ? "Cuentas por cobrar" : "Cuentas por pagar";
+  const [page, setPage] = useState(0);
+  const totalPages = Math.ceil(items.length / 20);
+  const pageRows = items.slice(page * 20, (page + 1) * 20);
 
   const registrarPago = (id, pago) => {
     const cuenta = all.find((c) => c.id === id);
@@ -95,7 +95,7 @@ export default function CuentasCobrar({ kind = "Cobrar" }) {
     <div>
       <Toolbar title={title} count={items.length} />
       <Table columns={["Documento", "Número", "Razón Social", "Total", "Pago", "Estado", "Fecha", "Detalle"]}
-        rows={items}
+        rows={pageRows}
         renderRow={(r) => (
           <>
             <Td>{r.tipoDocumento || ""}</Td>

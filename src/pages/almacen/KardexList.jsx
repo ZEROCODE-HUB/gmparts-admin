@@ -23,6 +23,10 @@ export default function KardexList() {
 
   const options = [...new Set(rows.map((k) => k.Article_name).filter(Boolean))];
 
+  const [page, setPage] = useState(0);
+  const totalPages = Math.ceil(rows.length / 20);
+  const pageRows = rows.slice(page * 20, (page + 1) * 20);
+
   return (
     <div>
       <Toolbar title="Lista Kardex" count={filtered.length} onExport={() => exportToExcel(rows, "Kardex")} />
@@ -61,9 +65,6 @@ export default function KardexList() {
       <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
-  const [page, setPage] = useState(0);
-  const totalPages = Math.ceil(rows.length / 20);
-  const pageRows = rows.slice(page * 20, (page + 1) * 20);
 }
 
 

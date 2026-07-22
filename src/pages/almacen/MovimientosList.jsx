@@ -30,6 +30,10 @@ export default function MovimientosList() {
     return wh || "—";
   };
 
+  const [page, setPage] = useState(0);
+  const totalPages = Math.ceil(rows.length / 20);
+  const pageRows = rows.slice(page * 20, (page + 1) * 20);
+
   return (
     <div>
       <Toolbar title="Movimientos de almacén" count={rows.length} onNew={() => navigate("/al-movimientos/nuevo")} onExport={() => exportToExcel(rows, "Movimientos")} />
@@ -67,9 +71,6 @@ export default function MovimientosList() {
       <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
-  const [page, setPage] = useState(0);
-  const totalPages = Math.ceil(rows.length / 20);
-  const pageRows = rows.slice(page * 20, (page + 1) * 20);
 }
 
 
