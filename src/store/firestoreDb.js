@@ -106,13 +106,15 @@ export async function deleteCatalogEntry(docKey, id) {
   await deleteDoc(doc(db, mapDocKeyToCollection(docKey), id));
 }
 
-// Convierte Timestamps de Firestore a strings ISO para evitar React error #31
+// Convierte Timestamps/DocumentRefs/etc de Firestore a strings para evitar React error #31
 function prepareDoc(data) {
   const result = {};
   for (const key in data) {
     const val = data[key];
     if (val && typeof val.toDate === "function") {
       result[key] = val.toDate().toISOString().split("T")[0];
+    } else if (val && typeof val === "object" && !Array.isArray(val) && typeof val.path === "string" && typeof val.id === "string") {
+      result[key] = val.id;
     } else {
       result[key] = val;
     }
