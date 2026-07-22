@@ -1,0 +1,12 @@
+const kardex = [
+  { id: "k1", Article: "a1", Article_name: "Filtro de Aceite 150A", Document_Type: "Ingreso", Date: "2024-06-01", Client: "", Provider: "PROV-001", Quantity: 50, Description: "Compra inicial", Code_Id: "ART-001", Unit: "Unidad", Total_Price: 1250.00, PricePerUnit: 25.00, Warehouse: "w1", OEM: "OEM-001" },
+  { id: "k2", Article: "a1", Article_name: "Filtro de Aceite 150A", Document_Type: "Salida", Date: "2024-06-05", Client: "c1", Provider: "", Quantity: -2, Description: "Venta", Code_Id: "ART-001", Unit: "Unidad", Total_Price: 65.00, PricePerUnit: 32.50, Warehouse: "w1", OEM: "OEM-001" },
+  { id: "k3", Article: "a2", Article_name: "Pastillas de Freno Delanteras", Document_Type: "Ingreso", Date: "2024-06-10", Client: "", Provider: "PROV-001", Quantity: 20, Description: "Compra", Code_Id: "ART-002", Unit: "Juego", Total_Price: 1700.00, PricePerUnit: 85.00, Warehouse: "w1", OEM: "OEM-002" },
+  { id: "k4", Article: "a2", Article_name: "Pastillas de Freno Delanteras", Document_Type: "Salida", Date: "2024-06-12", Client: "c2", Provider: "", Quantity: -1, Description: "Venta", Code_Id: "ART-002", Unit: "Juego", Total_Price: 114.75, PricePerUnit: 114.75, Warehouse: "w1", OEM: "OEM-002" },
+  { id: "k5", Article: "a3", Article_name: "Amortiguador Trasero", Document_Type: "Ingreso", Date: "2024-06-15", Client: "", Provider: "PROV-002", Quantity: 10, Description: "Compra", Code_Id: "ART-003", Unit: "Unidad", Total_Price: 1200.00, PricePerUnit: 120.00, Warehouse: "w2", OEM: "OEM-003" },
+  { id: "k6", Article: "a4", Article_name: "Bujía NGK Iridium", Document_Type: "Ingreso", Date: "2024-06-20", Client: "", Provider: "PROV-002", Quantity: 200, Description: "Compra", Code_Id: "ART-004", Unit: "Unidad", Total_Price: 3000.00, PricePerUnit: 15.00, Warehouse: "w1", OEM: "OEM-004" },
+  { id: "k7", Article: "a5", Article_name: "Aceite Motor 20W50 1L", Document_Type: "Ingreso", Date: "2024-07-01", Client: "", Provider: "PROV-003", Quantity: 100, Description: "Compra", Code_Id: "ART-005", Unit: "Litro", Total_Price: 1200.00, PricePerUnit: 12.00, Warehouse: "w1", OEM: "OEM-005" },
+  { id: "k8", Article: "a5", Article_name: "Aceite Motor 20W50 1L", Document_Type: "Salida", Date: "2024-07-03", Client: "c3", Provider: "", Quantity: -5, Description: "Venta", Code_Id: "ART-005", Unit: "Litro", Total_Price: 87.00, PricePerUnit: 17.40, Warehouse: "w1", OEM: "OEM-005" },
+];
+
+export default kardex;

@@ -1,0 +1,79 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Pencil, Trash2 } from "lucide-react";
+import Toolbar from "../../components/ui/Toolbar";
+import SearchBox from "../../components/ui/SearchBox";
+import Table, { Td } from "../../components/ui/Table";
+import Modal from "../../components/ui/Modal";
+import Btn from "../../components/ui/Btn";
+import { useFirestoreCollection, deleteMaestro } from "../../store/firestoreDb";
+
+const COL = "Vehiculos";
+
+export default function VehiculosList() {
+  const items = useFirestoreCollection(COL);
+  const navigate = useNavigate();
+
+  const [q, setQ] = useState("");
+  const [idSearch, setIdSearch] = useState("");
+  const [estadoFilter, setEstadoFilter] = useState("Todos");
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [toast, setToast] = useState(null);
+
+  const rows = items.filter((v) => {
+    const matchId = !idSearch || (v.Placa || "").toLowerCase().includes(idSearch.toLowerCase());
+    const matchQ = !q || (v.Placa + v.Propietario_name + v.Marca + v.Modelo + v.Estado)
+      .toLowerCase().includes(q.toLowerCase());
+    const matchEst = estadoFilter === "Todos" || v.Estado === estadoFilter;
+    return matchId && matchQ && matchEst;
+  });
+
+  const confirmDelete = async () => {
+    if (deleteTarget) await deleteMaestro(COL, deleteTarget.id);
+    setDeleteTarget(null);
+    setToast("Vehículo eliminado");
+    setTimeout(() => setToast(null), 2000);
+  };
+
+  return (
+    <div>
+      <Toolbar title="Vehículos" count={rows.length} onNew={() => navigate("/al-vehiculos/nuevo")} onExport={() => {}} />
+      <div className="flex flex-wrap gap-3 mb-3">
+        <SearchBox value={q} onChange={setQ} placeholder="Buscar placa, propietario, marca..." />
+        <input className="border rounded px-3 py-1.5 text-sm" placeholder="Filtrar por placa" value={idSearch} onChange={(e) => setIdSearch(e.target.value)} />
+        <select className="border rounded px-3 py-1.5 text-sm" value={estadoFilter} onChange={(e) => setEstadoFilter(e.target.value)}>
+          {["Todos", "Activo", "Inactivo", "En Taller"].map((o) => <option key={o} value={o}>{o}</option>)}
+        </select>
+      </div>
+      <Table columns={["Placa", "Propietario", "Marca", "Modelo", "Año", "Estado", "Acción"]}
+        rows={rows}
+        renderRow={(v) => (
+          <>
+            <Td><span className="gmp-mono text-[var(--muted)]">{v.Placa}</span></Td>
+            <Td className="font-medium">{v.Propietario_name}</Td>
+            <Td className="text-[var(--muted)]">{v.Marca}</Td>
+            <Td className="text-[var(--muted)]">{v.Modelo}</Td>
+            <Td className="gmp-mono">{v.anio_de_fabricion}</Td>
+            <Td className="text-[var(--muted)]">{v.Estado}</Td>
+            <Td>
+              <div className="flex gap-1">
+                <button onClick={() => navigate("/al-vehiculos/" + v.id)} className="p-1.5 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]"><Pencil size={15} /></button>
+                <button onClick={() => setDeleteTarget(v)} className="p-1.5 rounded-md text-[var(--danger)] hover:bg-[var(--danger-dim)]"><Trash2 size={15} /></button>
+              </div>
+            </Td>
+          </>
+        )}
+      />
+      {deleteTarget && (
+        <Modal title="Eliminar vehículo" onClose={() => setDeleteTarget(null)}>
+          <p className="text-sm text-[var(--muted)] mb-6">¿Eliminar {deleteTarget.Placa}?</p>
+          <div className="flex justify-end gap-2">
+            <Btn variant="ghost" onClick={() => setDeleteTarget(null)}>Cancelar</Btn>
+            <Btn variant="danger" onClick={confirmDelete}>Eliminar</Btn>
+          </div>
+        </Modal>
+      )}
+      {toast && <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded shadow">{toast}</div>}
+    </div>
+  );
+}

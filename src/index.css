@@ -1,0 +1,124 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+@import "tailwindcss";
+
+:root {
+  --bg: #0C0C0F;
+  --surface: #18181C;
+  --surface-2: #202024;
+  --surface-3: #28282D;
+  --panel: var(--surface);
+  --panel-2: var(--surface-2);
+  --line: #28282E;
+  --line-soft: #1E1E22;
+  --text: #ECECF2;
+  --muted: #9696A0;
+  --muted-2: #5E5E68;
+  --accent: #E84A3F;
+  --accent-dim: #2E1512;
+  --accent-border: #50201A;
+  --amber: #EDB94E;
+  --amber-dim: #322612;
+  --amber-border: #4A3A18;
+  --info: #5DB8D4;
+  --info-dim: #142A30;
+  --info-border: #1C3840;
+  --danger: #ED5E5E;
+  --danger-dim: #321616;
+  --danger-border: #4E2020;
+  --success: #52B870;
+  --success-dim: #122A18;
+  --success-border: #1C3822;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-weight: 450;
+}
+
+::selection {
+  background: var(--accent);
+  color: #F5F0F0;
+}
+
+.gmp-root {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.gmp-display {
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.gmp-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.gmp-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.gmp-scroll::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 4px;
+}
+
+.gmp-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.gmp-row:hover {
+  background: var(--surface-2);
+}
+
+.gmp-fade-in {
+  animation: gmpFade .12s ease-out;
+}
+
+@keyframes gmpFade {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.gmp-focus:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+@media print {
+  body * { visibility: hidden; }
+  .print-area, .print-area * { visibility: visible; }
+  .print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: #fff !important;
+    color: #000 !important;
+  }
+  .no-print { display: none !important; }
+}
+
+.gmp-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: gmpSpin 0.7s linear infinite;
+}
+
+@keyframes gmpSpin {
+  to { transform: rotate(360deg); }
+}

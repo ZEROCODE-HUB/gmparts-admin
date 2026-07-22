@@ -1,0 +1,10 @@
+{
+  "name": "gmparts-admin-functions",
+  "description": "Cloud Functions for GM Parts Admin (onUserDeleted cascade)",
+  "dependencies": {
+    "firebase-functions": "^4.0.0",
+    "firebase-admin": "^11.0.0"
+  },
+  "engines": { "node": "18" },
+  "private": true
+}

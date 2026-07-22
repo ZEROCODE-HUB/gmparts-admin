@@ -1,0 +1,168 @@
+// Capa swappable Firestore — Fase D1 (catálogos simples).
+//
+// Solo los docKeys de catálogo de Fase D1 enrutan a Firestore. El resto de la app
+// sigue en localStorage (db.js) hasta fases posteriores. Ver BACKEND_SPEC.md §3.
+//
+// Notas de diseño (Fase D1 acotada):
+//  - No se toca db.js (sigue localStorage para va-*/vs-*/c-*). El swappable completo
+//    de db.js -> firestoreDb se hace en fases D2-D4.
+//  - Los catálogos NO usan DocumentReference entre sí en esta fase (subgroup.group /
+//    vehicle_model_modelo.brand se omiten; solo se guarda el nombre legible).
+//  - Repuestos/Insumos NO se conectan como colecciones (read-only vía Articles, §1.21/1.22).
+
+import { db } from "../lib/firebase";
+import {
+  collection, doc, getDocs, addDoc, setDoc, deleteDoc, query, where, orderBy, onSnapshot,
+} from "firebase/firestore";
+import { useEffect, useState, useCallback } from "react";
+import { marcasSeed, gruposSeed, subgruposSeed, unidadesSeed } from "../mock/seed.articulos";
+import { marcasVehiculosSeed, modelosSeed } from "../mock/seed.vehiculos";
+
+// docKey interno (React) -> colección Firestore
+export const CATALOG_MAP = {
+  "cat-marca": "article_brand_marca",
+  "cat-grupo": "Group",
+  "cat-subgrupo": "subgroup",
+  "cat-unidad": "measurement_unit",
+  "cat-vehmarca": "vehicle_marca_brand",
+  "cat-vehmodelo": "vehicle_model_modelo",
+  "cat-encargado": "encargados",
+};
+
+export const DOC_TYPE = {
+  "va-factura": "Factura", "va-boleta": "Boleta", "va-cotizacion": "Cotizacion",
+  "va-guia": "Guia", "va-notacredito": "NotaCredito",
+  "vs-factura": "Factura", "vs-boleta": "Boleta", "vs-cotizacion": "Cotizacion",
+  "vs-orden": "OrdenTrabajo", "vs-notas": "Nota de venta",
+  "c-factura": "Factura", "c-boleta": "boleta", "c-notas": "NotaPedido",
+  "c-guia": "Guia", "c-orden": "OrdenPago",
+  "al-notaventa": "Nota de venta",
+};
+
+// Campo de nombre por colección (encargados usa `nombre`, el resto `name`)
+export const CATALOG_NAME_FIELD = {
+  "cat-encargado": "nombre",
+};
+
+// Valores semilla locales como fallback (se mezclan con lo vivo de Firestore)
+export const CATALOG_SEED = {
+  "cat-marca": marcasSeed.map((m) => m.nombre),
+  "cat-grupo": gruposSeed.map((g) => g.nombre),
+  "cat-subgrupo": subgruposSeed.map((s) => s.nombre),
+  "cat-unidad": unidadesSeed.map((u) => u.nombre),
+  "cat-vehmarca": marcasVehiculosSeed,
+  "cat-vehmodelo": Object.values(modelosSeed).flat(),
+  "cat-encargado": [],
+};
+
+// Split confirmado en D3: vs-* → Facturas, va-*/c-* → FacturasVentasCompras
+export function mapDocKeyToCollection(docKey) {
+  if (CATALOG_MAP[docKey]) return CATALOG_MAP[docKey];
+  const FACTURAS = ["vs-factura", "vs-boleta", "vs-cotizacion", "vs-orden", "vs-notas"];
+  const FACTURAS_VC = [
+    "va-factura", "va-boleta", "va-cotizacion", "va-guia", "va-notacredito",
+    "c-factura", "c-boleta", "c-notas", "c-guia", "c-orden", "al-notaventa",
+  ];
+  if (FACTURAS.includes(docKey)) return "Facturas";
+  if (FACTURAS_VC.includes(docKey)) return "FacturasVentasCompras";
+  if (docKey === "cuentasPorCobrar") return "cuentasPorCobrar";
+  return docKey;
+}
+
+export function isFirestoreDocKey(docKey) {
+  return docKey in CATALOG_MAP;
+}
+
+export async function getDocuments(docKey) {
+  const snap = await getDocs(collection(db, mapDocKeyToCollection(docKey)));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+export async function saveDocument(docKey, doc) {
+  if (doc.id && !String(doc.id).startsWith("seed:")) {
+    const ref = doc(db, mapDocKeyToCollection(docKey), doc.id);
+    await setDoc(ref, doc, { merge: true });
+    return doc.id;
+  }
+  const { id, ...data } = doc;
+  const ref = await addDoc(collection(db, mapDocKeyToCollection(docKey)), data);
+  return ref.id;
+}
+
+export async function deleteDocument(docKey, id) {
+  if (!id || String(id).startsWith("seed:")) return;
+  await deleteDoc(doc(db, mapDocKeyToCollection(docKey), id));
+}
+
+// ---- Catálogos (Fase D1) ----
+export async function addCatalogEntry(docKey, name, extra = {}) {
+  const field = CATALOG_NAME_FIELD[docKey] || "name";
+  const ref = await addDoc(collection(db, mapDocKeyToCollection(docKey)), { [field]: name, ...extra });
+  return ref.id;
+}
+
+export async function deleteCatalogEntry(docKey, id) {
+  if (!id || String(id).startsWith("seed:")) return;
+  await deleteDoc(doc(db, mapDocKeyToCollection(docKey), id));
+}
+
+// ---- Maestros (Fase D2) ----
+// Hook genérico en tiempo real para cualquier colección Firestore.
+// `constraints` es un arreglo de restricciones de firebase/firestore (where/orderBy).
+export function useFirestoreCollection(collectionName, constraints = []) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const col = collection(db, collectionName);
+    const q = constraints.length ? query(col, ...constraints) : col;
+    const unsub = onSnapshot(q, (snap) => {
+      setItems(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setLoading(false);
+    }, () => setLoading(false));
+    return unsub;
+  }, [collectionName, JSON.stringify(constraints)]);
+  return items;
+}
+
+// Crea o actualiza un documento de maestro. Si `docData.id` existe (y no es semilla)
+// hace updateDoc(merge); si no, addDoc. Devuelve el id.
+export async function saveMaestro(collectionName, docData) {
+  const clean = { ...docData };
+  delete clean.id;
+  if (docData.id && !String(docData.id).startsWith("seed:")) {
+    await setDoc(doc(db, collectionName, docData.id), clean, { merge: true });
+    return docData.id;
+  }
+  const ref = await addDoc(collection(db, collectionName), clean);
+  return ref.id;
+}
+
+export async function deleteMaestro(collectionName, id) {
+  if (!id || String(id).startsWith("seed:")) return;
+  await deleteDoc(doc(db, collectionName, id));
+}
+
+// ---- Hook para listas de documentos con delete, filtrado por tipofactura + TipoOperacion ----
+export const TIPO_OPERACION = {
+  "va-factura": "venta", "va-boleta": "venta", "va-cotizacion": "venta",
+  "va-guia": "venta", "va-notacredito": "venta",
+  "c-factura": "compra", "c-boleta": "compra", "c-notas": "compra",
+  "c-guia": "compra", "c-orden": "compra",
+  "al-notaventa": "venta",
+};
+
+export function useFirestoreDocuments(docKey) {
+  const colName = mapDocKeyToCollection(docKey);
+  const tipo = DOC_TYPE[docKey] || docKey;
+  const constraints = [where("tipofactura", "==", tipo)];
+  if (colName === "FacturasVentasCompras" && TIPO_OPERACION[docKey]) {
+    constraints.push(where("TipoOperacion", "==", TIPO_OPERACION[docKey]));
+  }
+  const items = useFirestoreCollection(colName, constraints);
+  const remove = useCallback(async (id) => {
+    if (!id || String(id).startsWith("seed:")) return;
+    await deleteDoc(doc(db, colName, id));
+  }, [colName]);
+  return [items, { remove }];
+}
+

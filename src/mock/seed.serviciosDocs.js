@@ -1,0 +1,14 @@
+// Documentos de Ventas Servicio (cotizacion/orden/nota/factura/boleta de taller).
+// Extraido del seedPool que antes vivia inline en ServicioEditor para poder
+// persistirlos en el store (src/store/db.js).
+const serviciosDocsSeed = [
+  { id: "cs0", tipo: "cotizacion", serie: "SC01", numero: "0001", fecha: "2024-07-10", cliente: "Jose Quiñonez", clienteDoc: "12345678", placa: "ABC-120", tipoIgv: "INCLUIDO", formaPago: "Contado", moneda: "PEN", items: [{ tipo: "servicio", descripcion: "Cambio de Aceite y Filtro", cant: 1, pu: 85, total: 85 }], subtotal: 85, igv: 0, total: 85, estado: "Pendiente" },
+  { id: "cs1", tipo: "cotizacion", serie: "SC01", numero: "0002", fecha: "2024-07-11", cliente: "Luis Ramirez", clienteDoc: "98765432", placa: "ABC-121", tipoIgv: "INCLUIDO", formaPago: "Contado", moneda: "PEN", items: [{ tipo: "servicio", descripcion: "Alineamiento y Balanceo", cant: 1, pu: 120, total: 120 }], subtotal: 120, igv: 0, total: 120, estado: "Aprobado" },
+  { id: "ot0", tipo: "orden", serie: "OT01", numero: "0001", fecha: "2024-07-05", cliente: "Jose Quiñonez", clienteDoc: "12345678", placa: "ABC-120", tipoIgv: "INCLUIDO", formaPago: "Contado", moneda: "PEN", items: [{ tipo: "servicio", descripcion: "Cambio de Aceite y Filtro", cant: 1, pu: 85, total: 85 }], subtotal: 85, igv: 0, total: 85, estado: "En taller" },
+  { id: "ot1", tipo: "orden", serie: "OT01", numero: "0002", fecha: "2024-07-06", cliente: "Luis Ramirez", clienteDoc: "98765432", placa: "ABC-121", tipoIgv: "INCLUIDO", formaPago: "Contado", moneda: "PEN", items: [{ tipo: "servicio", descripcion: "Alineamiento y Balanceo", cant: 1, pu: 120, total: 120 }], subtotal: 120, igv: 0, total: 120, estado: "Completado" },
+  { id: "ft0", tipo: "factura", serie: "FT01", numero: "0001", fecha: "2024-07-15", cliente: "Gear Motor Parts SAC", clienteDoc: "20601720621", placa: "ABC-120", tipoIgv: "MAS", formaPago: "Crédito", moneda: "PEN", items: [{ tipo: "servicio", descripcion: "Cambio de Aceite y Filtro", cant: 1, pu: 85, total: 85 }], subtotal: 85, igv: 15.30, total: 100.30, estado: "Emitida" },
+  { id: "bt0", tipo: "boleta", serie: "BT01", numero: "0001", fecha: "2024-07-18", cliente: "Pedro Lopez", clienteDoc: "34344343", placa: "ABC-122", tipoIgv: "INCLUIDO", formaPago: "Contado", moneda: "PEN", items: [{ tipo: "servicio", descripcion: "Revisión de Frenos", cant: 1, pu: 60, total: 60 }], subtotal: 60, igv: 0, total: 60, estado: "Emitida" },
+  { id: "nv0", tipo: "nota", serie: "NV01", numero: "0001", fecha: "2024-07-20", cliente: "Maria Torres", clienteDoc: "87654321", placa: "ABC-123", tipoIgv: "INCLUIDO", formaPago: "Contado", moneda: "PEN", items: [{ tipo: "servicio", descripcion: "Escaneo Electrónico", cant: 1, pu: 50, total: 50 }], subtotal: 50, igv: 0, total: 50, estado: "Registrada" },
+];
+
+export default serviciosDocsSeed;

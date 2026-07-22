@@ -1,0 +1,91 @@
+// ═════════════════════════════════════════════════════════════════
+// PROPUESTA de reglas de seguridad para GM Parts Admin — v4 SIMPLIFICADA
+//
+// Estrategia:
+//   - Autenticación obligatoria (request.auth != null) para todo acceso.
+//   - Lectura y escritura (create/update) abiertas a cualquier usuario
+//     autenticado en todas las colecciones operativas.
+//   - DELETE restringido a Administrador / Gerente General solo en
+//     colecciones con impacto financiero o de inventario.
+//   - Refinamiento por rol (Asesor Servicio, Asesor Repuesto, Jefe de
+//     Taller, Tecnico Mecanico) pendiente para fase futura, basado en
+//     uso real del sistema, no en suposiciones.
+//
+// NO DESPLEGAR sin validación del equipo.
+// ═════════════════════════════════════════════════════════════════
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ──────────────────────────────────────────────
+    function isAuth()     { return request.auth != null; }
+    function isAdmin()    { return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.user_role == "Administrador"; }
+    function isGG()       { return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.user_role == "Gerente General"; }
+    function isAdminOrGG(){ return isAdmin() || isGG(); }
+
+    // ── Lectura global: cualquier usuario autenticado ────────
+    match /{document=**} { allow read: if isAuth(); }
+
+    // ── Colecciones operativas: create/update abiertos ───────
+    // DELETE solo Admin/GG (impacto financiero o de inventario)
+
+    match /article_brand_marca/{doc}     { allow write: if isAuth(); }
+    match /Group/{doc}                   { allow write: if isAuth(); }
+    match /subgroup/{doc}                { allow write: if isAuth(); }
+    match /measurement_unit/{doc}        { allow write: if isAuth(); }
+    match /vehicle_marca_brand/{doc}     { allow write: if isAuth(); }
+    match /vehicle_model_modelo/{doc}    { allow write: if isAuth(); }
+    match /encargados/{doc}              { allow write: if isAuth(); }
+
+    match /Articles/{doc} {
+      allow create, update: if isAuth();
+      allow delete: if isAdminOrGG();
+    }
+    match /Articles_Warehouse/{doc}      { allow write: if isAuth(); }
+    match /Kardex_element/{doc}          { allow write: if isAuth(); }
+    match /Almacen_movement/{doc}        { allow write: if isAuth(); }
+    match /Almacen/{doc}                 { allow write: if isAuth(); }
+
+    match /FacturasVentasCompras/{doc} {
+      allow create, update: if isAuth();
+      allow delete: if isAdminOrGG();
+    }
+    match /Facturas/{doc} {
+      allow create, update: if isAuth();
+      allow delete: if isAdminOrGG();
+    }
+
+    match /cuentasPorCobrar/{doc} {
+      allow create, update: if isAuth();
+      allow delete: if isAdminOrGG();
+    }
+    match /cuentasPorCobrar/{doc}/pagos_CporCobrar/{pago} {
+      allow create, update: if isAuth();
+      allow delete: if isAdminOrGG();
+    }
+
+    match /Vehiculos/{doc} {
+      allow create, update: if isAuth();
+      allow delete: if isAdminOrGG();
+    }
+    match /Proveedores/{doc} {
+      allow create, update: if isAuth();
+      allow delete: if isAdminOrGG();
+    }
+
+    match /recepciones/{doc}                  { allow write: if isAuth(); }
+    match /recepciones/{doc}/diagnosticos/{d} { allow write: if isAuth(); }
+    match /personal/{doc}                     { allow write: if isAuth(); }
+    match /service/{doc}                      { allow write: if isAuth(); }
+    match /LastCode/{doc}                     { allow write: if isAuth(); }
+
+    // ── users: cada uno puede editar su propio documento ─────
+    match /users/{uid} {
+      allow write: if isAdminOrGG() || request.auth.uid == uid;
+    }
+
+    // ── Denegación por defecto ───────────────────────────────
+    match /{document=**} { allow write: if false; }
+  }
+}
