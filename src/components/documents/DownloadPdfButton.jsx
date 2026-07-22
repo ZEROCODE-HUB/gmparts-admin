@@ -17,12 +17,9 @@ export default function DownloadPdfButton({ collection, docId, pdfUrl }) {
 
   const handleClick = async () => {
     console.log("[PDF-DIAG] click en boton PDF", { collection, docId, pdfUrl });
-    if (pdfUrl) {
-      console.log("[PDF-DIAG] pdfUrl existe, abriendo", pdfUrl);
-      window.open(pdfUrl, "_blank");
-      return;
-    }
-    console.log("[PDF-DIAG] pdfUrl no existe, llamando Cloud Function");
+    // Temporal: siempre regenerar para validar el formato actual de la Cloud Function
+    // Volver a lógica con caché después de confirmar que el diseño es correcto.
+    console.log("[PDF-DIAG] llamando Cloud Function (ignorando pdfUrl existente)");
     setLoading(true);
     try {
       const generatePdf = httpsCallable(functions, "generateDocumentPdf");
