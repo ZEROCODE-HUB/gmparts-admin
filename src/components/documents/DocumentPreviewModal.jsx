@@ -2,6 +2,7 @@ import { X } from "lucide-react";
 import DownloadPdfButton from "./DownloadPdfButton";
 
 export default function DocumentPreviewModal({ title, data, fields, onClose, collection }) {
+  console.log("[PDF-DIAG] modal abierto, collection:", collection, "dataId:", data?.id, "pdfUrl:", data?.pdfUrl);
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto gmp-scroll bg-black/60 p-6">
       <div className="gmp-fade-in bg-[var(--surface-3)] rounded-lg w-full max-w-2xl mt-8 border border-[var(--line-soft)]">
