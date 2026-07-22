@@ -39,7 +39,7 @@ export default function DownloadPdfButton({ collection, docId, pdfUrl }) {
   return (
     <button onClick={handleClick} disabled={loading}
       className="p-1.5 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]"
-      title={pdfUrl ? "Descargar PDF" : "Generar PDF"}>
+      title={pdfUrl ? "Descargar PDF oficial" : "Generar PDF oficial"}>
       <FileText size={15} />
     </button>
   );

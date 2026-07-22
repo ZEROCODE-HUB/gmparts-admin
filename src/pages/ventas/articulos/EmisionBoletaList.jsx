@@ -64,7 +64,7 @@ export default function EmisionBoletaList() {
           </div>
         </Modal>
       )}
-      {preview && <DocumentPreviewModal title="Vista previa - Boleta" data={preview} fields={previewFields} onClose={() => setPreview(null)} />}
+      {preview && <DocumentPreviewModal title="Vista previa - Boleta" data={preview} fields={previewFields} collection="FacturasVentasCompras" onClose={() => setPreview(null)} />}
     </div>
   );
 }

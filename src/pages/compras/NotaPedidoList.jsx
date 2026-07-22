@@ -68,7 +68,7 @@ export default function NotaPedidoList() {
           </div>
         </Modal>
       )}
-      {preview && <DocumentPreviewModal title="Vista previa - Nota de Pedido" data={preview} fields={previewFields} onClose={() => setPreview(null)} />}
+      {preview && <DocumentPreviewModal title="Vista previa - Nota de Pedido" data={preview} fields={previewFields} collection="FacturasVentasCompras" onClose={() => setPreview(null)} />}
     </div>
   );
 }

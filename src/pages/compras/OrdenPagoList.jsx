@@ -67,7 +67,7 @@ export default function OrdenPagoList() {
           </div>
         </Modal>
       )}
-      {preview && <DocumentPreviewModal title="Vista previa - Orden de Pago" data={preview} fields={previewFields} onClose={() => setPreview(null)} />}
+      {preview && <DocumentPreviewModal title="Vista previa - Orden de Pago" data={preview} fields={previewFields} collection="FacturasVentasCompras" onClose={() => setPreview(null)} />}
     </div>
   );
 }

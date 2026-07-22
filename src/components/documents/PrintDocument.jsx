@@ -21,12 +21,10 @@ export default function PrintDocument({ title = "Documento", data, onClose }) {
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto gmp-scroll bg-black/60 p-6">
       <div className="bg-white text-black w-full max-w-2xl mt-4 rounded shadow-lg print-area">
         <div className="flex items-start justify-between px-8 py-6 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="GM Parts" className="w-12 h-12 object-contain" />
-            <div>
-              <p className="font-bold text-lg leading-none">GM<span className="text-blue-600">PARTS</span></p>
-              <p className="text-[10px] tracking-wide text-gray-500">TALLER · INVENTARIO</p>
-            </div>
+          <div>
+            <p className="font-bold text-lg leading-none">GM PARTS S.A.C.</p>
+            <p className="text-[10px] tracking-wide text-gray-500">RUC: 20601234567</p>
+            <p className="text-[10px] tracking-wide text-gray-500">Av. Principal 1234 - Lima</p>
           </div>
           <div className="text-right">
             <p className="font-bold">{title}</p>
@@ -35,13 +33,16 @@ export default function PrintDocument({ title = "Documento", data, onClose }) {
           </div>
         </div>
 
-        <div className="px-8 py-5 grid grid-cols-3 gap-4">
-          <Field label="Cliente" value={data?.razonSNombre || data?.cliente} />
-          <Field label="Documento" value={data?.clienteDoc} />
+        <div className="px-8 py-5 grid grid-cols-2 gap-4">
+          <Field label="Serie" value={data?.nserie || data?.serie} />
+          <Field label="N\u00famero" value={data?.numero} />
           <Field label="Fecha" value={data?.Fecha || data?.fecha || data?.fecha_creacion} />
-          <Field label="Placa" value={data?.placa} />
+          <Field label="Cliente" value={data?.razonSNombre || data?.cliente} />
+          <Field label="RUC/DNI" value={data?.clienteDoc} />
           <Field label="Estado" value={data?.Estado || data?.estado} />
           <Field label="Forma de pago" value={data?.FPago || data?.formaPago} />
+          <Field label="Almac\u00e9n" value={data?.almacen} />
+          <Field label="Placa" value={data?.placa} />
         </div>
 
         <div className="px-8 pb-6">
@@ -66,14 +67,15 @@ export default function PrintDocument({ title = "Documento", data, onClose }) {
             <table className="w-full text-sm border-t border-gray-200">
               <thead>
                 <tr className="text-left text-[11px] uppercase text-gray-500">
-                  <th className="py-2">Descripción</th><th className="py-2 text-right">Cant.</th><th className="py-2 text-right">P. Unit.</th><th className="py-2 text-right">Total</th>
+                  <th className="py-2">C\u00f3digo</th><th className="py-2">Descripci\u00f3n</th><th className="py-2 text-right">Cant.</th><th className="py-2 text-right">P. Unit.</th><th className="py-2 text-right">Total</th>
                 </tr>
               </thead>
               <tbody>
                 {items.map((it, i) => (
                   <tr key={i} className="border-t border-gray-100">
-                    <td className="py-2">{it.descripcion || it.articulo}</td>
-                    <td className="py-2 text-right">{it.cant ?? it.cantidad}</td>
+                    <td className="py-2 gmp-mono">{it.codigo || ""}</td>
+                    <td className="py-2">{it.descripcion || it.articulo || ""}</td>
+                    <td className="py-2 text-right">{it.cant ?? it.cantidad ?? 1}</td>
                     <td className="py-2 text-right">S/ {Number(it.pu || 0).toFixed(2)}</td>
                     <td className="py-2 text-right">S/ {Number(it.total || 0).toFixed(2)}</td>
                   </tr>

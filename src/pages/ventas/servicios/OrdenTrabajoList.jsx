@@ -79,7 +79,7 @@ export default function OrdenTrabajoList() {
         </Modal>
       )}
 
-      {preview && <DocumentPreviewModal title="Vista previa - Orden de Trabajo" data={{ ...preview, numeroorden: preview.numeroorden, facturado: preview.facturado ? "S�" : "No" }} fields={previewFields} onClose={() => setPreview(null)} />}
+      {preview && <DocumentPreviewModal title="Vista previa - Orden de Trabajo" data={{ ...preview, numeroorden: preview.numeroorden, facturado: preview.facturado ? "S�" : "No" }} fields={previewFields} collection="Facturas" onClose={() => setPreview(null)} />}
       {printTarget && <PrintDocument data={printTarget} onClose={() => setPrintTarget(null)} />}
     </div>
   );

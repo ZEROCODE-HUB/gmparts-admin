@@ -140,7 +140,7 @@ export default function RegistroNotaVentasList() {
         </Modal>
       )}
 
-      {preview && <DocumentPreviewModal title="Vista previa - Nota de Venta" data={preview} fields={previewFields} onClose={() => setPreview(null)} />}
+      {preview && <DocumentPreviewModal title="Vista previa - Nota de Venta" data={preview} fields={previewFields} collection="Facturas" onClose={() => setPreview(null)} />}
 
       {canjeTarget && (
         <Modal title="Canjear Nota de Venta" onClose={() => setCanjeTarget(null)} wide>
