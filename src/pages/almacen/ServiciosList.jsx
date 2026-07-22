@@ -1,4 +1,6 @@
-import { useState } from "react";
+﻿import { useState } from "react";
+import Pagination from "../../components/ui/Pagination";
+import { exportToExcel } from "../../lib/exportExcel";
 import { Pencil, Trash2 } from "lucide-react";
 import Toolbar from "../../components/ui/Toolbar";
 import SearchBox from "../../components/ui/SearchBox";
@@ -57,10 +59,10 @@ export default function ServiciosList() {
 
   return (
     <div>
-      <Toolbar title="Servicios" count={rows.length} onNew={openNew} onExport={() => {}} />
+      <Toolbar title="Servicios" count={rows.length} onNew={openNew} onExport={() => exportToExcel(rows, "Servicios")} />
       <SearchBox value={q} onChange={setQ} placeholder="Buscar código, descripción, marca..." />
       <Table columns={["Código", "Descripción", "Precio", "Moneda", "Marca", "Modelo", "Año", "Sistema", "Tipo", "Cat. MTC", "Carrocería", "Acción"]}
-        rows={rows}
+        rows={pageRows}
         renderRow={(s) => (
           <>
             <Td><span className="gmp-mono text-[var(--muted)]">{s.Codigo}</span></Td>
@@ -123,6 +125,8 @@ export default function ServiciosList() {
       )}
 
       {toast && <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded shadow">{toast}</div>}
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }
+

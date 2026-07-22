@@ -1,4 +1,6 @@
-import { useState } from "react";
+﻿import { useState } from "react";
+import Pagination from "../../components/ui/Pagination";
+import { exportToExcel } from "../../lib/exportExcel";
 import { Pencil, Trash2 } from "lucide-react";
 import Toolbar from "../../components/ui/Toolbar";
 import SearchBox from "../../components/ui/SearchBox";
@@ -102,10 +104,10 @@ export default function PersonalList() {
 
   return (
     <div>
-      <Toolbar title="Personal" count={rows.length} onNew={openNew} onExport={() => {}} />
+      <Toolbar title="Personal" count={rows.length} onNew={openNew} onExport={() => exportToExcel(rows, "Personal")} />
       <SearchBox value={q} onChange={setQ} placeholder="Buscar nombre, correo, DNI..." />
       <Table columns={["Nombre", "Correo", "Teléfono", "WSP", "DNI", "Dirección", "Distrito", "Cargo", "Rol", "Acción"]}
-        rows={rows}
+        rows={pageRows}
         renderRow={(p) => (
           <>
             <Td className="font-medium">{p.displayName}</Td>
@@ -171,6 +173,8 @@ export default function PersonalList() {
       )}
 
       {toast && <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded shadow">{toast}</div>}
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }
+

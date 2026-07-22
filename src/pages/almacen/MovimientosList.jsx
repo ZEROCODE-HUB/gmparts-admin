@@ -1,4 +1,6 @@
-import { useState } from "react";
+﻿import { useState } from "react";
+import Pagination from "../../components/ui/Pagination";
+import { exportToExcel } from "../../lib/exportExcel";
 import { useNavigate } from "react-router-dom";
 import { Pencil, Trash2 } from "lucide-react";
 import Toolbar from "../../components/ui/Toolbar";
@@ -30,9 +32,9 @@ export default function MovimientosList() {
 
   return (
     <div>
-      <Toolbar title="Movimientos de almacén" count={rows.length} onNew={() => navigate("/al-movimientos/nuevo")} onExport={() => {}} />
+      <Toolbar title="Movimientos de almacén" count={rows.length} onNew={() => navigate("/al-movimientos/nuevo")} onExport={() => exportToExcel(rows, "Movimientos")} />
       <Table columns={["Fecha", "Tipo", "Artículo", "Cantidad", "P. Unit.", "Total", "Documento", "Almacén", "Acción"]}
-        rows={rows}
+        rows={pageRows}
         renderRow={(m) => (
           <>
             <Td className="text-[var(--muted)]">{m.Date || m.fecha || "—"}</Td>
@@ -62,6 +64,8 @@ export default function MovimientosList() {
           </div>
         </Modal>
       )}
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }
+

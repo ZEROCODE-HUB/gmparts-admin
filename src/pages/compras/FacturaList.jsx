@@ -1,4 +1,6 @@
 ﻿import { useState } from "react";
+import Pagination from "../../components/ui/Pagination";
+import { exportToExcel } from "../../lib/exportExcel";
 import { useNavigate } from "react-router-dom";
 import { Eye, Pencil,Trash2 } from "lucide-react";
 import EnviarSunatButton from "../../components/documents/EnviarSunatButton";
@@ -33,10 +35,10 @@ export default function FacturaCompraList() {
 
   return (
     <div>
-      <Toolbar title="Compra - Factura" count={rows.length} onNew={() => navigate("/c-factura/nuevo")} onExport={() => {}} />
+      <Toolbar title="Compra - Factura" count={rows.length} onNew={() => navigate("/c-factura/nuevo")} onExport={() => exportToExcel(rows, "FacturasCompra")} />
       <SearchBox value={q} onChange={setQ} placeholder="Buscar proveedor, serie..." />
       <Table columns={["Serie", "N?mero", "Fecha", "Proveedor", "Documento", "Total", "Estado", "Acci?n"]}
-        rows={rows}
+        rows={pageRows}
         renderRow={(c) => (
           <>
             <Td className="gmp-mono text-[var(--muted)]">{c.serie || ""}</Td>
@@ -69,9 +71,11 @@ export default function FacturaCompraList() {
         </Modal>
       )}
       {preview && <DocumentPreviewModal title="Vista previa - Factura Compra" data={preview} fields={previewFields} collection="FacturasVentasCompras" onClose={() => setPreview(null)} />}
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }
+
 
 
 

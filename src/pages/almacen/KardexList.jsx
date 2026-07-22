@@ -1,4 +1,6 @@
-import { useState } from "react";
+﻿import { useState } from "react";
+import Pagination from "../../components/ui/Pagination";
+import { exportToExcel } from "../../lib/exportExcel";
 import { Download } from "lucide-react";
 import Toolbar from "../../components/ui/Toolbar";
 import Table, { Td } from "../../components/ui/Table";
@@ -23,7 +25,7 @@ export default function KardexList() {
 
   return (
     <div>
-      <Toolbar title="Lista Kardex" count={filtered.length} onExport={() => {}} />
+      <Toolbar title="Lista Kardex" count={filtered.length} onExport={() => exportToExcel(rows, "Kardex")} />
       <div className="flex gap-3 mb-4 flex-wrap items-end">
         <Field label="Producto">
           <select className={inputCls} value={filtroArticulo} onChange={(e) => setFiltroArticulo(e.target.value)}>
@@ -56,6 +58,8 @@ export default function KardexList() {
           </>
         )}
       />
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }
+

@@ -1,4 +1,6 @@
 ﻿import { useState } from "react";
+import Pagination from "../../../components/ui/Pagination";
+import { exportToExcel } from "../../../lib/exportExcel";
 import { useNavigate } from "react-router-dom";
 import { Eye, Pencil,Trash2 } from "lucide-react";
 import PrintButton from "../../../components/documents/PrintButton";
@@ -30,10 +32,10 @@ export default function CotizacionesList() {
 
   return (
     <div>
-      <Toolbar title="Cotizaciones" count={rows.length} onNew={() => navigate("/va-cotizacion/nuevo")} onExport={() => {}} />
+      <Toolbar title="Cotizaciones" count={rows.length} onNew={() => navigate("/va-cotizacion/nuevo")} onExport={() => exportToExcel(rows, "Cotizaciones")} />
       <SearchBox value={q} onChange={setQ} placeholder="Buscar cliente, serie..." />
       <Table columns={["Serie", "N?mero", "Fecha", "Cliente", "Documento", "Total", "Estado", "Acci?n"]}
-        rows={rows}
+        rows={pageRows}
         renderRow={(c) => (
           <>
             <Td className="gmp-mono text-[var(--muted)]">{c.serie || ""}</Td>
@@ -65,9 +67,11 @@ export default function CotizacionesList() {
         </Modal>
       )}
       {preview && <DocumentPreviewModal title="Vista previa - Cotizaci?n" data={preview} fields={previewFields} collection="FacturasVentasCompras" onClose={() => setPreview(null)} />}
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }
+
 
 
 

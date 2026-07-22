@@ -1,4 +1,6 @@
 ﻿import { useState } from "react";
+import Pagination from "../../../components/ui/Pagination";
+import { exportToExcel } from "../../../lib/exportExcel";
 import { useNavigate } from "react-router-dom";
 import { Eye, Pencil, Printer, Trash2, FileText } from "lucide-react";
 import Toolbar from "../../../components/ui/Toolbar";
@@ -44,10 +46,10 @@ export default function OrdenTrabajoList() {
 
   return (
     <div>
-      <Toolbar title="Orden de Trabajo" count={rows.length} onNew={() => navigate("/vs-orden/nuevo")} onExport={() => {}} />
+      <Toolbar title="Orden de Trabajo" count={rows.length} onNew={() => navigate("/vs-orden/nuevo")} onExport={() => exportToExcel(rows, "OrdenesTrabajo")} />
       <SearchBox value={q} onChange={setQ} />
       <Table columns={["Cliente", "Placa", "Estado", "Facturado", "Total", "Acci�n"]}
-        rows={rows}
+        rows={pageRows}
         renderRow={(c) => (
           <>
             <Td className="font-medium">{c.cliente || ""}</Td>
@@ -81,9 +83,11 @@ export default function OrdenTrabajoList() {
 
       {preview && <DocumentPreviewModal title="Vista previa - Orden de Trabajo" data={{ ...preview, numeroorden: preview.numeroorden, facturado: preview.facturado ? "S�" : "No" }} fields={previewFields} collection="Facturas" onClose={() => setPreview(null)} />}
       {printTarget && <PrintDocument data={printTarget} onClose={() => setPrintTarget(null)} />}
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }
+
 
 
 

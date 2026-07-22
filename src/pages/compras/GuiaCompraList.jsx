@@ -1,4 +1,6 @@
 ﻿import { useState } from "react";
+import Pagination from "../../components/ui/Pagination";
+import { exportToExcel } from "../../lib/exportExcel";
 import { useNavigate } from "react-router-dom";
 import { Eye, Pencil,Trash2 } from "lucide-react";
 import EnviarSunatButton from "../../components/documents/EnviarSunatButton";
@@ -32,10 +34,10 @@ export default function GuiaCompraList() {
 
   return (
     <div>
-      <Toolbar title="Compra - Gu?a de Remisi?n" count={rows.length} onNew={() => navigate("/c-guia/nuevo")} onExport={() => {}} />
+      <Toolbar title="Compra - Gu?a de Remisi?n" count={rows.length} onNew={() => navigate("/c-guia/nuevo")} onExport={() => exportToExcel(rows, "GuiasCompra")} />
       <SearchBox value={q} onChange={setQ} placeholder="Buscar proveedor, serie..." />
       <Table columns={["Serie", "N?mero", "Fecha", "Proveedor", "Documento", "Doc. Relaci?n", "Total", "Estado", "Acci?n"]}
-        rows={rows}
+        rows={pageRows}
         renderRow={(c) => (
           <>
             <Td className="gmp-mono text-[var(--muted)]">{c.serie || ""}</Td>
@@ -69,9 +71,11 @@ export default function GuiaCompraList() {
         </Modal>
       )}
       {preview && <DocumentPreviewModal title="Vista previa - Gu?a de Compra" data={preview} fields={previewFields} collection="FacturasVentasCompras" onClose={() => setPreview(null)} />}
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }
+
 
 
 

@@ -1,4 +1,6 @@
 ﻿import { useState } from "react";
+import Pagination from "../../../components/ui/Pagination";
+import { exportToExcel } from "../../../lib/exportExcel";
 import { useNavigate } from "react-router-dom";
 import { Eye, Pencil, Trash2, Repeat, Plus, Trash2 as TrashIcon } from "lucide-react";
 import PrintButton from "../../../components/documents/PrintButton";
@@ -103,10 +105,10 @@ export default function RegistroNotaVentasList() {
 
   return (
     <div>
-      <Toolbar title="Registro de Notas de Venta" count={rows.length} onNew={() => navigate("/vs-notas/nuevo")} onExport={() => {}} />
+      <Toolbar title="Registro de Notas de Venta" count={rows.length} onNew={() => navigate("/vs-notas/nuevo")} onExport={() => exportToExcel(rows, "NotasVenta")} />
       <SearchBox value={q} onChange={setQ} />
       <Table columns={["Serie", "N\u00famero", "Fecha", "Cliente", "Documento", "Servicio", "Total", "Acci\u00f3n"]}
-        rows={rows}
+        rows={pageRows}
         renderRow={(c) => (
           <>
             <Td className="gmp-mono text-[var(--muted)]">{c.serie || c.nserie || ""}</Td>
@@ -182,6 +184,8 @@ export default function RegistroNotaVentasList() {
           </div>
         </Modal>
       )}
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }
+

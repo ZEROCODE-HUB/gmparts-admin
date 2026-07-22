@@ -1,4 +1,6 @@
 ﻿import { useState } from "react";
+import Pagination from "../../components/ui/Pagination";
+import { exportToExcel } from "../../lib/exportExcel";
 import { Eye } from "lucide-react";
 import Toolbar from "../../components/ui/Toolbar";
 import Table, { Td } from "../../components/ui/Table";
@@ -149,8 +151,10 @@ export default function CuentasCobrar({ kind = "Cobrar" }) {
           )}
         </Modal>
       )}
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }
+
 
 

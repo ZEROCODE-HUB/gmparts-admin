@@ -1,4 +1,6 @@
-import { useState } from "react";
+﻿import { useState } from "react";
+import Pagination from "../../components/ui/Pagination";
+import { exportToExcel } from "../../lib/exportExcel";
 import { Pencil, Trash2, Plus, X } from "lucide-react";
 import Toolbar from "../../components/ui/Toolbar";
 import SearchBox from "../../components/ui/SearchBox";
@@ -94,10 +96,10 @@ export default function ArticulosWarehouseList() {
 
   return (
     <div>
-      <Toolbar title="Movimientos por Almacén (Stock)" count={rows.length} onNew={openNew} onExport={() => {}} />
+      <Toolbar title="Movimientos por Almacén (Stock)" count={rows.length} onNew={openNew} onExport={() => exportToExcel(rows, "ArticulosWarehouse")} />
       <SearchBox value={q} onChange={setQ} placeholder="Buscar tipo, serie, almacén..." />
       <Table columns={["Tipo", "Serie", "Fecha", "Almacén", "Artículos", "Observación", "Acción"]}
-        rows={rows}
+        rows={pageRows}
         renderRow={(a) => (
           <>
             <Td><span className="font-medium">{a.Document_Type}</span></Td>
@@ -202,6 +204,8 @@ export default function ArticulosWarehouseList() {
       )}
 
       {toast && <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded shadow">{toast}</div>}
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }
+

@@ -1,4 +1,6 @@
-import { useState } from "react";
+﻿import { useState } from "react";
+import Pagination from "../../components/ui/Pagination";
+import { exportToExcel } from "../../lib/exportExcel";
 import { Pencil, Trash2 } from "lucide-react";
 import Toolbar from "../../components/ui/Toolbar";
 import SearchBox from "../../components/ui/SearchBox";
@@ -44,10 +46,10 @@ export default function AlmacenesList() {
 
   return (
     <div>
-      <Toolbar title="Almacenes" count={rows.length} onNew={openNew} onExport={() => {}} />
+      <Toolbar title="Almacenes" count={rows.length} onNew={openNew} onExport={() => exportToExcel(rows, "Almacenes")} />
       <SearchBox value={q} onChange={setQ} placeholder="Buscar nombre, ciudad..." />
       <Table columns={["Nombre", "Dirección", "Ciudad", "Acción"]}
-        rows={rows}
+        rows={pageRows}
         renderRow={(a) => (
           <>
             <Td className="font-medium">{a.Nombre}</Td>
@@ -88,6 +90,8 @@ export default function AlmacenesList() {
       )}
 
       {toast && <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded shadow">{toast}</div>}
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }
+

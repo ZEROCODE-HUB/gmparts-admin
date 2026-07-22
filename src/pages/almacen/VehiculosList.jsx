@@ -1,4 +1,6 @@
-import { useState } from "react";
+﻿import { useState } from "react";
+import Pagination from "../../components/ui/Pagination";
+import { exportToExcel } from "../../lib/exportExcel";
 import { useNavigate } from "react-router-dom";
 import { Pencil, Trash2 } from "lucide-react";
 import Toolbar from "../../components/ui/Toolbar";
@@ -37,7 +39,7 @@ export default function VehiculosList() {
 
   return (
     <div>
-      <Toolbar title="Vehículos" count={rows.length} onNew={() => navigate("/al-vehiculos/nuevo")} onExport={() => {}} />
+      <Toolbar title="Vehículos" count={rows.length} onNew={() => navigate("/al-vehiculos/nuevo")} onExport={() => exportToExcel(rows, "Vehiculos")} />
       <div className="flex flex-wrap gap-3 mb-3">
         <SearchBox value={q} onChange={setQ} placeholder="Buscar placa, propietario, marca..." />
         <input className="border rounded px-3 py-1.5 text-sm" placeholder="Filtrar por placa" value={idSearch} onChange={(e) => setIdSearch(e.target.value)} />
@@ -46,7 +48,7 @@ export default function VehiculosList() {
         </select>
       </div>
       <Table columns={["Placa", "Propietario", "Marca", "Modelo", "Año", "Estado", "Acción"]}
-        rows={rows}
+        rows={pageRows}
         renderRow={(v) => (
           <>
             <Td><span className="gmp-mono text-[var(--muted)]">{v.Placa}</span></Td>
@@ -74,6 +76,8 @@ export default function VehiculosList() {
         </Modal>
       )}
       {toast && <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded shadow">{toast}</div>}
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }
+

@@ -1,4 +1,6 @@
 ﻿import { useState } from "react";
+import Pagination from "../../components/ui/Pagination";
+import { exportToExcel } from "../../lib/exportExcel";
 import { useNavigate } from "react-router-dom";
 import { Eye, Pencil,Trash2 } from "lucide-react";
 import EnviarSunatButton from "../../components/documents/EnviarSunatButton";
@@ -31,10 +33,10 @@ export default function OrdenPagoList() {
 
   return (
     <div>
-      <Toolbar title="Compra - Orden de Pago" count={rows.length} onNew={() => navigate("/c-orden/nuevo")} onExport={() => {}} />
+      <Toolbar title="Compra - Orden de Pago" count={rows.length} onNew={() => navigate("/c-orden/nuevo")} onExport={() => exportToExcel(rows, "OrdenesPago")} />
       <SearchBox value={q} onChange={setQ} placeholder="Buscar proveedor, serie..." />
       <Table columns={["Serie", "N?mero", "Fecha", "Proveedor", "Documento", "Doc. Relaci?n", "Total", "Estado", "Acci?n"]}
-        rows={rows}
+        rows={pageRows}
         renderRow={(c) => (
           <>
             <Td className="gmp-mono text-[var(--muted)]">{c.serie || ""}</Td>
@@ -68,9 +70,11 @@ export default function OrdenPagoList() {
         </Modal>
       )}
       {preview && <DocumentPreviewModal title="Vista previa - Orden de Pago" data={preview} fields={previewFields} collection="FacturasVentasCompras" onClose={() => setPreview(null)} />}
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }
+
 
 
 

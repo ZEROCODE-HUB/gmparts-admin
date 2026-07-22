@@ -1,4 +1,6 @@
 ﻿import { useState } from "react";
+import Pagination from "../../../components/ui/Pagination";
+import { exportToExcel } from "../../../lib/exportExcel";
 import { useNavigate } from "react-router-dom";
 import { Eye, Pencil,Trash2 } from "lucide-react";
 import PrintButton from "../../../components/documents/PrintButton";
@@ -30,10 +32,10 @@ export default function EmisionFacturaTallerList() {
 
   return (
     <div>
-      <Toolbar title="Emisi?n Factura Taller" count={rows.length} onNew={() => navigate("/vs-factura/nuevo")} onExport={() => {}} />
+      <Toolbar title="Emisi?n Factura Taller" count={rows.length} onNew={() => navigate("/vs-factura/nuevo")} onExport={() => exportToExcel(rows, "FacturasTaller")} />
       <SearchBox value={q} onChange={setQ} />
       <Table columns={["Serie", "N?mero", "Fecha", "Cliente", "RUC", "Servicio", "Total", "Acci?n"]}
-        rows={rows}
+        rows={pageRows}
         renderRow={(c) => (
           <>
             <Td className="gmp-mono text-[var(--muted)]">{c.nserie || c.serie || ""}</Td>
@@ -67,9 +69,11 @@ export default function EmisionFacturaTallerList() {
       )}
 
       {preview && <DocumentPreviewModal title="Vista previa - Factura Taller" data={preview} fields={previewFields} collection="Facturas" onClose={() => setPreview(null)} />}
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }
+
 
 
 

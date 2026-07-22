@@ -1,4 +1,6 @@
 ﻿import { useState } from "react";
+import Pagination from "../../../components/ui/Pagination";
+import { exportToExcel } from "../../../lib/exportExcel";
 import { useNavigate } from "react-router-dom";
 import { Eye, Pencil,Trash2 } from "lucide-react";
 import PrintButton from "../../../components/documents/PrintButton";
@@ -30,10 +32,10 @@ export default function CotizacionServicioList() {
 
   return (
     <div>
-      <Toolbar title="Cotizaci?n de Servicio" count={rows.length} onNew={() => navigate("/vs-cotizacion/nuevo")} onExport={() => {}} />
+      <Toolbar title="Cotizaci?n de Servicio" count={rows.length} onNew={() => navigate("/vs-cotizacion/nuevo")} onExport={() => exportToExcel(rows, "CotizacionesServicio")} />
       <SearchBox value={q} onChange={setQ} />
       <Table columns={["Serie", "N?mero", "Fecha", "Cliente", "Placa", "Servicio", "Total", "Acci?n"]}
-        rows={rows}
+        rows={pageRows}
         renderRow={(c) => (
           <>
             <Td className="gmp-mono text-[var(--muted)]">{c.nserie || c.serie || ""}</Td>
@@ -67,9 +69,11 @@ export default function CotizacionServicioList() {
       )}
 
       {preview && <DocumentPreviewModal title="Vista previa - Cotizaci?n de Servicio" data={preview} fields={previewFields} collection="Facturas" onClose={() => setPreview(null)} />}
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }
+
 
 
 

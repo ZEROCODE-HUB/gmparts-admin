@@ -1,4 +1,6 @@
 ﻿import { useState } from "react";
+import Pagination from "../../components/ui/Pagination";
+import { exportToExcel } from "../../lib/exportExcel";
 import { useNavigate } from "react-router-dom";
 import { Eye, Pencil, Trash2 } from "lucide-react";
 import PrintButton from "../../components/documents/PrintButton";
@@ -31,10 +33,10 @@ export default function NotaVenta() {
 
   return (
     <div>
-      <Toolbar title="Nota de Venta" count={rows.length} onNew={() => navigate("/al-nota-venta/nuevo")} onExport={() => {}} />
+      <Toolbar title="Nota de Venta" count={rows.length} onNew={() => navigate("/al-nota-venta/nuevo")} onExport={() => exportToExcel(rows, "NotasVentaAlmacen")} />
       <SearchBox value={q} onChange={setQ} placeholder="Buscar cliente, n�mero..." />
       <Table columns={["Serie", "N�mero", "Fecha", "Cliente", "Documento", "Almac�n", "Total", "Estado", "Acci�n"]}
-        rows={rows}
+        rows={pageRows}
         renderRow={(c) => (
           <>
             <Td className="gmp-mono text-[var(--muted)]">{c.serie || "NV"}</Td>
@@ -67,9 +69,11 @@ export default function NotaVenta() {
         </Modal>
       )}
       {preview && <DocumentPreviewModal title="Vista previa - Nota de Venta" data={preview} fields={previewFields} collection="FacturasVentasCompras" onClose={() => setPreview(null)} />}
+      <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }
+
 
 
 
