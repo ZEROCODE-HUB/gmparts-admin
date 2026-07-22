@@ -1,6 +1,7 @@
 import { X } from "lucide-react";
+import DownloadPdfButton from "./DownloadPdfButton";
 
-export default function DocumentPreviewModal({ title, data, fields, onClose }) {
+export default function DocumentPreviewModal({ title, data, fields, onClose, collection }) {
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto gmp-scroll bg-black/60 p-6">
       <div className="gmp-fade-in bg-[var(--surface-3)] rounded-lg w-full max-w-2xl mt-8 border border-[var(--line-soft)]">
@@ -8,7 +9,10 @@ export default function DocumentPreviewModal({ title, data, fields, onClose }) {
           <div>
             <h3 className="gmp-display text-lg font-semibold">{title}</h3>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]"><X size={18} /></button>
+          <div className="flex items-center gap-2">
+            {collection && data?.id && <DownloadPdfButton collection={collection} docId={data.id} pdfUrl={data.pdfUrl} />}
+            <button onClick={onClose} className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]"><X size={18} /></button>
+          </div>
         </div>
         <div className="px-6 py-5 max-h-[70vh] overflow-y-auto gmp-scroll">
           <table className="w-full text-sm">

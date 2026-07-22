@@ -245,6 +245,17 @@ export async function firestoreSaveDocument(docKey, payload) {
   delete clean.id;
   clean.tipofactura = DOC_TYPE[docKey] || docKey;
   clean.TipoOperacion = TIPO_OPERACION[docKey] || "";
+
+  // Normalizar nombres de campo al esquema legacy (§1.24 BACKEND_SPEC.md)
+  // La colección Facturas usa razonSNombre, nserie, FPago, Estado, Fecha, NumCotizacion
+  if (colName === "Facturas") {
+    if (payload.cliente) { clean.razonSNombre = payload.cliente; delete clean.cliente; }
+    if (payload.serie)   { clean.nserie = payload.serie; delete clean.serie; }
+    if (payload.formaPago) { clean.FPago = payload.formaPago; delete clean.formaPago; }
+    if (payload.estado)  { clean.Estado = payload.estado; delete clean.estado; }
+    if (payload.fecha)   { clean.Fecha = payload.fecha; delete clean.fecha; }
+    if (payload.numCotizacion) { clean.NumCotizacion = payload.numCotizacion; delete clean.numCotizacion; }
+  }
   let docId;
   try {
     if (payload.id) {

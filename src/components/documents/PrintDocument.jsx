@@ -1,4 +1,4 @@
-import { X, Printer } from "lucide-react";
+﻿import { X, Printer } from "lucide-react";
 import Btn from "../ui/Btn";
 
 function Field({ label, value }) {
@@ -30,18 +30,18 @@ export default function PrintDocument({ title = "Documento", data, onClose }) {
           </div>
           <div className="text-right">
             <p className="font-bold">{title}</p>
-            <p className="text-sm">{data?.serie || ""} {data?.numero || ""}</p>
+            <p className="text-sm">{data?.nserie || data?.serie || ""} {data?.numero || ""}</p>
             {data?.numeroorden ? <p className="text-sm">OT N° {data.numeroorden}</p> : null}
           </div>
         </div>
 
         <div className="px-8 py-5 grid grid-cols-3 gap-4">
-          <Field label="Cliente" value={data?.cliente} />
+          <Field label="Cliente" value={data?.razonSNombre || data?.cliente} />
           <Field label="Documento" value={data?.clienteDoc} />
-          <Field label="Fecha" value={data?.fecha || data?.fecha_creacion} />
+          <Field label="Fecha" value={data?.Fecha || data?.fecha || data?.fecha_creacion} />
           <Field label="Placa" value={data?.placa} />
-          <Field label="Estado" value={data?.estado} />
-          <Field label="Forma de pago" value={data?.formaPago} />
+          <Field label="Estado" value={data?.Estado || data?.estado} />
+          <Field label="Forma de pago" value={data?.FPago || data?.formaPago} />
         </div>
 
         <div className="px-8 pb-6">

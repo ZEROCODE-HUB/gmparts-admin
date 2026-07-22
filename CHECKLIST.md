@@ -444,3 +444,27 @@ documentos a Firestore con conexión de colecciones `Kardex_element` y `Almacen_
 - [ ] Las reglas de seguridad (`firestore.rules.propuesta`) son una propuesta — requieren
       validación contigo antes de desplegar. En particular, los roles mapeados a colecciones
       específicas necesitan confirmación de que coinciden con los flujos reales de trabajo.
+
+### POST-D5 — Canje de Nota de Venta + PDF real
+- [x] **Canje de Nota de Venta**: `RegistroNotaVentasList.jsx` — botón "Canjear" (Repeat) ahora
+  abre un modal que:
+  1. Carga los items de la Nota de Venta original (colección `Facturas`, `tipofactura: "Nota de venta"`)
+  2. Permite elegir documento destino: Factura o Boleta
+  3. Permite editar cantidades/descripciones/precios antes de confirmar
+  4. Al confirmar: genera correlativo con `getNextCorrelative`, crea documento NUEVO en
+     colección `Facturas` con `tipofactura` seleccionado, `estado: "Completado"`,
+     `origen: { tipo: "notaventa", ref }` y `_docType` correspondiente. Aplica stock vía
+     `applyStockToItems` con `articleId`.
+  5. La Nota de Venta original NO se modifica (queda intacta)
+  6. Campos guardados en ambos formatos (`cliente`/`razonSNombre`, `serie`/`nserie`) para
+     compatibilidad con Flutter legacy
+- [x] **PDF real via Cloud Function** (`functions/index.js`):
+  - HTTP callable `generateDocumentPdf` que recibe `{ collection, docId }`
+  - Lee el documento de Firestore, genera PDF con `pdf-lib` (header, campos, tabla items, totales)
+  - Sube a Firebase Storage, guarda `pdfUrl` en el documento, devuelve la URL
+  - Layout A4 con: logo empresa, tipo documento, datos cabecera, tabla items, subtotal/IGV/total
+  - Requiere deploy: `cd functions && npm install && firebase deploy --only functions`
+- [x] **Botón Descargar PDF** (`DownloadPdfButton.jsx`): componente reutilizable que abre
+  `pdfUrl` existente o llama a `generateDocumentPdf` si no existe. Integrado en
+  `DocumentPreviewModal.jsx` (vista de detalle).
+- [x] **`npm run build`**: compila limpio (1890 modules, 0 errores).

@@ -11,10 +11,10 @@ import DocumentPreviewModal from "../../../components/documents/DocumentPreviewM
 import { useFirestoreDocuments } from "../../../store/firestoreDb";
 
 const previewFields = [
-  { key: "serie", label: "Serie" }, { key: "numero", label: "N?mero" },
-  { key: "fecha", label: "Fecha" }, { key: "cliente", label: "Cliente" },
+  { key: "nserie", label: "Serie" }, { key: "numero", label: "N?mero" },
+  { key: "Fecha", label: "Fecha" }, { key: "razonSNombre", label: "Cliente" },
   { key: "clienteDoc", label: "DNI" }, { key: "subtotal", label: "Subtotal" },
-  { key: "igv", label: "IGV" }, { key: "total", label: "Total" }, { key: "estado", label: "Estado" },
+  { key: "igv", label: "IGV" }, { key: "total", label: "Total" }, { key: "Estado", label: "Estado" },
 ];
 
 export default function EmisionBoletaTallerList() {
@@ -25,7 +25,7 @@ export default function EmisionBoletaTallerList() {
   const [preview, setPreview] = useState(null);
 
   const rows = items.filter((c) =>
-    ((c.cliente || "") + (c.serie || "") + (c.numero || "")).toLowerCase().includes(q.toLowerCase())
+    ((c.razonSNombre || c.cliente || "") + (c.nserie || c.serie || "") + (c.numero || "")).toLowerCase().includes(q.toLowerCase())
   );
 
   return (
@@ -36,10 +36,10 @@ export default function EmisionBoletaTallerList() {
         rows={rows}
         renderRow={(c) => (
           <>
-            <Td className="gmp-mono text-[var(--muted)]">{c.serie || ""}</Td>
+            <Td className="gmp-mono text-[var(--muted)]">{c.nserie || c.serie || ""}</Td>
             <Td className="gmp-mono">{c.numero || ""}</Td>
-            <Td className="text-[var(--muted)]">{c.fecha || ""}</Td>
-            <Td className="font-medium">{c.cliente || ""}</Td>
+            <Td className="text-[var(--muted)]">{c.Fecha || c.fecha || ""}</Td>
+            <Td className="font-medium">{c.razonSNombre || c.cliente || ""}</Td>
             <Td className="gmp-mono text-[var(--muted)]">{c.clienteDoc || ""}</Td>
             <Td className="text-[var(--muted)]">{(c.items && c.items[0] && c.items[0].descripcion) || "?"}</Td>
             <Td className="gmp-mono">S/ {Number(c.total || 0).toFixed(2)}</Td>

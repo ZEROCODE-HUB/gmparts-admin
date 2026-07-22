@@ -122,3 +122,129 @@ exports.onUserDeleted = functions.auth.user().onDelete(async (user) => {
     console.error("onUserDeleted ERROR para uid:", uid, err);
   }
 });
+
+// ═════════════════════════════════════════════════════════════════
+// generateDocumentPdf — HTTP callable
+// Recibe { collection, docId }, genera PDF, sube a Storage,
+// guarda pdfUrl en el documento y devuelve la URL.
+//
+// Llamada desde el frontend:
+//   const fn = getFunctions();
+//   const result = await callable(fn, "generateDocumentPdf", { collection, docId });
+//   window.open(result.data.url);
+// ═════════════════════════════════════════════════════════════════
+
+const { PDFDocument, rgb, StandardFonts } = require("pdf-lib");
+
+exports.generateDocumentPdf = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError("unauthenticated", "Debe iniciar sesi\u00f3n.");
+  }
+  const { collection: colName, docId } = data;
+  if (!colName || !docId) {
+    throw new functions.https.HttpsError("invalid-argument", "Faltan collection y docId.");
+  }
+
+  // 1. Leer el documento de Firestore
+  const docRef = db.doc(colName + "/" + docId);
+  const snap = await docRef.get();
+  if (!snap.exists) {
+    throw new functions.https.HttpsError("not-found", "Documento no encontrado.");
+  }
+  const doc = snap.data();
+
+  // 2. Determinar tipo
+  const tipo = doc.tipofactura || doc._docType || "Documento";
+  const cliente = doc.cliente || doc.razonSNombre || doc.proveedor || "";
+  const clienteDoc = doc.clienteDoc || "";
+  const serie = doc.serie || doc.nserie || "";
+  const numero = doc.numero || "";
+  const fecha = doc.fecha || "";
+  const items = doc.items || [];
+  const subtotal = doc.subtotal || 0;
+  const igv = doc.igv || 0;
+  const total = doc.total || 0;
+  const almacen = doc.almacen || "";
+
+  // 3. Generar PDF
+  const pdfDoc = await PDFDocument.create();
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const page = pdfDoc.addPage([595, 842]); // A4
+  const { width, height } = page.getSize();
+  const draw = (text, x, y, opts = {}) => {
+    page.drawText(text, { x, y, size: opts.size || 10, font: opts.bold ? fontBold : font, color: opts.color || rgb(0, 0, 0), ...opts });
+  };
+
+  let y = height - 50;
+
+  // Header
+  draw("GM PARTS S.A.C.", 50, y, { size: 18, bold: true }); y -= 16;
+  draw("RUC: 20601234567", 50, y, { size: 9, color: rgb(0.4, 0.4, 0.4) }); y -= 12;
+  draw("Av. Principal 1234 - Lima", 50, y, { size: 9, color: rgb(0.4, 0.4, 0.4) }); y -= 20;
+
+  // Document type
+  draw(tipo.toUpperCase(), 50, y, { size: 14, bold: true }); y -= 24;
+
+  // Fields
+  const fieldX = 50;
+  const valX = 180;
+  draw("Serie:", fieldX, y, { bold: true }); draw(serie || "-", valX, y); y -= 14;
+  draw("N\u00famero:", fieldX, y, { bold: true }); draw(numero || "-", valX, y); y -= 14;
+  draw("Fecha:", fieldX, y, { bold: true }); draw(fecha || "-", valX, y); y -= 14;
+  draw("Cliente:", fieldX, y, { bold: true }); draw(cliente || "-", valX, y); y -= 14;
+  draw("RUC/DNI:", fieldX, y, { bold: true }); draw(clienteDoc || "-", valX, y); y -= 14;
+  if (almacen) { draw("Almac\u00e9n:", fieldX, y, { bold: true }); draw(almacen, valX, y); y -= 14; }
+  y -= 10;
+
+  // Items table header
+  const cols = [
+    { x: 50, label: "C\u00f3digo", w: 80 },
+    { x: 130, label: "Descripci\u00f3n", w: 200 },
+    { x: 330, label: "Cant.", w: 50 },
+    { x: 380, label: "P.Unit.", w: 80 },
+    { x: 460, label: "Total", w: 80 },
+  ];
+  page.drawLine({ start: { x: 50, y }, end: { x: 545, y }, thickness: 1, color: rgb(0, 0, 0) }); y -= 14;
+  cols.forEach((c) => draw(c.label, c.x, y, { size: 9, bold: true }));
+  y -= 14;
+  page.drawLine({ start: { x: 50, y }, end: { x: 545, y }, thickness: 0.5, color: rgb(0.6, 0.6, 0.6) }); y -= 6;
+
+  // Items
+  for (const it of items) {
+    if (y < 80) { y = height - 80; page.drawLine({ start: { x: 50, y: y + 6 }, end: { x: 545, y: y + 6 }, thickness: 0.5 }); }
+    const cod = it.codigo || "";
+    const desc = it.descripcion || "";
+    const cant = it.cant ?? it.cantidad ?? 1;
+    const pu = it.pu ?? it.precioVenta ?? 0;
+    const tot = (Number(pu) || 0) * (Number(cant) || 1);
+    draw(cod, 50, y, { size: 8 }); draw(desc, 130, y, { size: 8 });
+    draw(String(cant), 330, y, { size: 8 });
+    draw("S/ " + Number(pu).toFixed(2), 380, y, { size: 8 });
+    draw("S/ " + tot.toFixed(2), 460, y, { size: 8 });
+    y -= 14;
+  }
+
+  // Totals
+  y -= 6;
+  page.drawLine({ start: { x: 350, y }, end: { x: 545, y }, thickness: 1, color: rgb(0, 0, 0) }); y -= 16;
+  draw("Subtotal:", 380, y, { bold: true }); draw("S/ " + Number(subtotal).toFixed(2), 460, y); y -= 14;
+  draw("IGV (18%):", 380, y, { bold: true }); draw("S/ " + Number(igv).toFixed(2), 460, y); y -= 14;
+  draw("TOTAL:", 380, y, { bold: true, size: 11 }); draw("S/ " + Number(total).toFixed(2), 460, y, { bold: true, size: 11 });
+
+  const pdfBytes = await pdfDoc.save();
+
+  // 4. Subir a Firebase Storage
+  const bucket = admin.storage().bucket();
+  const fileName = colName + "/" + docId + ".pdf";
+  const file = bucket.file(fileName);
+  await file.save(Buffer.from(pdfBytes), { contentType: "application/pdf" });
+  await file.makePublic();
+  const pdfUrl = "https://storage.googleapis.com/" + bucket.name + "/" + fileName;
+
+  // 5. Guardar URL en el documento
+  await docRef.update({ pdfUrl });
+
+  console.log("PDF generado para", colName, docId, pdfUrl);
+  return { url: pdfUrl };
+});

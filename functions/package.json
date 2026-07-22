@@ -1,10 +1,11 @@
 {
   "name": "gmparts-admin-functions",
-  "description": "Cloud Functions for GM Parts Admin (onUserDeleted cascade)",
+  "description": "Cloud Functions for GM Parts Admin (onUserDeleted + generatePdf)",
   "dependencies": {
     "firebase-functions": "^4.0.0",
-    "firebase-admin": "^11.0.0"
+    "firebase-admin": "^11.0.0",
+    "pdf-lib": "^1.17.1"
   },
-  "engines": { "node": "18" },
+  "engines": { "node": "20" },
   "private": true
 }
