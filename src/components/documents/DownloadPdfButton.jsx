@@ -1,48 +1,46 @@
 import { useState } from "react";
 import { FileText } from "lucide-react";
-import { httpsCallable } from "firebase/functions";
-import { functions } from "../../lib/firebase";
+import { generarFacturaPDF, descargarPDF } from "../../lib/pdfGenerator";
 
-// Botón "Descargar PDF" para vista de detalle de documentos.
-// Si el documento ya tiene pdfUrl, lo abre directamente.
-// Si no, llama a la Cloud Function generateDocumentPdf para generarlo.
-//
-// Uso: <DownloadPdfButton collection="FacturasVentasCompras" docId={id} pdfUrl={doc.pdfUrl} />
-//
-// La Cloud Function debe estar desplegada para generar nuevos PDFs.
-// Sin la función desplegada, el botón abre pdfUrl si existe.
-
-export default function DownloadPdfButton({ collection, docId, pdfUrl }) {
+export default function DownloadPdfButton({ data }) {
   const [loading, setLoading] = useState(false);
 
   const handleClick = async () => {
-    console.log("[PDF-DIAG] click en boton PDF", { collection, docId, pdfUrl });
-    // Temporal: siempre regenerar para validar el formato actual de la Cloud Function
-    // Volver a lógica con caché después de confirmar que el diseño es correcto.
-    console.log("[PDF-DIAG] llamando Cloud Function (ignorando pdfUrl existente)");
     setLoading(true);
     try {
-      const generatePdf = httpsCallable(functions, "generateDocumentPdf");
-      console.log("[PDF-DIAG] calling generateDocumentPdf with", { collection, docId });
-      const result = await generatePdf({ collection, docId });
-      console.log("[PDF-DIAG] resultado:", result);
-      const url = result.data.url;
-      console.log("[PDF-DIAG] URL obtenida:", url);
-      window.open(url, "_blank");
+      const docDef = generarFacturaPDF({
+        items: data.items || data.diagnosticos || [],
+        cliente: data.cliente || data.razonSNombre || data.nombre_cliente || data.Razon_social || "",
+        clienteDoc: data.clienteDoc || data.RUCempresa || data.DNI || "",
+        direccion: data.direccion || "",
+        fecha: data.fecha || data.Fecha || data.fecha_creacion || "",
+        formaPago: data.formaPago || data.FPago || "CONTADO",
+        serie: data.serie || data.nserie || data.Nserie || "",
+        numero: data.numero || data.NumCotizacion || "",
+        subtotal: data.subtotal || 0,
+        igv: data.igv || 0,
+        total: data.total || data.Total || 0,
+        placa: data.placa || "",
+        marca: data.marca || "",
+        modelo: data.modelo || "",
+        km: data.km_ingreso || "",
+        observaciones: data.observacion || data.motivo || data.observaciones || "",
+        titulo: "",
+      });
+      const filename = `documento_${data.serie || data.Nserie || ""}${data.numero || ""}.pdf`;
+      await descargarPDF(docDef, filename);
     } catch (err) {
       console.error("Error al generar PDF:", err);
-      alert("Error al generar PDF. Verifica que la Cloud Function est\u00e9 desplegada.");
+      alert("Error al generar PDF");
     } finally {
       setLoading(false);
     }
   };
 
-  if (!pdfUrl && !collection) return null;
-
   return (
     <button onClick={handleClick} disabled={loading}
       className="p-1.5 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]"
-      title={pdfUrl ? "Descargar PDF oficial" : "Generar PDF oficial"}>
+      title="Descargar PDF">
       <FileText size={15} />
     </button>
   );

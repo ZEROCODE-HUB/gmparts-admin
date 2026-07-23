@@ -11,7 +11,7 @@ export default function DocumentPreviewModal({ title, data, fields, onClose, col
             <h3 className="gmp-display text-lg font-semibold">{title}</h3>
           </div>
           <div className="flex items-center gap-2">
-            {collection && data?.id && <DownloadPdfButton collection={collection} docId={data.id} pdfUrl={data.pdfUrl} />}
+            {data && <DownloadPdfButton data={data} />}
             <button onClick={onClose} className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]"><X size={18} /></button>
           </div>
         </div>
