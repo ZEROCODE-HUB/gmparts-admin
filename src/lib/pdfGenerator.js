@@ -5,6 +5,9 @@ let _pdfMake = null;
 async function getPdfMake() {
   if (!_pdfMake) {
     const m = await import("pdfmake/build/pdfmake");
+    m.default.fonts = {
+      Roboto: { normal: "Helvetica", bold: "Helvetica-Bold", italics: "Helvetica-Oblique", bolditalics: "Helvetica-BoldOblique" },
+    };
     _pdfMake = m.default;
   }
   return _pdfMake;
