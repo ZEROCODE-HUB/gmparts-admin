@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"><title>Firestore Debug — Full Scan</title>
+<head><meta charset="utf-8"><title>Firestore Debug — Muestra por TipoOperacion</title>
 <style>body{font-family:sans-serif;padding:20px;background:#111;color:#eee}input,button{font-size:14px;padding:8px;margin:4px}pre{background:#1a1a1a;padding:12px;border-radius:6px;overflow:auto;white-space:pre-wrap}</style></head>
 <body>
 <div id="login">
-  <h3>Firestore Debug — Full Collection Scan</h3>
+  <h3>Firestore Debug — Muestra compra vs venta</h3>
   <input id="email" placeholder="Email" /><br/>
   <input id="pass" type="password" placeholder="Contraseña" /><br/>
   <button onclick="doLogin()">Login</button>
@@ -27,41 +27,6 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
 
-// ALL possible collection names from:
-//  - src/ codebase (useFirestoreCollection, collection(db, ...))
-//  - firestoreDb.js (mapDocKeyToCollection, CATALOG_MAP)
-//  - firestoreStock.js (direct writes)
-//  - reference/ original (entity names)
-//  - Flutter/Dart naming variants
-const ALL_COLS = [
-  // Del admin actual (src/)
-  "Facturas", "FacturasVentasCompras", "cuentasPorCobrar",
-  "Articles", "Kardex_element", "Almacen_movement", "Almacen", "Vehiculos",
-  "Articles_Warehouse", "LastCode", "users", "Proveedores", "service", "recepciones",
-  // Catálogos (firestoreDb.js CATALOG_MAP)
-  "article_brand_marca", "Group", "subgroup", "measurement_unit",
-  "vehicle_marca_brand", "vehicle_model_modelo", "encargados",
-  // Posibles variantes Flutter/Dart (camelCase + PascalCase)
-  "Clientes", "clientes", "Personal", "personal",
-  "Articulos", "articulos",
-  "Kardex", "kardex", "Movimientos", "movimientos",
-  "Almacenes", "almacenes",
-  "Servicios", "servicios",
-  "Recepciones", "Recepcion", "recepcion",
-  "OrdenesTrabajo", "ordenes_trabajo", "OrdenTrabajo", "orden_trabajo",
-  "Diagnosticos", "diagnosticos",
-  "Cotizaciones", "cotizaciones", "Cotizacion", "cotizacion",
-  "Factura", "Boleta", "Guia", "NotaCredito", "NotaPedido", "OrdenPago",
-  "facturas", "boletas", "guias", "notas_credito",
-  "Ventas", "ventas", "Compras", "compras",
-  "Productos", "productos", "Stock", "stock",
-  "CuentasCobrar", "cuentas_cobrar", "CuentasPagar", "cuentas_pagar",
-  "Vales", "vales", "ValeInsumos", "vale_insumos",
-  "Marcas", "marcas", "Unidades", "unidades", "Grupos", "grupos",
-  "Settings", "Config", "config",
-  "Reportes", "reportes",
-];
-
 async function doLogin() {
   try {
     await auth.signInWithEmailAndPassword(
@@ -79,54 +44,55 @@ async function doLogin() {
 async function run() {
   let html = "";
 
-  for (const name of ALL_COLS) {
-    try {
-      const snap = await db.collection(name).get();
-      if (snap.size === 0) continue;
+  // Muestras de FacturasVentasCompras separadas por TipoOperacion
+  const col = "FacturasVentasCompras";
+  
+  html += "===== FacturasVentasCompras — MUESTRA VENTA (TipoOperacion == venta) =====\n";
+  try {
+    const ventaSnap = await db.collection(col).where("TipoOperacion", "==", "venta").limit(1).get();
+    if (!ventaSnap.empty) {
+      const d = ventaSnap.docs[0];
+      html += JSON.stringify({ id: d.id, ...d.data() }, null, 2) + "\n\n";
+    } else { html += "(sin docs de venta)\n\n"; }
+  } catch(e) { html += "ERROR: " + e.message + "\n\n"; }
 
-      const tfCount = {};   // tipofactura -> count
-      const toCount = {};   // TipoOperacion -> count
-      const combos = {};    // tipofactura+TipoOperacion -> count
-      let sample = null;
+  html += "===== FacturasVentasCompras — MUESTRA COMPRA (TipoOperacion == compra) =====\n";
+  try {
+    const compraSnap = await db.collection(col).where("TipoOperacion", "==", "compra").limit(1).get();
+    if (!compraSnap.empty) {
+      const d = compraSnap.docs[0];
+      html += JSON.stringify({ id: d.id, ...d.data() }, null, 2) + "\n\n";
+    } else { html += "(sin docs de compra)\n\n"; }
+  } catch(e) { html += "ERROR: " + e.message + "\n\n"; }
 
-      snap.forEach(d => {
-        const data = d.data();
-        if (!sample) sample = { id: d.id, ...data };
+  html += "===== FacturasVentasCompras — Boleta con venta =====";
+  try {
+    const bolSnap = await db.collection(col).where("tipofactura", "==", "Boleta").limit(1).get();
+    if (!bolSnap.empty) {
+      const d = bolSnap.docs[0];
+      html += JSON.stringify({ id: d.id, ...d.data() }, null, 2) + "\n\n";
+    } else { html += "(sin boletas)\n\n"; }
+  } catch(e) { html += "ERROR: " + e.message + "\n\n"; }
 
-        const tf = data.tipofactura;
-        if (tf) {
-          tfCount[tf] = (tfCount[tf] || 0) + 1;
-          const to = data.TipoOperacion;
-          const key = tf + " | " + (to || "(sin TipoOperacion)");
-          combos[key] = (combos[key] || 0) + 1;
-        } else {
-          tfCount["(sin tipofactura)"] = (tfCount["(sin tipofactura)"] || 0) + 1;
-        }
+  html += "===== cuentasPorCobrar — cuenta tipo Cobrar =====";
+  try {
+    const cobSnap = await db.collection("cuentasPorCobrar").where("tipoCuenta", "==", "Cobrar").limit(1).get();
+    if (!cobSnap.empty) {
+      const d = cobSnap.docs[0];
+      html += JSON.stringify({ id: d.id, ...d.data() }, null, 2) + "\n\n";
+    } else { html += "(sin cuentas cobrar)\n\n"; }
+  } catch(e) { html += "ERROR: " + e.message + "\n\n"; }
 
-        const to = data.TipoOperacion;
-        if (to) toCount[to] = (toCount[to] || 0) + 1;
-      });
+  html += "===== cuentasPorCobrar — cuenta tipo Pagar =====";
+  try {
+    const pagSnap = await db.collection("cuentasPorCobrar").where("tipoCuenta", "==", "Pagar").limit(1).get();
+    if (!pagSnap.empty) {
+      const d = pagSnap.docs[0];
+      html += JSON.stringify({ id: d.id, ...d.data() }, null, 2) + "\n\n";
+    } else { html += "(sin cuentas pagar)\n\n"; }
+  } catch(e) { html += "ERROR: " + e.message + "\n\n"; }
 
-      html += `\n===== ${name} (${snap.size} docs) =====\n`;
-
-      // tipofactura distribution
-      const tfEntries = Object.entries(tfCount).sort((a,b) => b[1] - a[1]);
-      html += `  tipofactura: ${tfEntries.map(([k,v]) => `${k}=${v}`).join(", ")}\n`;
-
-      // combos tipofactura + TipoOperacion
-      if (Object.keys(combos).length > 0) {
-        html += `  combos (tf+to): ${Object.entries(combos).sort((a,b) => b[1]-a[1]).map(([k,v]) => `${k}=${v}`).join(" | ")}\n`;
-      }
-
-      // Sample fields (resumido)
-      const fields = Object.keys(sample).filter(k => k !== "id");
-      html += `  campos: ${fields.slice(0, 12).join(", ")}${fields.length > 12 ? `...(+${fields.length - 12})` : ""}\n`;
-    } catch (e) {
-      // skip collections that don't exist
-    }
-  }
-
-  html += "\n\n=== FIN ===";
+  html += "=== FIN ===";
   document.getElementById("out").textContent = html;
 }
 </script>

@@ -106,18 +106,54 @@ export async function deleteCatalogEntry(docKey, id) {
   await deleteDoc(doc(db, mapDocKeyToCollection(docKey), id));
 }
 
-// Convierte Timestamps/DocumentRefs/etc de Firestore a strings para evitar React error #31
+// Mapa Flutter PascalCase → admin camelCase (top-level)
+const FLUTTER_FIELDS = {
+  "RazonNombre": ["proveedor", "cliente"],
+  "Nserie": ["serie"],
+  "Total": ["total"],
+  "Estado": ["estado"],
+  "Fecha": ["fecha"],
+  "FPago": ["formaPago"],
+  "Items": ["items"],
+  "NumCotizacion": ["numero"],
+  "Usuario": ["usuario"],
+  "Canje": ["canje"],
+  "EstadoFactura": ["estadoFactura"],
+};
+// Mismo mapa para sub-campos dentro de items/objetos
+const FLUTTER_SUB_FIELDS = {
+  "Descripcion": ["descripcion"],
+  "Codigo": ["codigo"],
+  "Cantidad": ["cant", "cantidad"],
+  "PrecioVenta": ["pu", "precioVenta"],
+  "PrecioCompra": ["precioCompra"],
+  "Total": ["total"],
+  "Tipo": ["tipo"],
+  "Utilidad": ["utilidad"],
+  "Stock": ["stock"],
+  "Moneda": ["moneda"],
+};
+
+function prepareValue(val) {
+  if (val && typeof val.toDate === "function") return val.toDate().toISOString().split("T")[0];
+  if (val && typeof val === "object" && !Array.isArray(val) && typeof val.path === "string" && typeof val.id === "string") return val.id;
+  if (Array.isArray(val)) return val.map(prepareValue);
+  if (val && typeof val === "object") {
+    const r = {};
+    for (const k in val) r[k] = prepareValue(val[k]);
+    for (const [pk, aliases] of Object.entries(FLUTTER_SUB_FIELDS)) {
+      if (r[pk] !== undefined) for (const a of aliases) { if (r[a] == null) r[a] = r[pk]; }
+    }
+    return r;
+  }
+  return val;
+}
+
 function prepareDoc(data) {
   const result = {};
-  for (const key in data) {
-    const val = data[key];
-    if (val && typeof val.toDate === "function") {
-      result[key] = val.toDate().toISOString().split("T")[0];
-    } else if (val && typeof val === "object" && !Array.isArray(val) && typeof val.path === "string" && typeof val.id === "string") {
-      result[key] = val.id;
-    } else {
-      result[key] = val;
-    }
+  for (const key in data) result[key] = prepareValue(data[key]);
+  for (const [pk, aliases] of Object.entries(FLUTTER_FIELDS)) {
+    if (result[pk] !== undefined) for (const a of aliases) { if (result[a] == null) result[a] = result[pk]; }
   }
   return result;
 }
