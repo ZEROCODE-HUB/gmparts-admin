@@ -27,10 +27,9 @@ export default function DownloadPdfButton({ data }) {
         observaciones: data.observacion || data.motivo || data.observaciones || "",
         titulo: "",
       });
-      descargarPDF(docDef, `${data.serie || data.Nserie || ""}${data.numero || ""}.pdf`);
+      await descargarPDF(docDef, `${data.serie || data.Nserie || ""}${data.numero || ""}.pdf`);
     } catch (err) {
       console.error("Error al generar PDF:", err);
-      alert("Error al generar PDF");
     } finally {
       setLoading(false);
     }

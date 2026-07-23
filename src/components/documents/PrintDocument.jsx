@@ -24,13 +24,17 @@ export default function PrintDocument({ title = "Documento", data, onClose }) {
     titulo: title || "DOCUMENTO",
   });
 
-  const handleDownload = () => {
-    descargarPDF(getDocDef(), `${title}_${data.serie || data.Nserie || ""}${data.numero || ""}.pdf`);
+  const handleDownload = async () => {
+    try {
+      await descargarPDF(getDocDef(), `${title}_${data.serie || data.Nserie || ""}${data.numero || ""}.pdf`);
+    } catch (e) { console.error("PDF error:", e); }
     onClose();
   };
 
-  const handlePrint = () => {
-    imprimirPDF(getDocDef());
+  const handlePrint = async () => {
+    try {
+      await imprimirPDF(getDocDef());
+    } catch (e) { console.error("PDF error:", e); }
     onClose();
   };
 

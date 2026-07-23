@@ -26,13 +26,17 @@ export default function PrintButton({ title, data }) {
     titulo: title || "DOCUMENTO",
   });
 
-  const handleDownload = () => {
-    descargarPDF(getDocDef(), `${title || "documento"}_${data.serie || data.Nserie || ""}${data.numero || ""}.pdf`);
+  const handleDownload = async () => {
+    try {
+      await descargarPDF(getDocDef(), `${title || "documento"}_${data.serie || data.Nserie || ""}${data.numero || ""}.pdf`);
+    } catch (e) { console.error("PDF error:", e); }
     setOpen(false);
   };
 
-  const handlePrint = () => {
-    imprimirPDF(getDocDef());
+  const handlePrint = async () => {
+    try {
+      await imprimirPDF(getDocDef());
+    } catch (e) { console.error("PDF error:", e); }
     setOpen(false);
   };
 
