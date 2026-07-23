@@ -61,6 +61,7 @@ export default function ProveedoresList() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [toast, setToast] = useState(null);
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const rows = items.filter((p) =>
     (p.nombre + p.documento + p.razonSocial + p.correo + p.direccion + p.distrito)
@@ -72,17 +73,29 @@ export default function ProveedoresList() {
   const pageRows = rows.slice(page * 20, (page + 1) * 20);
 
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
-  const openNew = () => { setError(""); setEditing(null); setForm(empty); setModalOpen(true); };
-  const openEdit = (p) => { setError(""); setEditing(p); setForm({ ...empty, ...p }); setModalOpen(true); };
+  const cleanForm = (c) => {
+    const clean = {};
+    for (const k in empty) clean[k] = c[k] ?? empty[k];
+    return clean;
+  };
+  const openNew = () => { setError(""); setSaving(false); setEditing(null); setForm(empty); setModalOpen(true); };
+  const openEdit = (p) => { setError(""); setSaving(false); setEditing(p); setForm(cleanForm(p)); setModalOpen(true); };
 
   const handleSave = async () => {
+    setSaving(true);
+    setError("");
     try {
       await saveMaestro(COL, { ...toFirestore(form), id: editing ? form.id : undefined });
       setModalOpen(false);
       setToast("Proveedor guardado");
       setTimeout(() => setToast(null), 2000);
     } catch (e) {
-      setError(e.message);
+      const msg = e.message || "";
+      if (msg.includes("undefined")) setError("Completa todos los campos requeridos");
+      else if (msg.includes("permission")) setError("No tienes permisos para realizar esta acci\u00f3n");
+      else setError("Error al guardar. Verifica los datos e intenta de nuevo.");
+    } finally {
+      setSaving(false);
     }
   };
   const confirmDelete = async () => {
@@ -136,7 +149,7 @@ export default function ProveedoresList() {
           </div>
           <div className="flex justify-end gap-2 mt-6">
             <Btn variant="ghost" onClick={() => setModalOpen(false)}>Cancelar</Btn>
-            <Btn onClick={handleSave}>{editing ? "Guardar cambios" : "Crear proveedor"}</Btn>
+            <Btn onClick={handleSave} loading={saving}>{editing ? "Guardar cambios" : "Crear proveedor"}</Btn>
           </div>
         </Modal>
       )}
