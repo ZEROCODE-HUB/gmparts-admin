@@ -35,7 +35,7 @@ export default function RegistroNotaVentasList() {
   const [canjeando, setCanjeando] = useState(false);
 
   const rows = items.filter((c) =>
-    ((c.cliente || "") + (c.serie || "") + (c.numero || "")).toLowerCase().includes(q.toLowerCase())
+    ((c.razonSNombre || c.cliente || "") + (c.nserie || c.serie || "") + (c.numero || "")).toLowerCase().includes(q.toLowerCase())
   );
   const [page, setPage] = useState(0);
   const totalPages = Math.ceil(rows.length / 20);

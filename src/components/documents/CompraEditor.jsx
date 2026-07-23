@@ -165,7 +165,7 @@ export default function CompraEditor({ title, backPath, docKey, onSave, mode = "
     if (!form.formaPago) return "Seleccione condicion de pago";
     if (!form.tipoIgv) return "Seleccione tipo de IGV";
     if (!form.almacen) return "Seleccione almacen";
-    if (items.length === 0) return "Seleccione articulos";
+    if (!isOrdenPago && items.length === 0) return "Seleccione articulos";
     return "";
   };
 
