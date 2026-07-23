@@ -1,17 +1,23 @@
+import pdfMake from "pdfmake/build/pdfmake";
+
+let _inited = false;
+async function init() {
+  if (_inited) return;
+  const pdfFonts = await import("pdfmake/build/vfs_fonts");
+  pdfMake.vfs = pdfFonts.default;
+  pdfMake.fonts = {
+    Roboto: {
+      normal: "Roboto-Regular.ttf",
+      bold: "Roboto-Medium.ttf",
+      italics: "Roboto-Italic.ttf",
+      bolditalics: "Roboto-MediumItalic.ttf",
+    },
+  };
+  _inited = true;
+}
+
 const LOGO_URL = "https://storage.googleapis.com/flutterflow-io-6f20.appspot.com/projects/g-m-parts-lac7fg/assets/za03o2h6k5tg/Capa_1.png";
 const ERP_LOGO_URL = "https://storage.googleapis.com/flutterflow-io-6f20.appspot.com/projects/g-m-parts-lac7fg/assets/za03o2h6k5tg/Capa_1.png";
-
-let _pdfMake = null;
-async function getPdfMake() {
-  if (!_pdfMake) {
-    const m = await import("pdfmake/build/pdfmake");
-    m.default.fonts = {
-      Roboto: { normal: "Helvetica", bold: "Helvetica-Bold", italics: "Helvetica-Oblique", bolditalics: "Helvetica-BoldOblique" },
-    };
-    _pdfMake = m.default;
-  }
-  return _pdfMake;
-}
 
 async function urlToDataUrl(url) {
   try {
@@ -23,9 +29,7 @@ async function urlToDataUrl(url) {
       r.onload = () => resolve(r.result);
       r.readAsDataURL(blob);
     });
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
 function totalEnLetras(num) {
@@ -46,6 +50,7 @@ const S = {
 };
 
 async function buildDocDef(opts) {
+  await init();
   const { items, cliente, clienteDoc, direccion, fecha, formaPago, serie, numero, subtotal, igv, total, placa, marca, modelo, km, observaciones, titulo = "FACTURA ELECTR\u00d3NICA", vendedor = "VENDEDOR 1", nroCot = "" } = opts;
   const numDoc = `${serie || ""}-${numero || ""}`;
   const [logoData, erpData] = await Promise.all([urlToDataUrl(LOGO_URL), urlToDataUrl(ERP_LOGO_URL)]);
@@ -86,8 +91,7 @@ async function buildDocDef(opts) {
   while (tblBody.length < 12) tblBody.push([{ text: "", style: "cell" }, { text: "", style: "cell" }, { text: "", style: "cell" }, { text: "", style: "cell" }, { text: "", style: "cell" }]);
   content.push({ table: { widths: [55, 35, "*", 65, 55], body: tblBody }, layout: { hLineWidth: () => 0.5, vLineWidth: () => 0.5 }, margin: [0, 0, 0, 10] });
   content.push({ columns: [
-    { width: "*", text: "" },
-    { width: "40%", stack: [
+    { width: "*", text: "" }, { width: "40%", stack: [
       { text: `OP. GRAVADA    S/ ${Number(subtotal || 0).toFixed(2)}`, style: "totalLine" },
       { text: `I.G.V. (18%)    S/ ${Number(igv || 0).toFixed(2)}`, style: "totalLine" },
       { text: `IMPORTE TOTAL    S/ ${Number(total || 0).toFixed(2)}`, style: "totalBold" },
@@ -112,25 +116,20 @@ async function buildDocDef(opts) {
     ]},
   ], margin: [0, 10, 0, 10] });
   if (erpData) content.push({ image: erpData, width: 60, alignment: "right" });
-  return { pageSize: "A4", pageMargins: [25, 25, 25, 25], content, styles: S };
+  return { pageSize: "A4", pageMargins: [25, 25, 25, 25], content, styles: S, defaultStyle: { fontName: "Roboto" } };
 }
 
-// ── API PÚBLICA ──
 export async function descargarPDF(opts, filename) {
   if (!filename.endsWith(".pdf")) filename += ".pdf";
-  const pm = await getPdfMake();
-  pm.createPdf(await buildDocDef(opts)).download(filename);
+  pdfMake.createPdf(await buildDocDef(opts)).download(filename);
 }
 export async function imprimirPDF(opts) {
-  const pm = await getPdfMake();
-  pm.createPdf(await buildDocDef(opts)).print();
+  pdfMake.createPdf(await buildDocDef(opts)).print();
 }
 export async function abrirPDF(opts) {
-  const pm = await getPdfMake();
-  pm.createPdf(await buildDocDef(opts)).open();
+  pdfMake.createPdf(await buildDocDef(opts)).open();
 }
 
-// Helper para construir opts desde un documento (usado por PrintButton, etc.)
 export function docToOpts(data, title) {
   return {
     items: data.items || data.diagnosticos || [],
