@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"><title>Firestore Debug</title>
-<style>body{font-family:sans-serif;padding:20px;background:#111;color:#eee}input,button{font-size:14px;padding:8px;margin:4px}pre{background:#1a1a1a;padding:12px;border-radius:6px;overflow:auto}</style></head>
+<head><meta charset="utf-8"><title>Firestore Debug — Full Scan</title>
+<style>body{font-family:sans-serif;padding:20px;background:#111;color:#eee}input,button{font-size:14px;padding:8px;margin:4px}pre{background:#1a1a1a;padding:12px;border-radius:6px;overflow:auto;white-space:pre-wrap}</style></head>
 <body>
 <div id="login">
-  <h3>Firestore Debug — Login</h3>
+  <h3>Firestore Debug — Full Collection Scan</h3>
   <input id="email" placeholder="Email" /><br/>
   <input id="pass" type="password" placeholder="Contraseña" /><br/>
   <button onclick="doLogin()">Login</button>
@@ -27,40 +27,39 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
 
-// Todas las colecciones que existen en el admin + variantes Flutter
+// ALL possible collection names from:
+//  - src/ codebase (useFirestoreCollection, collection(db, ...))
+//  - firestoreDb.js (mapDocKeyToCollection, CATALOG_MAP)
+//  - firestoreStock.js (direct writes)
+//  - reference/ original (entity names)
+//  - Flutter/Dart naming variants
 const ALL_COLS = [
-  // Del admin actual
+  // Del admin actual (src/)
   "Facturas", "FacturasVentasCompras", "cuentasPorCobrar",
-  "Articles", "Kardex_element", "Almacen_movement", "Almacen",
-  "Vehiculos", "Articles_Warehouse", "LastCode",
-  // Catálogos
-  "article_brand_marca", "Group", "subgroup",
-  "measurement_unit", "vehicle_marca_brand", "vehicle_model_modelo",
-  "encargados", "users",
-  // Posibles Flutter / mobile
-  "Clientes", "Proveedores", "Personal",
-  "Recepciones", "recepciones",
-  "OrdenesTrabajo", "Ordenes_de_Trabajo", "ordenes_trabajo",
-  "Servicios", "servicios",
-  "Diagnosticos", "diagnosticos",
-  "Marcas", "Unidades",
-  "FacturasVentas", "FacturasCompras",
-  "Productos", "productos",
-  "Cotizaciones", "cotizaciones",
-  "Almacenes", "almacenes",
-  "Kardex", "kardex",
-  "Movimientos", "movimientos",
-  "NotasVenta", "notas_venta",
-  "Vales", "ValeInsumos", "vale_insumos",
-  "Stock", "stock",
-  "Settings", "Config",
-  // Más variantes
+  "Articles", "Kardex_element", "Almacen_movement", "Almacen", "Vehiculos",
+  "Articles_Warehouse", "LastCode", "users", "Proveedores", "service", "recepciones",
+  // Catálogos (firestoreDb.js CATALOG_MAP)
+  "article_brand_marca", "Group", "subgroup", "measurement_unit",
+  "vehicle_marca_brand", "vehicle_model_modelo", "encargados",
+  // Posibles variantes Flutter/Dart (camelCase + PascalCase)
+  "Clientes", "clientes", "Personal", "personal",
   "Articulos", "articulos",
-  "Factura", "Boleta", "Cotizacion",
-  "orden_trabajo", "OrdenTrabajo",
-  "CuentasCobrar", "cuentas_cobrar",
-  "Ventas", "Compras",
-  "Reportes",
+  "Kardex", "kardex", "Movimientos", "movimientos",
+  "Almacenes", "almacenes",
+  "Servicios", "servicios",
+  "Recepciones", "Recepcion", "recepcion",
+  "OrdenesTrabajo", "ordenes_trabajo", "OrdenTrabajo", "orden_trabajo",
+  "Diagnosticos", "diagnosticos",
+  "Cotizaciones", "cotizaciones", "Cotizacion", "cotizacion",
+  "Factura", "Boleta", "Guia", "NotaCredito", "NotaPedido", "OrdenPago",
+  "facturas", "boletas", "guias", "notas_credito",
+  "Ventas", "ventas", "Compras", "compras",
+  "Productos", "productos", "Stock", "stock",
+  "CuentasCobrar", "cuentas_cobrar", "CuentasPagar", "cuentas_pagar",
+  "Vales", "vales", "ValeInsumos", "vale_insumos",
+  "Marcas", "marcas", "Unidades", "unidades", "Grupos", "grupos",
+  "Settings", "Config", "config",
+  "Reportes", "reportes",
 ];
 
 async function doLogin() {
@@ -78,50 +77,56 @@ async function doLogin() {
 }
 
 async function run() {
-  let html = "COLECCIONES ENCONTRADAS:\n\n";
+  let html = "";
 
   for (const name of ALL_COLS) {
     try {
-      const snap = await db.collection(name).limit(1).get();
-      if (snap.size === 0) continue; // existe pero vacía
+      const snap = await db.collection(name).get();
+      if (snap.size === 0) continue;
 
-      // Existe con datos
-      const d = snap.docs[0];
-      const data = d.data();
-      const fields = Object.keys(data);
+      const tfCount = {};   // tipofactura -> count
+      const toCount = {};   // TipoOperacion -> count
+      const combos = {};    // tipofactura+TipoOperacion -> count
+      let sample = null;
 
-      html += `📁 ${name} (${snap.size}+ docs)\n`;
-      html += `   Campos: ${fields.join(", ")}\n`;
+      snap.forEach(d => {
+        const data = d.data();
+        if (!sample) sample = { id: d.id, ...data };
 
-      // Buscar tipofactura y cualquier campo tipo "tipo*" o "*type*
-      const tipoCampos = fields.filter(f => /tipo|type|kind|doc|class|categoria/i.test(f));
-      if (tipoCampos.length > 0) {
-        html += `   Posibles discriminadores: ${tipoCampos.map(f => `${f}="${data[f]}"`).join(", ")}\n`;
-      }
-
-      // mostrar primer doc resumido
-      const sample = { id: d.id };
-      for (const k of fields) {
-        const v = data[k];
-        // Resumir objetos complejos
-        if (v && typeof v === 'object' && !(v instanceof firebase.firestore.Timestamp) && !Array.isArray(v)) {
-          const ref = v.path || v.id || Object.keys(v).slice(0,3).join(",");
-          sample[k] = `{${ref}...}`;
-        } else if (Array.isArray(v)) {
-          sample[k] = `[${v.length} items]`;
-        } else if (v instanceof firebase.firestore.Timestamp) {
-          sample[k] = `Timestamp(${v.toDate().toISOString()})`;
+        const tf = data.tipofactura;
+        if (tf) {
+          tfCount[tf] = (tfCount[tf] || 0) + 1;
+          const to = data.TipoOperacion;
+          const key = tf + " | " + (to || "(sin TipoOperacion)");
+          combos[key] = (combos[key] || 0) + 1;
         } else {
-          sample[k] = v;
+          tfCount["(sin tipofactura)"] = (tfCount["(sin tipofactura)"] || 0) + 1;
         }
+
+        const to = data.TipoOperacion;
+        if (to) toCount[to] = (toCount[to] || 0) + 1;
+      });
+
+      html += `\n===== ${name} (${snap.size} docs) =====\n`;
+
+      // tipofactura distribution
+      const tfEntries = Object.entries(tfCount).sort((a,b) => b[1] - a[1]);
+      html += `  tipofactura: ${tfEntries.map(([k,v]) => `${k}=${v}`).join(", ")}\n`;
+
+      // combos tipofactura + TipoOperacion
+      if (Object.keys(combos).length > 0) {
+        html += `  combos (tf+to): ${Object.entries(combos).sort((a,b) => b[1]-a[1]).map(([k,v]) => `${k}=${v}`).join(" | ")}\n`;
       }
-      html += `   Primer doc: ${JSON.stringify(sample)}\n\n`;
+
+      // Sample fields (resumido)
+      const fields = Object.keys(sample).filter(k => k !== "id");
+      html += `  campos: ${fields.slice(0, 12).join(", ")}${fields.length > 12 ? `...(+${fields.length - 12})` : ""}\n`;
     } catch (e) {
-      // La coleccion no existe
+      // skip collections that don't exist
     }
   }
 
-  html += "=== FIN ===";
+  html += "\n\n=== FIN ===";
   document.getElementById("out").textContent = html;
 }
 </script>
