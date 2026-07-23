@@ -64,6 +64,7 @@ export default function ClientesList() {
   const [form, setForm] = useState(empty);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [toast, setToast] = useState(null);
+  const [error, setError] = useState("");
 
   const rows = items.filter((c) =>
     (c.codigo + c.nombre + c.documento + c.direccion + c.email + c.distrito)
@@ -76,14 +77,18 @@ export default function ClientesList() {
 
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
 
-  const openNew = () => { setEditing(null); setForm(empty); setModalOpen(true); };
-  const openEdit = (c) => { setEditing(c); setForm({ ...empty, ...c }); setModalOpen(true); };
+  const openNew = () => { setError(""); setEditing(null); setForm(empty); setModalOpen(true); };
+  const openEdit = (c) => { setError(""); setEditing(c); setForm({ ...empty, ...c }); setModalOpen(true); };
 
   const handleSave = async () => {
-    await saveMaestro(COL, { ...toFirestore(form), id: editing ? form.id : undefined });
-    setModalOpen(false);
-    setToast("Cliente guardado");
-    setTimeout(() => setToast(null), 2000);
+    try {
+      await saveMaestro(COL, { ...toFirestore(form), id: editing ? form.id : undefined });
+      setModalOpen(false);
+      setToast("Cliente guardado");
+      setTimeout(() => setToast(null), 2000);
+    } catch (e) {
+      setError(e.message);
+    }
   };
   const confirmDelete = async () => {
     if (deleteTarget) await deleteMaestro(COL, deleteTarget.id);
@@ -120,6 +125,7 @@ export default function ClientesList() {
 
       {modalOpen && (
         <Modal title={editing ? "Editar Cliente" : "Nuevo Cliente"} onClose={() => setModalOpen(false)}>
+          {error && <p className="text-sm text-[var(--danger)] mb-3">{error}</p>}
           <div className="grid grid-cols-2 gap-4">
             <Field label="Código"><input className={inputCls} value={form.codigo} onChange={(e) => set("codigo", e.target.value)} /></Field>
             <Field label="Nombre" span><input className={inputCls} value={form.nombre} onChange={(e) => set("nombre", e.target.value)} required /></Field>

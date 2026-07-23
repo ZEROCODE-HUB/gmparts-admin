@@ -60,6 +60,7 @@ export default function ProveedoresList() {
   const [form, setForm] = useState(empty);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [toast, setToast] = useState(null);
+  const [error, setError] = useState("");
 
   const rows = items.filter((p) =>
     (p.nombre + p.documento + p.razonSocial + p.correo + p.direccion + p.distrito)
@@ -71,14 +72,18 @@ export default function ProveedoresList() {
   const pageRows = rows.slice(page * 20, (page + 1) * 20);
 
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
-  const openNew = () => { setEditing(null); setForm(empty); setModalOpen(true); };
-  const openEdit = (p) => { setEditing(p); setForm({ ...empty, ...p }); setModalOpen(true); };
+  const openNew = () => { setError(""); setEditing(null); setForm(empty); setModalOpen(true); };
+  const openEdit = (p) => { setError(""); setEditing(p); setForm({ ...empty, ...p }); setModalOpen(true); };
 
   const handleSave = async () => {
-    await saveMaestro(COL, { ...toFirestore(form), id: editing ? form.id : undefined });
-    setModalOpen(false);
-    setToast("Proveedor guardado");
-    setTimeout(() => setToast(null), 2000);
+    try {
+      await saveMaestro(COL, { ...toFirestore(form), id: editing ? form.id : undefined });
+      setModalOpen(false);
+      setToast("Proveedor guardado");
+      setTimeout(() => setToast(null), 2000);
+    } catch (e) {
+      setError(e.message);
+    }
   };
   const confirmDelete = async () => {
     if (deleteTarget) await deleteMaestro(COL, deleteTarget.id);
@@ -114,6 +119,7 @@ export default function ProveedoresList() {
 
       {modalOpen && (
         <Modal title={editing ? "Editar Proveedor" : "Nuevo Proveedor"} onClose={() => setModalOpen(false)}>
+          {error && <p className="text-sm text-[var(--danger)] mb-3">{error}</p>}
           <div className="grid grid-cols-2 gap-4">
             <Field label="Nombre" span><input className={inputCls} value={form.nombre} onChange={(e) => set("nombre", e.target.value)} required /></Field>
             <Field label="Documento"><input className={inputCls} value={form.documento} onChange={(e) => set("documento", e.target.value)} /></Field>
