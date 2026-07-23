@@ -13,13 +13,18 @@ async function getPdfMake() {
 }
 
 async function urlToDataUrl(url) {
-  const resp = await fetch(url);
-  const blob = await resp.blob();
-  return new Promise((resolve) => {
-    const r = new FileReader();
-    r.onload = () => resolve(r.result);
-    r.readAsDataURL(blob);
-  });
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const blob = await resp.blob();
+    return await new Promise((resolve) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
 }
 
 function totalEnLetras(num) {
@@ -48,7 +53,7 @@ async function buildDocDef(opts) {
   const content = [
     { columns: [
       { width: "60%", stack: [
-        { image: logoData, width: 80, height: 80, alignment: "left" },
+        ...(logoData ? [{ image: logoData, width: 80, height: 80, alignment: "left" }] : []),
         { text: "GEAR MOTOR PARTS S.A.C.", style: "empresaNombre" },
         { text: "Direcci\u00f3n fiscal: Coo. Veintisiete de Abril. Av. Nicol\u00e1s Ayll\u00f3n 3270, Ate, Lima", style: "empresaDetalle" },
         { text: "Tel.: 01 362 8667 - 924 483 844", style: "empresaDetalle" },
@@ -105,7 +110,7 @@ async function buildDocDef(opts) {
       ...(detraccion ? [{ text: `DETRACCI\u00d3N 12%: S/ ${detraccion.toFixed(2)}`, style: "detraccion" }, { text: `Neto a pagar: S/ ${(neto || 0).toFixed(2)}`, style: "detraccion" }, { text: "Sujeto a Sistema de Pago Obligaciones Tributarias", fontSize: 6, italics: true }] : []),
     ]},
   ], margin: [0, 10, 0, 10] });
-  content.push({ image: erpData, width: 60, alignment: "right" });
+  if (erpData) content.push({ image: erpData, width: 60, alignment: "right" });
   return { pageSize: "A4", pageMargins: [25, 25, 25, 25], content, styles: S, defaultStyle: { fontName: "Roboto" } };
 }
 
