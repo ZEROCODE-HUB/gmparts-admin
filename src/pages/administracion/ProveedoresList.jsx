@@ -85,7 +85,7 @@ export default function ProveedoresList() {
     setSaving(true);
     setError("");
     try {
-      await saveMaestro(COL, { ...toFirestore(form), id: editing ? form.id : undefined });
+      await saveMaestro(COL, { ...toFirestore(form), id: editing?.id });
       setModalOpen(false);
       setToast("Proveedor guardado");
       setTimeout(() => setToast(null), 2000);

@@ -93,7 +93,7 @@ export default function PersonalList() {
       data.user_role = form.cargoEmpleado;
     }
     // edición: NO tocar user_role (Flutter edit no lo re-seteará)
-    await saveMaestro(COL, { ...data, id: editing ? form.id : undefined });
+    await saveMaestro(COL, { ...data, id: editing?.id });
     setModalOpen(false);
     setToast("Personal guardado");
     setTimeout(() => setToast(null), 2000);

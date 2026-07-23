@@ -90,7 +90,7 @@ export default function ClientesList() {
     setSaving(true);
     setError("");
     try {
-      await saveMaestro(COL, { ...toFirestore(form), id: editing ? form.id : undefined });
+      await saveMaestro(COL, { ...toFirestore(form), id: editing?.id });
       setModalOpen(false);
       setToast("Cliente guardado");
       setTimeout(() => setToast(null), 2000);
