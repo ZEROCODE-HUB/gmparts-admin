@@ -4,7 +4,7 @@ import { generarFacturaPDF, descargarPDF, imprimirPDF } from "../../lib/pdfGener
 export default function PrintDocument({ title = "Documento", data, onClose }) {
   if (!data) return null;
 
-  const getHTML = () => generarFacturaPDF({
+  const getDocDef = () => generarFacturaPDF({
     items: data.items || data.diagnosticos || [],
     cliente: data.cliente || data.razonSNombre || data.nombre_cliente || data.Razon_social || "",
     clienteDoc: data.clienteDoc || data.RUCempresa || data.DNI || "",
@@ -25,12 +25,12 @@ export default function PrintDocument({ title = "Documento", data, onClose }) {
   });
 
   const handleDownload = () => {
-    descargarPDF(getHTML(), `${title}_${data.serie || data.Nserie || ""}${data.numero || ""}.pdf`);
+    descargarPDF(getDocDef(), `${title}_${data.serie || data.Nserie || ""}${data.numero || ""}.pdf`);
     onClose();
   };
 
   const handlePrint = () => {
-    imprimirPDF(getHTML());
+    imprimirPDF(getDocDef());
     onClose();
   };
 

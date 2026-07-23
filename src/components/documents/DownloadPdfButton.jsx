@@ -8,7 +8,7 @@ export default function DownloadPdfButton({ data }) {
   const handleClick = async () => {
     setLoading(true);
     try {
-      const html = generarFacturaPDF({
+      const docDef = generarFacturaPDF({
         items: data.items || data.diagnosticos || [],
         cliente: data.cliente || data.razonSNombre || data.nombre_cliente || data.Razon_social || "",
         clienteDoc: data.clienteDoc || data.RUCempresa || data.DNI || "",
@@ -27,7 +27,7 @@ export default function DownloadPdfButton({ data }) {
         observaciones: data.observacion || data.motivo || data.observaciones || "",
         titulo: "",
       });
-      descargarPDF(html, `documento_${data.serie || data.Nserie || ""}${data.numero || ""}.html`);
+      descargarPDF(docDef, `${data.serie || data.Nserie || ""}${data.numero || ""}.pdf`);
     } catch (err) {
       console.error("Error al generar PDF:", err);
       alert("Error al generar PDF");

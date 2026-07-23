@@ -6,7 +6,7 @@ export default function PrintButton({ title, data }) {
   const [open, setOpen] = useState(false);
   if (!data) return null;
 
-  const getHTML = () => generarFacturaPDF({
+  const getDocDef = () => generarFacturaPDF({
     items: data.items || data.diagnosticos || [],
     cliente: data.cliente || data.razonSNombre || data.nombre_cliente || data.Razon_social || "",
     clienteDoc: data.clienteDoc || data.RUCempresa || data.DNI || "",
@@ -27,12 +27,12 @@ export default function PrintButton({ title, data }) {
   });
 
   const handleDownload = () => {
-    descargarPDF(getHTML(), `${title || "documento"}_${data.serie || data.Nserie || ""}${data.numero || ""}.pdf`);
+    descargarPDF(getDocDef(), `${title || "documento"}_${data.serie || data.Nserie || ""}${data.numero || ""}.pdf`);
     setOpen(false);
   };
 
   const handlePrint = () => {
-    imprimirPDF(getHTML());
+    imprimirPDF(getDocDef());
     setOpen(false);
   };
 
