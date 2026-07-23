@@ -21,6 +21,14 @@ const previewFields = [
   { key: "modelo", label: "Modelo" }, { key: "status", label: "Estado" },
 ];
 
+const estadoColor = (e) => ({
+  "Recepci\u00f3n": "bg-yellow-100 text-yellow-700",
+  "Diagn\u00f3stico": "bg-blue-100 text-blue-700",
+  "Cotizaci\u00f3n": "bg-purple-100 text-purple-700",
+  "Reparaci\u00f3n": "bg-orange-100 text-orange-700",
+  "Finalizado": "bg-green-100 text-green-700",
+}[e] || "bg-gray-100 text-gray-700");
+
 const ffecha = (ts) => {
   if (!ts) return "";
   if (typeof ts === "string") return ts.slice(0, 10);
@@ -60,7 +68,7 @@ export default function CotizacionServicioList() {
             <Td className="font-medium">{c.nombre_cliente || c.Razon_social || ""}</Td>
             <Td className="gmp-mono text-[var(--muted)]">{c.placa || ""}</Td>
             <Td className="text-[var(--muted)]">{c.tipo_servicio || "?"}</Td>
-            <Td><span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${c.status === "Recepci�n" ? "bg-yellow-100 text-yellow-700" : "bg-green-100 text-green-700"}`}>{c.status || ""}</span></Td>
+            <Td><span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${estadoColor(c.status)}`}>{c.status || ""}</span></Td>
             <Td>
               <div className="flex gap-1">
                 <button onClick={() => setPreview(c)} className="p-1.5 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]" title="Ver detalle"><Eye size={15} /></button>
