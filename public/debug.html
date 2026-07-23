@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Firestore Debug</title>
+<style>body{font-family:sans-serif;padding:20px;background:#111;color:#eee}input,button{font-size:14px;padding:8px;margin:4px}pre{background:#1a1a1a;padding:12px;border-radius:6px;overflow:auto}</style></head>
+<body>
+<div id="login">
+  <h3>Firestore Debug — Login</h3>
+  <input id="email" placeholder="Email" /><br/>
+  <input id="pass" type="password" placeholder="Contraseña" /><br/>
+  <button onclick="doLogin()">Login</button>
+  <p id="err" style="color:red"></p>
+</div>
+<pre id="out" style="display:none">Cargando...</pre>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBcY4fRbtUVrQyM2Y_IywgPmQLPV_j79-o",
+  authDomain: "g-m-parts-lac7fg.firebaseapp.com",
+  projectId: "g-m-parts-lac7fg",
+  storageBucket: "g-m-parts-lac7fg.appspot.com",
+  messagingSenderId: "192029790072",
+  appId: "1:192029790072:web:09dd0119229174fcc6428d",
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
+
+// Todas las colecciones que existen en el admin + variantes Flutter
+const ALL_COLS = [
+  // Del admin actual
+  "Facturas", "FacturasVentasCompras", "cuentasPorCobrar",
+  "Articles", "Kardex_element", "Almacen_movement", "Almacen",
+  "Vehiculos", "Articles_Warehouse", "LastCode",
+  // Catálogos
+  "article_brand_marca", "Group", "subgroup",
+  "measurement_unit", "vehicle_marca_brand", "vehicle_model_modelo",
+  "encargados", "users",
+  // Posibles Flutter / mobile
+  "Clientes", "Proveedores", "Personal",
+  "Recepciones", "recepciones",
+  "OrdenesTrabajo", "Ordenes_de_Trabajo", "ordenes_trabajo",
+  "Servicios", "servicios",
+  "Diagnosticos", "diagnosticos",
+  "Marcas", "Unidades",
+  "FacturasVentas", "FacturasCompras",
+  "Productos", "productos",
+  "Cotizaciones", "cotizaciones",
+  "Almacenes", "almacenes",
+  "Kardex", "kardex",
+  "Movimientos", "movimientos",
+  "NotasVenta", "notas_venta",
+  "Vales", "ValeInsumos", "vale_insumos",
+  "Stock", "stock",
+  "Settings", "Config",
+  // Más variantes
+  "Articulos", "articulos",
+  "Factura", "Boleta", "Cotizacion",
+  "orden_trabajo", "OrdenTrabajo",
+  "CuentasCobrar", "cuentas_cobrar",
+  "Ventas", "Compras",
+  "Reportes",
+];
+
+async function doLogin() {
+  try {
+    await auth.signInWithEmailAndPassword(
+      document.getElementById("email").value,
+      document.getElementById("pass").value
+    );
+    document.getElementById("login").style.display = "none";
+    document.getElementById("out").style.display = "block";
+    await run();
+  } catch (e) {
+    document.getElementById("err").textContent = e.message;
+  }
+}
+
+async function run() {
+  let html = "COLECCIONES ENCONTRADAS:\n\n";
+
+  for (const name of ALL_COLS) {
+    try {
+      const snap = await db.collection(name).limit(1).get();
+      if (snap.size === 0) continue; // existe pero vacía
+
+      // Existe con datos
+      const d = snap.docs[0];
+      const data = d.data();
+      const fields = Object.keys(data);
+
+      html += `📁 ${name} (${snap.size}+ docs)\n`;
+      html += `   Campos: ${fields.join(", ")}\n`;
+
+      // Buscar tipofactura y cualquier campo tipo "tipo*" o "*type*
+      const tipoCampos = fields.filter(f => /tipo|type|kind|doc|class|categoria/i.test(f));
+      if (tipoCampos.length > 0) {
+        html += `   Posibles discriminadores: ${tipoCampos.map(f => `${f}="${data[f]}"`).join(", ")}\n`;
+      }
+
+      // mostrar primer doc resumido
+      const sample = { id: d.id };
+      for (const k of fields) {
+        const v = data[k];
+        // Resumir objetos complejos
+        if (v && typeof v === 'object' && !(v instanceof firebase.firestore.Timestamp) && !Array.isArray(v)) {
+          const ref = v.path || v.id || Object.keys(v).slice(0,3).join(",");
+          sample[k] = `{${ref}...}`;
+        } else if (Array.isArray(v)) {
+          sample[k] = `[${v.length} items]`;
+        } else if (v instanceof firebase.firestore.Timestamp) {
+          sample[k] = `Timestamp(${v.toDate().toISOString()})`;
+        } else {
+          sample[k] = v;
+        }
+      }
+      html += `   Primer doc: ${JSON.stringify(sample)}\n\n`;
+    } catch (e) {
+      // La coleccion no existe
+    }
+  }
+
+  html += "=== FIN ===";
+  document.getElementById("out").textContent = html;
+}
+</script>
+</body>
+</html>

@@ -34,7 +34,7 @@ export const DOC_TYPE = {
   "va-guia": "Guia", "va-notacredito": "NotaCredito",
   "vs-factura": "Factura", "vs-boleta": "Boleta", "vs-cotizacion": "Cotizacion",
   "vs-orden": "OrdenTrabajo", "vs-notas": "Nota de venta",
-  "c-factura": "Factura", "c-boleta": "boleta", "c-notas": "NotaPedido",
+  "c-factura": "Factura", "c-boleta": "Boleta", "c-notas": "NotaPedido",
   "c-guia": "Guia", "c-orden": "OrdenPago",
   "al-notaventa": "Nota de venta",
 };

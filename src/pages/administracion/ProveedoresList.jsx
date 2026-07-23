@@ -34,7 +34,7 @@ function toFirestore(f) {
     nombre: f.nombre,
     Documento: f.documento,
     razon_social: f.razonSocial,
-    ruc: f.razonSocial,
+    ruc: f.documento,
     correo: f.correo,
     celular: Number(f.celular) || 0,
     wps: f.wps,

@@ -21,7 +21,7 @@ const empty = () => ({
   Register_date: new Date().toISOString().split("T")[0],
   Warehouse: "",
   Observation: "",
-  Article_List: [],
+  Articale_List: [],
 });
 
 export default function ArticulosWarehouseList() {
@@ -58,7 +58,7 @@ export default function ArticulosWarehouseList() {
       Register_date: a.Register_date || new Date().toISOString().split("T")[0],
       Warehouse: a.Warehouse || "",
       Observation: a.Observation || "",
-      Article_List: (a.Article_List || []).map((li) => ({ ...li })),
+      Articale_List: (a.Articale_List || []).map((li) => ({ ...li })),
     });
     setModalOpen(true);
   };
@@ -79,21 +79,21 @@ export default function ArticulosWarehouseList() {
 
   const addLine = () => {
     const line = emptyLine();
-    setForm((p) => ({ ...p, Article_List: [...(p.Article_List || []), line] }));
+    setForm((p) => ({ ...p, Articale_List: [...(p.Articale_List || []), line] }));
   };
 
   const removeLine = (idx) => {
-    setForm((p) => ({ ...p, Article_List: p.Article_List.filter((_, i) => i !== idx) }));
+    setForm((p) => ({ ...p, Articale_List: p.Articale_List.filter((_, i) => i !== idx) }));
   };
 
   const updateLine = (idx, field, value) => {
     setForm((p) => {
-      const list = [...(p.Article_List || [])];
+      const list = [...(p.Articale_List || [])];
       list[idx] = { ...list[idx], [field]: value };
       if (field === "Quantity" || field === "PricePerUnit") {
         list[idx].TotalPrice = (Number(list[idx].Quantity) || 0) * (Number(list[idx].PricePerUnit) || 0);
       }
-      return { ...p, Article_List: list };
+      return { ...p, Articale_List: list };
     });
   };
 
@@ -109,7 +109,7 @@ export default function ArticulosWarehouseList() {
             <Td className="gmp-mono text-[var(--muted)]">{a.Serial_Number}</Td>
             <Td className="text-[var(--muted)]">{a.Register_date || "-"}</Td>
             <Td className="text-[var(--muted)]">{a.Warehouse}</Td>
-            <Td className="text-[var(--muted)]">{(a.Article_List || []).length} ítem(s)</Td>
+            <Td className="text-[var(--muted)]">{(a.Articale_List || []).length} ítem(s)</Td>
             <Td className="text-[var(--muted)] max-w-[200px] truncate">{a.Observation}</Td>
             <Td>
               <div className="flex gap-1">
@@ -151,7 +151,7 @@ export default function ArticulosWarehouseList() {
               <h3 className="text-sm font-semibold text-[var(--text)]">Artículos</h3>
               <button type="button" onClick={addLine} className="text-xs px-3 py-1.5 rounded-lg text-[var(--accent)] hover:bg-[var(--accent-dim)] border border-[var(--line-soft)] flex items-center gap-1"><Plus size={14} /> Agregar línea</button>
             </div>
-            {(form.Article_List || []).length === 0 ? (
+            {(form.Articale_List || []).length === 0 ? (
               <p className="text-sm text-[var(--muted)] py-3">Sin artículos. Agregue líneas al movimiento.</p>
             ) : (
               <div className="overflow-x-auto">
@@ -166,7 +166,7 @@ export default function ArticulosWarehouseList() {
                     </tr>
                   </thead>
                   <tbody>
-                    {(form.Article_List || []).map((li, i) => (
+                    {(form.Articale_List || []).map((li, i) => (
                       <tr key={i} className="border-t border-[var(--line-soft)]">
                         <td className="px-3 py-2">
                           <input className={`${inputCls} w-32`} value={li.Code} onChange={(e) => updateLine(i, "Code", e.target.value)} placeholder="Código" />

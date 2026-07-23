@@ -8,24 +8,18 @@ import Table, { Td } from "../../components/ui/Table";
 import Modal from "../../components/ui/Modal";
 import Btn from "../../components/ui/Btn";
 import Field, { inputCls } from "../../components/ui/Field";
-import { useFirestoreCollection, saveMaestro, deleteMaestro } from "../../store/firestoreDb";
+import { useStoreCollection } from "../../store/useStoreCollection";
+import * as db from "../../store/db";
 
 const COL = "service";
 
-function fromFirestore(d) {
-  return { ...d, Tipo_de_vehiculo: d.Carroceria };
-}
-function toFirestore(f) {
-  const { Tipo_de_vehiculo, ...rest } = f;
-  return { ...rest, Carroceria: Tipo_de_vehiculo };
-}
 const empty = {
   Codigo: "", Descripcion: "", Precio: "", Currency: "PEN", Note: "", Alert_in_days: "",
   marcabrand: "", model: "", year: "", Sistema: "", Tipo_de_servicio: "", Categoria_MTC: "", Tipo_de_vehiculo: "",
 };
 
 export default function ServiciosList() {
-  const items = useFirestoreCollection(COL).map(fromFirestore);
+  const [items, { remove }] = useStoreCollection(COL);
 
   const [q, setQ] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
@@ -48,13 +42,13 @@ export default function ServiciosList() {
   const openEdit = (s) => { setEditing(s); setForm({ ...empty, ...s }); setModalOpen(true); };
 
   const handleSave = async () => {
-    await saveMaestro(COL, { ...toFirestore(form), id: editing ? form.id : undefined });
+    db.saveDocument(COL, { ...form, id: editing ? form.id : undefined });
     setModalOpen(false);
     setToast("Servicio guardado");
     setTimeout(() => setToast(null), 2000);
   };
   const confirmDelete = async () => {
-    if (deleteTarget) await deleteMaestro(COL, deleteTarget.id);
+    remove(deleteTarget.id);
     setDeleteTarget(null);
     setToast("Servicio eliminado");
     setTimeout(() => setToast(null), 2000);

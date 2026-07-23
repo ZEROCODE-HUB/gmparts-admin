@@ -22,10 +22,12 @@ import serviciosDocsSeed from "../mock/seed.serviciosDocs";
 import recepcionesSeed from "../mock/seed.recepciones";
 import valesSeed from "../mock/seed.vales";
 import { cuentasCobrarSeed } from "../mock/seed.cobranza";
+import serviciosSeed from "../mock/seed.servicios";
 
 const LS = { docs: "gmp_docs_v1", art: "gmp_art_v1", kardex: "gmp_kardex_v1" };
 
 const SEED_MAP = {
+  "service": serviciosSeed,
   "va-factura": facturasVASeed,
   "va-boleta": boletasVASeed,
   "va-cotizacion": cotizacionesVASeed,
