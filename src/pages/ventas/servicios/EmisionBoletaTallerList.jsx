@@ -13,10 +13,10 @@ import DocumentPreviewModal from "../../../components/documents/DocumentPreviewM
 import { useFirestoreDocuments } from "../../../store/firestoreDb";
 
 const previewFields = [
-  { key: "nserie", label: "Serie" }, { key: "numero", label: "N?mero" },
-  { key: "Fecha", label: "Fecha" }, { key: "razonSNombre", label: "Cliente" },
+  { key: "Nserie", label: "Serie" }, { key: "NumCotizacion", label: "N?mero" },
+  { key: "Fecha", label: "Fecha" }, { key: "RazonSNombre", label: "Cliente" },
   { key: "clienteDoc", label: "DNI" }, { key: "subtotal", label: "Subtotal" },
-  { key: "igv", label: "IGV" }, { key: "total", label: "Total" }, { key: "Estado", label: "Estado" },
+  { key: "igv", label: "IGV" }, { key: "Total", label: "Total" }, { key: "Estado", label: "Estado" },
 ];
 
 export default function EmisionBoletaTallerList() {
@@ -27,7 +27,7 @@ export default function EmisionBoletaTallerList() {
   const [preview, setPreview] = useState(null);
 
   const rows = items.filter((c) =>
-    ((c.razonSNombre || c.cliente || "") + (c.nserie || c.serie || "") + (c.numero || "")).toLowerCase().includes(q.toLowerCase())
+    ((c.RazonSNombre || c.razonSNombre || c.cliente || "") + (c.Nserie || c.nserie || c.serie || "") + (c.NumCotizacion || c.numero || "")).toLowerCase().includes(q.toLowerCase())
   );
   const [page, setPage] = useState(0);
   const totalPages = Math.ceil(rows.length / 20);
@@ -41,13 +41,13 @@ export default function EmisionBoletaTallerList() {
         rows={pageRows}
         renderRow={(c) => (
           <>
-            <Td className="gmp-mono text-[var(--muted)]">{c.nserie || c.serie || ""}</Td>
-            <Td className="gmp-mono">{c.numero || ""}</Td>
+            <Td className="gmp-mono text-[var(--muted)]">{c.Nserie || c.nserie || c.serie || ""}</Td>
+            <Td className="gmp-mono">{c.NumCotizacion || c.numero || ""}</Td>
             <Td className="text-[var(--muted)]">{c.Fecha || c.fecha || ""}</Td>
-            <Td className="font-medium">{c.razonSNombre || c.cliente || ""}</Td>
+            <Td className="font-medium">{c.RazonSNombre || c.razonSNombre || c.cliente || ""}</Td>
             <Td className="gmp-mono text-[var(--muted)]">{c.clienteDoc || ""}</Td>
             <Td className="text-[var(--muted)]">{(c.items && c.items[0] && c.items[0].descripcion) || "?"}</Td>
-            <Td className="gmp-mono">S/ {Number(c.total || 0).toFixed(2)}</Td>
+            <Td className="gmp-mono">S/ {Number(c.Total || c.total || 0).toFixed(2)}</Td>
             <Td>
               <div className="flex gap-1">
                 <button onClick={() => setPreview(c)} className="p-1.5 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]" title="Ver detalle"><Eye size={15} /></button>
@@ -63,7 +63,7 @@ export default function EmisionBoletaTallerList() {
       {deleteTarget && (
         <Modal title="Anular boleta" onClose={() => setDeleteTarget(null)}>
           <p className="text-sm text-[var(--muted)] mb-6">?Est?s seguro de anular esta boleta?</p>
-          <p className="font-medium mb-6">{deleteTarget.serie}-{deleteTarget.numero}</p>
+          <p className="font-medium mb-6">{deleteTarget.Nserie || deleteTarget.nserie || deleteTarget.serie}-{deleteTarget.NumCotizacion || deleteTarget.numero}</p>
           <div className="flex justify-end gap-2">
             <Btn variant="ghost" onClick={() => setDeleteTarget(null)}>Cancelar</Btn>
             <Btn variant="danger" onClick={() => { remove(deleteTarget.id); setDeleteTarget(null); }}>Anular</Btn>

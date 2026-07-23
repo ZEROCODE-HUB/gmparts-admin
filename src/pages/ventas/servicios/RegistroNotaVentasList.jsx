@@ -35,7 +35,7 @@ export default function RegistroNotaVentasList() {
   const [canjeando, setCanjeando] = useState(false);
 
   const rows = items.filter((c) =>
-    ((c.razonSNombre || c.cliente || "") + (c.nserie || c.serie || "") + (c.numero || "")).toLowerCase().includes(q.toLowerCase())
+    ((c.RazonSNombre || c.razonSNombre || c.cliente || "") + (c.Nserie || c.nserie || c.serie || "") + (c.NumCotizacion || c.numero || "")).toLowerCase().includes(q.toLowerCase())
   );
   const [page, setPage] = useState(0);
   const totalPages = Math.ceil(rows.length / 20);
@@ -114,13 +114,13 @@ export default function RegistroNotaVentasList() {
         rows={pageRows}
         renderRow={(c) => (
           <>
-            <Td className="gmp-mono text-[var(--muted)]">{c.serie || c.nserie || ""}</Td>
-            <Td className="gmp-mono">{c.numero || ""}</Td>
-            <Td className="text-[var(--muted)]">{c.fecha || ""}</Td>
-            <Td className="font-medium">{c.cliente || c.razonSNombre || ""}</Td>
+            <Td className="gmp-mono text-[var(--muted)]">{c.Nserie || c.nserie || c.serie || ""}</Td>
+            <Td className="gmp-mono">{c.NumCotizacion || c.numero || ""}</Td>
+            <Td className="text-[var(--muted)]">{c.Fecha || c.fecha || ""}</Td>
+            <Td className="font-medium">{c.RazonSNombre || c.razonSNombre || c.cliente || ""}</Td>
             <Td className="gmp-mono text-[var(--muted)]">{c.clienteDoc || ""}</Td>
             <Td className="text-[var(--muted)]">{(c.items && c.items[0] && c.items[0].descripcion) || "\u2014"}</Td>
-            <Td className="gmp-mono">S/ {Number(c.total || 0).toFixed(2)}</Td>
+            <Td className="gmp-mono">S/ {Number(c.Total || c.total || 0).toFixed(2)}</Td>
             <Td>
               <div className="flex gap-1">
                 <button onClick={() => setPreview(c)} className="p-1.5 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]" title="Ver detalle"><Eye size={15} /></button>
@@ -137,7 +137,7 @@ export default function RegistroNotaVentasList() {
       {deleteTarget && (
         <Modal title="Anular nota" onClose={() => setDeleteTarget(null)}>
           <p className="text-sm text-[var(--muted)] mb-6">\u00bfEst\u00e1s seguro de anular esta nota?</p>
-          <p className="font-medium mb-6">{deleteTarget.serie}-{deleteTarget.numero}</p>
+          <p className="font-medium mb-6">{deleteTarget.Nserie || deleteTarget.nserie || deleteTarget.serie}-{deleteTarget.NumCotizacion || deleteTarget.numero}</p>
           <div className="flex justify-end gap-2">
             <Btn variant="ghost" onClick={() => setDeleteTarget(null)}>Cancelar</Btn>
             <Btn variant="danger" onClick={() => { remove(deleteTarget.id); setDeleteTarget(null); }}>Anular</Btn>
@@ -150,8 +150,8 @@ export default function RegistroNotaVentasList() {
       {canjeTarget && (
         <Modal title="Canjear Nota de Venta" onClose={() => setCanjeTarget(null)} wide>
           <div className="mb-4 p-3 bg-[var(--surface-2)] rounded-lg text-sm">
-            <p><strong>Nota original:</strong> {canjeTarget.serie || ""}-{canjeTarget.numero || ""} &middot; {canjeTarget.cliente || ""} &middot; {canjeTarget.fecha || ""}</p>
-            <p><strong>Total original:</strong> S/ {Number(canjeTarget.total || 0).toFixed(2)}</p>
+            <p><strong>Nota original:</strong> {canjeTarget.Nserie || canjeTarget.nserie || canjeTarget.serie || ""}-{canjeTarget.NumCotizacion || canjeTarget.numero || ""} &middot; {canjeTarget.RazonSNombre || canjeTarget.razonSNombre || canjeTarget.cliente || ""} &middot; {canjeTarget.Fecha || canjeTarget.fecha || ""}</p>
+            <p><strong>Total original:</strong> S/ {Number(canjeTarget.Total || canjeTarget.total || 0).toFixed(2)}</p>
           </div>
 
           <div className="flex gap-4 mb-4">
