@@ -4,9 +4,7 @@ const ERP_LOGO_URL = "https://storage.googleapis.com/flutterflow-io-6f20.appspot
 let _pdfMake = null;
 async function getPdfMake() {
   if (!_pdfMake) {
-    const [m, f] = await Promise.all([import("pdfmake/build/pdfmake"), import("pdfmake/build/vfs_fonts")]);
-    m.default.vfs = f.default;
-    m.default.fonts = { Roboto: { normal: "Roboto-Regular.ttf", bold: "Roboto-Medium.ttf", italics: "Roboto-Italic.ttf", bolditalics: "Roboto-MediumItalic.ttf" } };
+    const m = await import("pdfmake/build/pdfmake");
     _pdfMake = m.default;
   }
   return _pdfMake;
@@ -111,7 +109,7 @@ async function buildDocDef(opts) {
     ]},
   ], margin: [0, 10, 0, 10] });
   if (erpData) content.push({ image: erpData, width: 60, alignment: "right" });
-  return { pageSize: "A4", pageMargins: [25, 25, 25, 25], content, styles: S, defaultStyle: { fontName: "Roboto" } };
+  return { pageSize: "A4", pageMargins: [25, 25, 25, 25], content, styles: S };
 }
 
 // ── API PÚBLICA ──
