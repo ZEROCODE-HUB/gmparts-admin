@@ -1,423 +1,250 @@
-let _pdfMake = null;
-async function getPdfMake() {
-  if (!_pdfMake) {
-    const pdfMakeModule = await import("pdfmake/build/pdfmake");
-    const pdfFontsModule = await import("pdfmake/build/vfs_fonts");
-    pdfMakeModule.default.vfs = pdfFontsModule.default.pdfMake ? pdfFontsModule.default.pdfMake.vfs : pdfFontsModule.default;
-    _pdfMake = pdfMakeModule.default;
-  }
-  return _pdfMake;
-}
-
 const LOGO_URL = "https://storage.googleapis.com/flutterflow-io-6f20.appspot.com/projects/g-m-parts-lac7fg/assets/za03o2h6k5tg/Capa_1.png";
 const ERP_LOGO_URL = "https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/12345/capa_erp.png";
 
 function totalEnLetras(num) {
-  const unidades = ["", "UNO", "DOS", "TRES", "CUATRO", "CINCO", "SEIS", "SIETE", "OCHO", "NUEVE"];
-  const decenas = ["", "DIEZ", "VEINTE", "TREINTA", "CUARENTA", "CINCUENTA", "SESENTA", "SETENTA", "OCHENTA", "NOVENTA"];
-  const especiales = ["DIEZ", "ONCE", "DOCE", "TRECE", "CATORCE", "QUINCE", "DIECISÉIS", "DIECISIETE", "DIECIOCHO", "DIECINUEVE"];
   if (num === 0) return "CERO CON 00/100 SOLES";
   const entero = Math.floor(num);
   const decimal = Math.round((num - entero) * 100);
-  let palabras = "";
-  if (entero >= 1000000) { palabras += "UN MILLÓN "; }
-  // Simplificado: retorna número + texto fijo para demo
   return `${entero} CON ${decimal.toString().padStart(2, "0")}/100 SOLES`;
 }
 
-function encabezadoPDF(titulo, numero) {
-  return {
-    columns: [
-      {
-        width: "60%",
-        stack: [
-          { image: LOGO_URL, width: 80, height: 80, alignment: "left" },
-          { text: "GEAR MOTOR PARTS S.A.C.", style: "empresaNombre" },
-          { text: "Dirección fiscal: Coo. Veintisiete de Abril. Av. Nicolás Ayllón 3270, Ate, Lima", style: "empresaDetalle" },
-          { text: "Tel.: 01 362 8667 - 924 483 844", style: "empresaDetalle" },
-          { text: "gearmparts@gmail.com", style: "empresaDetalle" },
-        ],
-      },
-      {
-        width: "40%",
-        alignment: "right",
-        table: {
-          widths: ["*"],
-          body: [
-            [
-              {
-                text: [
-                  { text: "R.U.C. 20601720621\n", style: "ruc" },
-                  { text: `${titulo}\n`, style: "tituloDoc" },
-                  { text: `Nº ${numero}`, style: "numeroDoc" },
-                ],
-                alignment: "center",
-                margin: [8, 8, 8, 8],
-                border: [true, true, true, true],
-              },
-            ],
-          ],
-        },
-      },
-    ],
-    margin: [0, 0, 0, 15],
-  };
+function escape(s) {
+  return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-function datosCliente(cliente, direccion, ruc, condPago, fecha, vendedor, nroCot, observaciones) {
-  const rows = [
-    [{ text: "SEÑOR(ES):", style: "label" }, { text: (cliente || "").toUpperCase(), style: "value" }, { text: "FECHA EMISIÓN:", style: "label" }, { text: fecha || "", style: "value" }],
-    [{ text: "DIRECCIÓN:", style: "label" }, { text: (direccion || "").toUpperCase(), style: "value" }, { text: "VENDEDOR:", style: "label" }, { text: (vendedor || "").toUpperCase(), style: "value" }],
-    [{ text: "RUC:", style: "label" }, { text: ruc || "", style: "value" }, { text: "ORD. DE COMPRA:", style: "label" }, { text: "", style: "value" }],
-    [{ text: "NRO COT:", style: "label" }, { text: nroCot || "", style: "value" }, { text: "COND. DE PAGO:", style: "label" }, { text: (condPago || "").toUpperCase(), style: "value" }],
-  ];
-  if (observaciones) {
-    rows.push([{ text: "OBSERVA:", style: "label" }, { text: observaciones, style: "value", colSpan: 3 }, {}, {}]);
-  }
-  return {
-    table: {
-      widths: ["17%", "33%", "17%", "33%"],
-      body: rows,
-    },
-    layout: "lightHorizontalLines",
-    margin: [0, 0, 0, 10],
-  };
-}
-
-function datosVehiculo(placa, marca, modelo, km) {
-  return {
-    table: {
-      widths: ["25%", "25%", "25%", "25%"],
-      body: [
-        [
-          { text: "PLACA:", style: "label" },
-          { text: (placa || "").toUpperCase(), style: "value" },
-          { text: "MARCA:", style: "label" },
-          { text: (marca || "").toUpperCase(), style: "value" },
-        ],
-        [
-          { text: "MODELO:", style: "label" },
-          { text: (modelo || "").toUpperCase(), style: "value" },
-          { text: "KM:", style: "label" },
-          { text: km || "", style: "value" },
-        ],
-      ],
-    },
-    layout: "lightHorizontalLines",
-    margin: [0, 0, 0, 15],
-  };
-}
-
-function tablaItems(items, conCodigo = true, conCant = true) {
-  const headers = [
-    { text: "CÓDIGO", style: "tableHeader" },
-    { text: "CANT.", style: "tableHeader", alignment: "center" },
-    { text: "DESCRIPCIÓN", style: "tableHeader" },
-    { text: "P.UNITARIO", style: "tableHeader", alignment: "right" },
-    { text: "IMPORTE", style: "tableHeader", alignment: "right" },
-  ];
-  const body = [headers];
+function itemsHTML(items) {
+  if (!items || items.length === 0) return "";
+  let rows = "";
   for (const it of items) {
     const cant = it.cant ?? it.cantidad ?? 1;
     const pu = it.pu ?? it.precioVenta ?? 0;
-    const total = it.total ?? cant * pu;
-    body.push([
-      { text: it.codigo || "", style: "cell", alignment: "center" },
-      { text: String(cant), style: "cell", alignment: "center" },
-      { text: (it.descripcion || it.articulo || "").toUpperCase(), style: "cell" },
-      { text: `S/ ${Number(pu).toFixed(2)}`, style: "cell", alignment: "right" },
-      { text: `S/ ${Number(total).toFixed(2)}`, style: "cell", alignment: "right" },
-    ]);
+    const tot = it.total ?? cant * pu;
+    rows += `<tr>
+      <td style="border:1px solid #000;padding:4px;font-size:9px;text-align:center">${escape(it.codigo || "")}</td>
+      <td style="border:1px solid #000;padding:4px;font-size:9px;text-align:center">${cant}</td>
+      <td style="border:1px solid #000;padding:4px;font-size:9px">${escape(it.descripcion || it.articulo || "").toUpperCase()}</td>
+      <td style="border:1px solid #000;padding:4px;font-size:9px;text-align:right">S/ ${Number(pu).toFixed(2)}</td>
+      <td style="border:1px solid #000;padding:4px;font-size:9px;text-align:right">S/ ${Number(tot).toFixed(2)}</td>
+    </tr>`;
   }
-  while (body.length < 12) {
-    body.push([{ text: "", style: "cell" }, { text: "", style: "cell" }, { text: "", style: "cell" }, { text: "", style: "cell" }, { text: "", style: "cell" }]);
-  }
-  return {
-    table: {
-      widths: [55, 35, "*", 65, 55],
-      body,
-    },
-    layout: {
-      hLineWidth: () => 0.5,
-      vLineWidth: () => 0.5,
-    },
-    margin: [0, 0, 0, 10],
-  };
+  return rows;
 }
 
-function totales(subtotal, igv, total) {
-  const items = [
-    { text: "OP. GRAVADA", alignment: "left" },
-    { text: `S/ ${Number(subtotal || 0).toFixed(2)}`, alignment: "right" },
-  ];
-  return {
-    columns: [
-      { width: "*", text: "" },
-      {
-        width: "40%",
-        table: {
-          widths: ["*"],
-          body: [
-            [{ text: `OP. GRAVADA    S/ ${Number(subtotal || 0).toFixed(2)}`, style: "totalLine" }],
-            [{ text: `I.G.V. (18%)    S/ ${Number(igv || 0).toFixed(2)}`, style: "totalLine" }],
-            [{ text: `IMPORTE TOTAL    S/ ${Number(total || 0).toFixed(2)}`, style: "totalBold", margin: [0, 4, 0, 4] }],
-          ],
-        },
-        layout: "noBorders",
-        margin: [0, 0, 0, 10],
-      },
-    ],
-  };
-}
-
-function footerPDF(qrData, totalVal) {
-  const detraccion = totalVal > 700 ? totalVal * 0.12 : null;
-  const neto = detraccion ? totalVal - detraccion : null;
-  return {
-    columns: [
-      {
-        width: "30%",
-        stack: [
-          { qr: qrData || "SIN DATOS QR", fit: 80, alignment: "center" },
-          { text: "Representación impresa de la FACTURA ELECTRÓNICA", fontSize: 6, alignment: "center" },
-          { text: "CONSULTE SU DOCUMENTO EN WWW.SUNAT.GOB.PE CON SU CLAVE SOL", fontSize: 6, alignment: "center" },
-        ],
-      },
-      {
-        width: "35%",
-        stack: [
-          { text: "CUENTAS BANCARIAS:", style: "label" },
-          { text: "BCP CTA Soles: 191-2390862-0-19", style: "bankDetail" },
-          { text: "BCP CTA CCI: 002-19100239086201950", style: "bankDetail" },
-          { text: "BN DETRACCIÓN: 00-066-104419", style: "bankDetail" },
-        ],
-        margin: [0, 0, 10, 0],
-      },
-      {
-        width: "35%",
-        stack: [
-          { text: "SON:", style: "label" },
-          { text: totalEnLetras(totalVal || 0).toUpperCase(), fontSize: 8 },
-          detraccion ? { text: `DETRACCIÓN 12%: S/ ${detraccion.toFixed(2)}`, style: "detraccion" } : null,
-          detraccion ? { text: `Neto a pagar: S/ ${neto.toFixed(2)}`, style: "detraccionBold" } : null,
-          detraccion ? { text: "Sujeto a Sistema de Pago Obligaciones Tributarias", fontSize: 6, italics: true } : null,
-        ].filter(Boolean),
-      },
-    ],
-    margin: [0, 10, 0, 10],
-  };
-}
-
-function estiloFactura(titulo) {
-  return {
-    empresaNombre: { fontSize: 12, bold: true },
-    empresaDetalle: { fontSize: 8 },
-    ruc: { fontSize: 11, bold: true },
-    tituloDoc: { fontSize: 13, bold: true },
-    numeroDoc: { fontSize: 11, bold: true },
-    label: { fontSize: 9, bold: true },
-    value: { fontSize: 9 },
-    tableHeader: { fontSize: 9, bold: true, alignment: "center", margin: [4, 4, 4, 4] },
-    cell: { fontSize: 8, margin: [3, 2, 3, 2] },
-    totalLine: { fontSize: 9, margin: [2, 2, 2, 2] },
-    totalBold: { fontSize: 10, bold: true, margin: [2, 2, 2, 2] },
-    bankDetail: { fontSize: 8 },
-    detraccion: { fontSize: 8, color: "#CC0000", bold: true },
-    detraccionBold: { fontSize: 9, bold: true },
-  };
-}
-
-// ──────────────────────────────────────────────
-// EXPORT: Generar Factura / Boleta (Venta)
-// ──────────────────────────────────────────────
-export function generarFacturaPDF({ items, cliente, clienteDoc, direccion, fecha, formaPago, serie, numero, subtotal, igv, total, placa, marca, modelo, km, observaciones, titulo = "FACTURA ELECTRÓNICA", vendedor = "VENDEDOR 1" }) {
+function buildHTML({ items, cliente, clienteDoc, direccion, fecha, formaPago, serie, numero, subtotal, igv, total, placa, marca, modelo, km, observaciones, titulo = "DOCUMENTO", vendedor = "VENDEDOR 1", nroCot = "" }) {
   const numDoc = `${serie || ""}-${numero || ""}`;
-  const qrData = `${cliente || ""}|${numDoc}|${total || 0}`;
-  const docDef = {
-    pageSize: "A4",
-    pageMargins: [20, 20, 20, 20],
-    content: [
-      encabezadoPDF(titulo, numDoc),
-      datosCliente(cliente, direccion || "SIN DIRECCIÓN", clienteDoc || "00000000000", formaPago || "CONTADO", fecha || "", vendedor, "", observaciones),
-      datosVehiculo(placa, marca, modelo, km),
-      tablaItems(items || []),
-      totales(subtotal, igv, total),
-      footerPDF(qrData, total || 0),
-      { image: ERP_LOGO_URL, width: 60, alignment: "right" },
-    ],
-    styles: estiloFactura(titulo),
-    defaultStyle: { fontName: "Roboto" },
-  };
-  return docDef;
+  const detraccion = total > 700 ? total * 0.12 : null;
+  const neto = detraccion ? total - detraccion : null;
+
+  return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>${escape(titulo)} ${escape(numDoc)}</title>
+<style>
+  @page { margin: 15mm 10mm; size: A4; }
+  body { font-family: Arial, Helvetica, sans-serif; font-size: 10px; color: #000; margin: 0; padding: 0; }
+  table { border-collapse: collapse; width: 100%; }
+  td, th { padding: 4px; font-size: 9px; }
+  .header { width: 100%; margin-bottom: 15px; }
+  .header td { vertical-align: top; }
+  .box { border: 1px solid #000; padding: 8px; }
+  .label { font-weight: bold; font-size: 9px; }
+  .value { font-size: 9px; }
+  .totals { text-align: right; margin-top: 10px; }
+  .totals p { margin: 2px 0; font-size: 9px; }
+  .total-bold { font-weight: bold; font-size: 10px; }
+  .detraccion { color: #c00; font-weight: bold; font-size: 8px; }
+  .footer { margin-top: 15px; }
+  .footer td { vertical-align: top; }
+  .bank { font-size: 8px; }
+  @media print { .no-print { display: none; } }
+  hr { border: none; border-top: 0.5px solid #000; margin: 4px 0; }
+</style></head><body>
+
+<!-- ENCABEZADO -->
+<table class="header"><tr>
+  <td width="60%">
+    <img src="${LOGO_URL}" width="80" style="margin-bottom:4px"/><br>
+    <b style="font-size:12px">GEAR MOTOR PARTS S.A.C.</b><br>
+    <span style="font-size:8px">Direcci\u00f3n fiscal: Coo. Veintisiete de Abril. Av. Nicol\u00e1s Ayll\u00f3n 3270, Ate, Lima</span><br>
+    <span style="font-size:8px">Tel.: 01 362 8667 - 924 483 844</span><br>
+    <span style="font-size:8px">gearmparts@gmail.com</span>
+  </td>
+  <td width="40%" style="text-align:right">
+    <div class="box" style="display:inline-block;text-align:center;min-width:170px">
+      <b style="font-size:11px">R.U.C. 20601720621</b><br><br>
+      <b style="font-size:13px">${escape(titulo)}</b><br><br>
+      <b style="font-size:11px">N\u00ba ${escape(numDoc)}</b>
+    </div>
+  </td>
+</tr></table>
+
+<!-- DATOS CLIENTE -->
+<table style="border:1px solid #000;margin-bottom:10px;padding:6px">
+  <tr>
+    <td width="17%" class="label">SE\u00d1OR(ES):</td>
+    <td width="33%" class="value">${escape(cliente).toUpperCase()}</td>
+    <td width="17%" class="label">FECHA EMISI\u00d3N:</td>
+    <td width="33%" class="value">${escape(fecha)}</td>
+  </tr>
+  <tr>
+    <td class="label">DIRECCI\u00d3N:</td>
+    <td class="value">${escape(direccion).toUpperCase()}</td>
+    <td class="label">VENDEDOR:</td>
+    <td class="value">${escape(vendedor).toUpperCase()}</td>
+  </tr>
+  <tr>
+    <td class="label">RUC:</td>
+    <td class="value">${escape(clienteDoc)}</td>
+    <td class="label">ORD. DE COMPRA:</td>
+    <td class="value"></td>
+  </tr>
+  <tr>
+    <td class="label">NRO COT:</td>
+    <td class="value">${escape(nroCot)}</td>
+    <td class="label">COND. DE PAGO:</td>
+    <td class="value">${escape(formaPago).toUpperCase()}</td>
+  </tr>
+  ${observaciones ? `<tr><td class="label">OBSERVA:</td><td class="value" colspan="3">${escape(observaciones)}</td></tr>` : ""}
+</table>
+
+<!-- DATOS VEHICULO (si aplica) -->
+${(placa || marca || modelo || km) ? `
+<table style="border:1px solid #000;margin-bottom:10px;padding:6px">
+  <tr>
+    <td width="25%" class="label">PLACA:</td>
+    <td width="25%" class="value">${escape(placa).toUpperCase()}</td>
+    <td width="25%" class="label">MARCA:</td>
+    <td width="25%" class="value">${escape(marca).toUpperCase()}</td>
+  </tr>
+  <tr>
+    <td class="label">MODELO:</td>
+    <td class="value">${escape(modelo).toUpperCase()}</td>
+    <td class="label">KM:</td>
+    <td class="value">${escape(km)}</td>
+  </tr>
+</table>` : ""}
+
+<!-- TABLA ITEMS -->
+<table style="border-collapse:collapse;margin-bottom:10px">
+  <tr style="background:#e0e0e0">
+    <th style="border:1px solid #000;padding:5px;font-size:9px">C\u00d3DIGO</th>
+    <th style="border:1px solid #000;padding:5px;font-size:9px">CANT.</th>
+    <th style="border:1px solid #000;padding:5px;font-size:9px">DESCRIPCI\u00d3N</th>
+    <th style="border:1px solid #000;padding:5px;font-size:9px">P.UNITARIO</th>
+    <th style="border:1px solid #000;padding:5px;font-size:9px">IMPORTE</th>
+  </tr>
+  ${itemsHTML(items)}
+</table>
+
+<!-- TOTALES -->
+<div class="totals">
+  <p>OP. GRAVADA    S/ ${Number(subtotal || 0).toFixed(2)}</p>
+  <p>I.G.V. (18%)    S/ ${Number(igv || 0).toFixed(2)}</p>
+  <hr>
+  <p class="total-bold">IMPORTE TOTAL    S/ ${Number(total || 0).toFixed(2)}</p>
+</div>
+
+<!-- FOOTER -->
+<table class="footer"><tr>
+  <td width="30%">
+    <div style="text-align:center">
+      <div style="border:1px solid #000;width:80px;height:80px;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:8px">QR</div>
+      <span style="font-size:6px">Representaci\u00f3n impresa de la FACTURA ELECTR\u00d3NICA</span><br>
+      <span style="font-size:6px">CONSULTE SU DOCUMENTO EN WWW.SUNAT.GOB.PE CON SU CLAVE SOL</span>
+    </div>
+  </td>
+  <td width="35%" style="padding-left:10px">
+    <b style="font-size:9px">CUENTAS BANCARIAS:</b><br>
+    <span class="bank">BCP CTA Soles: 191-2390862-0-19</span><br>
+    <span class="bank">BCP CTA CCI: 002-19100239086201950</span><br>
+    <span class="bank">BN DETRACCI\u00d3N: 00-066-104419</span>
+  </td>
+  <td width="35%">
+    <b style="font-size:9px">SON:</b><br>
+    <span style="font-size:8px">${escape(totalEnLetras(total || 0).toUpperCase())}</span><br>
+    ${detraccion ? `<span class="detraccion">DETRACCI\u00d3N 12%: S/ ${detraccion.toFixed(2)}</span><br>
+    <span class="detraccion">Neto a pagar: S/ ${(neto || 0).toFixed(2)}</span><br>
+    <span style="font-size:6px;font-style:italic">Sujeto a Sistema de Pago Obligaciones Tributarias</span>` : ""}
+  </td>
+</tr></table>
+
+<div style="text-align:right;margin-top:10px">
+  <img src="${ERP_LOGO_URL}" width="60"/>
+</div>
+
+</body></html>`;
 }
 
-// ──────────────────────────────────────────────
-// EXPORT: Generar Factura Compra
-// ──────────────────────────────────────────────
-export function generarFacturaCompraPDF({ items, proveedor, proveedorDoc, direccion, fecha, formaPago, serie, numero, subtotal, igv, total, observaciones, titulo = "FACTURA ELECTRÓNICA", vendedor = "VENDEDOR 1" }) {
-  return generarFacturaPDF({ items, cliente: proveedor, clienteDoc: proveedorDoc, direccion, fecha, formaPago, serie, numero, subtotal, igv, total, placa: "", marca: "", modelo: "", km: "", observaciones, titulo, vendedor });
+function openPrintWindow(html) {
+  const w = window.open("", "_blank", "width=800,height=600");
+  if (!w) { alert("Permite ventanas emergentes para imprimir"); return null; }
+  w.document.write(html);
+  w.document.close();
+  return w;
 }
 
-// ──────────────────────────────────────────────
-// EXPORT: Generar Cotización de Servicio
-// ──────────────────────────────────────────────
+export function generarFacturaPDF(opts) {
+  return buildHTML(opts);
+}
+
+export function generarFacturaCompraPDF(opts) {
+  return buildHTML({ ...opts, cliente: opts.proveedor || opts.cliente, clienteDoc: opts.proveedorDoc || opts.clienteDoc });
+}
+
 export function generarCotizacionPDF({ recepcion, diagnosticos = [], items }) {
-  // Construir items desde diagnosticos (FlutterFlow logic)
   const allItems = [];
-  let counter = 1;
   for (const diag of diagnosticos) {
-    // Mano de obra
     const tiempo = Number(diag.horasTrabajo || diag.Tiempo_estimado || 0);
     const precioServ = Number(diag.manoDeObra || diag.precioservicio || 0);
     if (diag.nombreFalla || diag.Nombre_falla) {
-      allItems.push({
-        codigo: "",
-        descripcion: diag.nombreFalla || diag.Nombre_falla || "",
-        cant: tiempo,
-        pu: precioServ,
-        total: precioServ * tiempo,
-        _item: counter++,
-      });
+      allItems.push({ codigo: "", descripcion: diag.nombreFalla || diag.Nombre_falla || "", cant: tiempo, pu: precioServ, total: precioServ * tiempo });
     }
-    // Repuestos
     const reps = diag.repuestos || diag.Repuestos || [];
     for (const r of reps) {
-      const cant = Number(r.cantidad || 1);
-      const precio = Number(r.precio || r.precioCompra || 0);
       allItems.push({
         codigo: r.codigo || "",
         descripcion: r.nombre || r.descripcion || "",
-        cant,
-        pu: precio,
-        total: cant * precio,
-        _item: counter++,
+        cant: Number(r.cantidad || 1),
+        pu: Number(r.precio || r.precioCompra || 0),
+        total: Number(r.cantidad || 1) * Number(r.precio || r.precioCompra || 0),
       });
     }
   }
-
-  // Si llegaron items directos (sin diagnosticos), usarlos
   const itemsFinal = items && items.length > 0 ? items : allItems;
-
-  const numCot = recepcion.codeCT || recepcion.numeroCotizacion || "SIN CODIGO";
-  const totalVal = recepcion.Total || recepcion.total || 0;
-  const qrData = `${recepcion.nombre_cliente || ""}|${numCot}|${totalVal}`;
-
-  const docDef = {
-    pageSize: "A4",
-    pageMargins: [20, 20, 20, 20],
-    content: [
-      // Encabezado
-      {
-        columns: [
-          {
-            width: "60%",
-            stack: [
-              { image: LOGO_URL, width: 100, alignment: "left" },
-              { text: "GEAR MOTOR PARTS S.A.C.", style: "empresaNombre" },
-              { text: "Dirección fiscal: Av. Nicolás Ayllón Nro. 3270", style: "empresaDetalle" },
-              { text: "Tel.: 01 362 8667 - 924 483 844", style: "empresaDetalle" },
-              { text: "gearmparts@gmail.com", style: "empresaDetalle" },
-            ],
-          },
-          {
-            width: "40%",
-            alignment: "right",
-            table: {
-              widths: ["*"],
-              body: [[
-                {
-                  text: [
-                    { text: "R.U.C. 20601720621\n", style: "ruc" },
-                    { text: `Cotizacion ${numCot}\n`, style: "tituloDoc" },
-                    { text: `FECHA: ${recepcion.fecha_creacion || ""}`, style: "numeroDoc" },
-                  ],
-                  alignment: "center",
-                  margin: [8, 8, 8, 8],
-                  border: [true, true, true, true],
-                },
-              ]],
-            },
-          },
-        ],
-        margin: [0, 0, 0, 15],
-      },
-      // Datos cliente
-      datosCliente(
-        recepcion.nombre_cliente || recepcion.Razon_social || "",
-        "",
-        recepcion.RUCempresa || recepcion.DNI || "",
-        recepcion.condpago || "CONTADO",
-        recepcion.fecha_creacion || "",
-        recepcion.tecnico_servicio || "",
-        numCot,
-        recepcion.observaciones || recepcion.Observaciones_adicionales || ""
-      ),
-      // Datos vehiculo
-      datosVehiculo(recepcion.placa, recepcion.marca, recepcion.modelo, recepcion.km_ingreso),
-      // Tabla de items (con codigo y numero de item)
-      {
-        table: {
-          widths: [30, 50, "*", 40, 40, 50, 50],
-          body: [
-            [
-              { text: "ITEM", style: "tableHeader" },
-              { text: "CÓDIGO", style: "tableHeader" },
-              { text: "DESCRIPCIÓN", style: "tableHeader" },
-              { text: "UNIDAD", style: "tableHeader", alignment: "center" },
-              { text: "CANT", style: "tableHeader", alignment: "center" },
-              { text: "PRECIO", style: "tableHeader", alignment: "right" },
-              { text: "TOTAL", style: "tableHeader", alignment: "right" },
-            ],
-            ...(itemsFinal.length > 0 ? itemsFinal.map((it, i) => [
-              { text: String(i + 1), style: "cell", alignment: "center" },
-              { text: it.codigo || it.Codigo || "", style: "cell", alignment: "center" },
-              { text: (it.descripcion || it.nombre || it.Nombre_falla || "").toUpperCase(), style: "cell" },
-              { text: it._item ? "HRS" : "UND", style: "cell", alignment: "center" },
-              { text: String(Number(it.cant || it.cantidad || 1)), style: "cell", alignment: "center" },
-              { text: `S/ ${Number(it.pu || it.precio || 0).toFixed(2)}`, style: "cell", alignment: "right" },
-              { text: `S/ ${Number(it.total || 0).toFixed(2)}`, style: "cell", alignment: "right" },
-            ]) : []),
-          ],
-        },
-        layout: { hLineWidth: () => 0.5, vLineWidth: () => 0.5 },
-        margin: [0, 0, 0, 10],
-      },
-      // Totales
-      totales(recepcion.Subtotal || recepcion.subtotal || 0, recepcion.IGV || recepcion.igv || 0, totalVal),
-      // Condiciones comerciales
-      {
-        text: [
-          { text: "CONDICIONES COMERCIALES\n", style: "label" },
-          { text: `FORMA DE PAGO: ${recepcion.condpago || "CONTADO"}\n`, fontSize: 9 },
-          { text: `MONEDA: ${recepcion.moneda || "SOLES"}\n`, fontSize: 9 },
-          { text: `VALIDEZ OFERTA: ${recepcion.validoferta || "7 DÍAS"}\n`, fontSize: 9 },
-          { text: `FECHA DE SERVICIO: ${recepcion.fecha_creacion || ""}`, fontSize: 9 },
-        ],
-        margin: [0, 0, 0, 10],
-      },
-      // Total en letras
-      { text: `SON: ${totalEnLetras(totalVal)}`, style: "label", margin: [0, 0, 0, 10] },
-      // Footer
-      footerPDF(qrData, totalVal),
-    ],
-    styles: estiloFactura("COTIZACIÓN"),
-    defaultStyle: { fontName: "Roboto" },
-  };
-  return docDef;
+  return buildHTML({
+    items: itemsFinal,
+    cliente: recepcion.nombre_cliente || recepcion.Razon_social || "",
+    clienteDoc: recepcion.RUCempresa || recepcion.DNI || "",
+    fecha: recepcion.fecha_creacion || "",
+    formaPago: recepcion.condpago || "CONTADO",
+    serie: recepcion.codeCT || "",
+    numero: "",
+    subtotal: recepcion.Subtotal || recepcion.subtotal || 0,
+    igv: recepcion.IGV || recepcion.igv || 0,
+    total: recepcion.Total || recepcion.total || 0,
+    placa: recepcion.placa || "",
+    marca: recepcion.marca || "",
+    modelo: recepcion.modelo || "",
+    km: recepcion.km_ingreso || "",
+    observaciones: recepcion.observaciones || recepcion.Observaciones_adicionales || "",
+    titulo: "COTIZACI\u00d3N",
+    nroCot: recepcion.codeCT || "",
+  });
 }
 
-// ──────────────────────────────────────────────
-// Helper: descargar o imprimir
-// ──────────────────────────────────────────────
-export async function descargarPDF(docDef, filename) {
-  const pm = await getPdfMake();
-  pm.createPdf(docDef).download(filename);
+export function descargarPDF(html, filename) {
+  const blob = new Blob([html], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename.endsWith(".pdf") ? filename.replace(".pdf", ".html") : filename + ".html";
+  a.click();
+  URL.revokeObjectURL(url);
 }
-export async function imprimirPDF(docDef) {
-  const pm = await getPdfMake();
-  pm.createPdf(docDef).print();
+
+export function imprimirPDF(html) {
+  const w = openPrintWindow(html);
+  if (w) setTimeout(() => w.print(), 500);
 }
-export async function abrirPDF(docDef) {
-  const pm = await getPdfMake();
-  pm.createPdf(docDef).open();
+
+export function abrirPDF(html) {
+  const w = openPrintWindow(html);
 }

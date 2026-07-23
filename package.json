@@ -17,7 +17,6 @@
     "algoliasearch": "^5.56.0",
     "firebase": "^12.16.0",
     "lucide-react": "^1.25.0",
-    "pdfmake": "^0.3.11",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router-dom": "^7.18.1",
