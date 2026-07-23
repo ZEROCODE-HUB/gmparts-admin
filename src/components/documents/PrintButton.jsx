@@ -6,50 +6,32 @@ export default function PrintButton({ title, data }) {
   const [open, setOpen] = useState(false);
   if (!data) return null;
 
-  const handleDownload = () => {
-    const docDef = generarFacturaPDF({
-      items: data.items || data.diagnosticos || [],
-      cliente: data.cliente || data.razonSNombre || data.nombre_cliente || data.Razon_social || "",
-      clienteDoc: data.clienteDoc || data.RUCempresa || "",
-      direccion: data.direccion || "",
-      fecha: data.fecha || data.Fecha || data.fecha_creacion || "",
-      formaPago: data.formaPago || data.FPago || "CONTADO",
-      serie: data.serie || data.nserie || data.Nserie || "",
-      numero: data.numero || data.NumCotizacion || "",
-      subtotal: data.subtotal || 0,
-      igv: data.igv || 0,
-      total: data.total || data.Total || 0,
-      placa: data.placa || "",
-      marca: data.marca || "",
-      modelo: data.modelo || "",
-      km: data.km_ingreso || "",
-      observaciones: data.observacion || data.motivo || "",
-      titulo: title || "DOCUMENTO",
-    });
-    descargarPDF(docDef, `${title || "documento"}_${data.serie || data.Nserie || ""}${data.numero || ""}.pdf`);
+  const getDocDef = () => generarFacturaPDF({
+    items: data.items || data.diagnosticos || [],
+    cliente: data.cliente || data.razonSNombre || data.nombre_cliente || data.Razon_social || "",
+    clienteDoc: data.clienteDoc || data.RUCempresa || "",
+    direccion: data.direccion || "",
+    fecha: data.fecha || data.Fecha || data.fecha_creacion || "",
+    formaPago: data.formaPago || data.FPago || "CONTADO",
+    serie: data.serie || data.nserie || data.Nserie || "",
+    numero: data.numero || data.NumCotizacion || "",
+    subtotal: data.subtotal || 0,
+    igv: data.igv || 0,
+    total: data.total || data.Total || 0,
+    placa: data.placa || "",
+    marca: data.marca || "",
+    modelo: data.modelo || "",
+    km: data.km_ingreso || "",
+    observaciones: data.observacion || data.motivo || "",
+    titulo: title || "DOCUMENTO",
+  });
+
+  const handleDownload = async () => {
+    await descargarPDF(getDocDef(), `${title || "documento"}_${data.serie || data.Nserie || ""}${data.numero || ""}.pdf`);
   };
 
-  const handlePrint = () => {
-    const docDef = generarFacturaPDF({
-      items: data.items || data.diagnosticos || [],
-      cliente: data.cliente || data.razonSNombre || data.nombre_cliente || data.Razon_social || "",
-      clienteDoc: data.clienteDoc || data.RUCempresa || "",
-      direccion: data.direccion || "",
-      fecha: data.fecha || data.Fecha || data.fecha_creacion || "",
-      formaPago: data.formaPago || data.FPago || "CONTADO",
-      serie: data.serie || data.nserie || data.Nserie || "",
-      numero: data.numero || data.NumCotizacion || "",
-      subtotal: data.subtotal || 0,
-      igv: data.igv || 0,
-      total: data.total || data.Total || 0,
-      placa: data.placa || "",
-      marca: data.marca || "",
-      modelo: data.modelo || "",
-      km: data.km_ingreso || "",
-      observaciones: data.observacion || data.motivo || "",
-      titulo: title || "DOCUMENTO",
-    });
-    imprimirPDF(docDef);
+  const handlePrint = async () => {
+    await imprimirPDF(getDocDef());
   };
 
   return (

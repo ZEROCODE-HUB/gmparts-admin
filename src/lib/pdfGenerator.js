@@ -1,6 +1,13 @@
-import pdfMake from "pdfmake/build/pdfmake";
-import pdfFonts from "pdfmake/build/vfs_fonts";
-pdfMake.vfs = pdfFonts.pdfMake.vfs;
+let _pdfMake = null;
+async function getPdfMake() {
+  if (!_pdfMake) {
+    const pdfMakeModule = await import("pdfmake/build/pdfmake");
+    const pdfFontsModule = await import("pdfmake/build/vfs_fonts");
+    pdfMakeModule.default.vfs = pdfFontsModule.default.pdfMake ? pdfFontsModule.default.pdfMake.vfs : pdfFontsModule.default;
+    _pdfMake = pdfMakeModule.default;
+  }
+  return _pdfMake;
+}
 
 const LOGO_URL = "https://storage.googleapis.com/flutterflow-io-6f20.appspot.com/projects/g-m-parts-lac7fg/assets/za03o2h6k5tg/Capa_1.png";
 const ERP_LOGO_URL = "https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/12345/capa_erp.png";
@@ -402,12 +409,15 @@ export function generarCotizacionPDF({ recepcion, diagnosticos = [], items }) {
 // ──────────────────────────────────────────────
 // Helper: descargar o imprimir
 // ──────────────────────────────────────────────
-export function descargarPDF(docDef, filename) {
-  pdfMake.createPdf(docDef).download(filename);
+export async function descargarPDF(docDef, filename) {
+  const pm = await getPdfMake();
+  pm.createPdf(docDef).download(filename);
 }
-export function imprimirPDF(docDef) {
-  pdfMake.createPdf(docDef).print();
+export async function imprimirPDF(docDef) {
+  const pm = await getPdfMake();
+  pm.createPdf(docDef).print();
 }
-export function abrirPDF(docDef) {
-  pdfMake.createPdf(docDef).open();
+export async function abrirPDF(docDef) {
+  const pm = await getPdfMake();
+  pm.createPdf(docDef).open();
 }
