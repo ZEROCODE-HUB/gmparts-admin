@@ -1,14 +1,69 @@
 import { useState } from "react";
-import { Printer } from "lucide-react";
-import PrintDocument from "./PrintDocument";
+import { Printer, Download } from "lucide-react";
+import { generarFacturaPDF, descargarPDF, imprimirPDF } from "../../lib/pdfGenerator";
 
-// Botón reutilizable que abre el layout de impresión de un documento.
 export default function PrintButton({ title, data }) {
   const [open, setOpen] = useState(false);
+  if (!data) return null;
+
+  const handleDownload = () => {
+    const docDef = generarFacturaPDF({
+      items: data.items || data.diagnosticos || [],
+      cliente: data.cliente || data.razonSNombre || data.nombre_cliente || data.Razon_social || "",
+      clienteDoc: data.clienteDoc || data.RUCempresa || "",
+      direccion: data.direccion || "",
+      fecha: data.fecha || data.Fecha || data.fecha_creacion || "",
+      formaPago: data.formaPago || data.FPago || "CONTADO",
+      serie: data.serie || data.nserie || data.Nserie || "",
+      numero: data.numero || data.NumCotizacion || "",
+      subtotal: data.subtotal || 0,
+      igv: data.igv || 0,
+      total: data.total || data.Total || 0,
+      placa: data.placa || "",
+      marca: data.marca || "",
+      modelo: data.modelo || "",
+      km: data.km_ingreso || "",
+      observaciones: data.observacion || data.motivo || "",
+      titulo: title || "DOCUMENTO",
+    });
+    descargarPDF(docDef, `${title || "documento"}_${data.serie || data.Nserie || ""}${data.numero || ""}.pdf`);
+  };
+
+  const handlePrint = () => {
+    const docDef = generarFacturaPDF({
+      items: data.items || data.diagnosticos || [],
+      cliente: data.cliente || data.razonSNombre || data.nombre_cliente || data.Razon_social || "",
+      clienteDoc: data.clienteDoc || data.RUCempresa || "",
+      direccion: data.direccion || "",
+      fecha: data.fecha || data.Fecha || data.fecha_creacion || "",
+      formaPago: data.formaPago || data.FPago || "CONTADO",
+      serie: data.serie || data.nserie || data.Nserie || "",
+      numero: data.numero || data.NumCotizacion || "",
+      subtotal: data.subtotal || 0,
+      igv: data.igv || 0,
+      total: data.total || data.Total || 0,
+      placa: data.placa || "",
+      marca: data.marca || "",
+      modelo: data.modelo || "",
+      km: data.km_ingreso || "",
+      observaciones: data.observacion || data.motivo || "",
+      titulo: title || "DOCUMENTO",
+    });
+    imprimirPDF(docDef);
+  };
+
   return (
     <>
-      <button onClick={() => setOpen(true)} className="p-1.5 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]" title="Imprimir vista r\u00e1pida"><Printer size={15} /></button>
-      {open && <PrintDocument title={title} data={data} onClose={() => setOpen(false)} />}
+      <button onClick={() => setOpen(true)} className="p-1.5 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]" title="Imprimir / PDF"><Printer size={15} /></button>
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setOpen(false)}>
+          <div className="bg-[var(--panel)] rounded-lg p-6 flex flex-col gap-3 min-w-[200px]" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => { handleDownload(); setOpen(false); }} className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-[var(--surface-2)] text-sm font-medium"><Download size={16} /> Descargar PDF</button>
+            <button onClick={() => { handlePrint(); setOpen(false); }} className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-[var(--surface-2)] text-sm font-medium"><Printer size={16} /> Imprimir</button>
+            <button onClick={() => setOpen(false)} className="text-sm text-[var(--muted)] hover:text-[var(--text)] mt-2">Cancelar</button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
