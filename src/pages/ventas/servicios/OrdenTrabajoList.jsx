@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+﻿import { useState, useCallback } from "react";
 import Pagination from "../../../components/ui/Pagination";
 import { exportToExcel } from "../../../lib/exportExcel";
 import { useNavigate } from "react-router-dom";
@@ -10,15 +10,24 @@ import Modal from "../../../components/ui/Modal";
 import Btn from "../../../components/ui/Btn";
 import DocumentPreviewModal from "../../../components/documents/DocumentPreviewModal";
 import PrintDocument from "../../../components/documents/PrintDocument";
-import { useFirestoreDocuments } from "../../../store/firestoreDb";
+import { useFirestoreCollection } from "../../../store/firestoreDb";
+import { db as fbDb } from "../../../lib/firebase";
+import { deleteDoc, doc } from "firebase/firestore";
 import * as db from "../../../store/db";
 
 const previewFields = [
-  { key: "numeroorden", label: "N� OT" }, { key: "cliente", label: "Cliente" },
-  { key: "placa", label: "Placa" }, { key: "marca", label: "Marca" },
-  { key: "modelo", label: "Modelo" }, { key: "estado", label: "Estado" },
-  { key: "facturado", label: "Facturado" },
+  { key: "codeCT", label: "Documento" }, { key: "numeroorden", label: "N� OT" },
+  { key: "nombre_cliente", label: "Cliente" }, { key: "placa", label: "Placa" },
+  { key: "marca", label: "Marca" }, { key: "modelo", label: "Modelo" },
+  { key: "status", label: "Estado" }, { key: "facturado", label: "Facturado" },
 ];
+
+const ffecha = (ts) => {
+  if (!ts) return "";
+  if (typeof ts === "string") return ts.slice(0, 10);
+  if (ts.seconds) return new Date(ts.seconds * 1000).toISOString().slice(0, 10);
+  return "";
+};
 
 const estadoColor = (e) => ({
   "Recepci�n": "bg-gray-100 text-gray-700",
@@ -29,14 +38,18 @@ const estadoColor = (e) => ({
 
 export default function OrdenTrabajoList() {
   const navigate = useNavigate();
-  const [items, { remove }] = useFirestoreDocuments("vs-orden");
+  const items = useFirestoreCollection("recepciones");
   const [q, setQ] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [preview, setPreview] = useState(null);
   const [printTarget, setPrintTarget] = useState(null);
 
+  const remove = useCallback(async (id) => {
+    if (id) await deleteDoc(doc(fbDb, "recepciones", id));
+  }, []);
+
   const rows = items.filter((c) =>
-    (`${c.cliente} ${c.serie || ""} ${c.numero || ""} ${c.placa || ""}`).toLowerCase().includes(q.toLowerCase())
+    (`${c.nombre_cliente || c.Razon_social || ""} ${c.codeCT || ""} ${c.numeroorden || ""} ${c.placa || ""}`).toLowerCase().includes(q.toLowerCase())
   );
   const [page, setPage] = useState(0);
   const totalPages = Math.ceil(rows.length / 20);
@@ -44,22 +57,22 @@ export default function OrdenTrabajoList() {
 
   const facturar = (ot) => {
     const itemsFact = db.getOTFacturaItems(ot);
-    navigate("/vs-factura/nuevo", { state: { fromOT: ot.id, cliente: ot.cliente, clienteDoc: ot.clienteDoc, placa: ot.placa, items: itemsFact } });
+    navigate("/vs-factura/nuevo", { state: { fromOT: ot.id, cliente: ot.nombre_cliente || ot.Razon_social, clienteDoc: ot.RUCempresa || ot.DNI || "", placa: ot.placa, items: itemsFact } });
   };
 
   return (
     <div>
       <Toolbar title="Orden de Trabajo" count={rows.length} onNew={() => navigate("/vs-orden/nuevo")} onExport={() => exportToExcel(rows, "OrdenesTrabajo")} />
       <SearchBox value={q} onChange={setQ} />
-      <Table columns={["Cliente", "Placa", "Estado", "Facturado", "Total", "Acci�n"]}
+      <Table columns={["Documento", "Cliente", "Placa", "Estado", "Facturado", "Acci�n"]}
         rows={pageRows}
         renderRow={(c) => (
           <>
-            <Td className="font-medium">{c.cliente || ""}</Td>
+            <Td className="gmp-mono text-[var(--muted)]">{c.codeCT || ""}</Td>
+            <Td className="font-medium">{c.nombre_cliente || c.Razon_social || ""}</Td>
             <Td className="gmp-mono text-[var(--muted)]">{c.placa || "�"}</Td>
-            <Td><span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${estadoColor(c.estado)}`}>{c.estado || ""}</span></Td>
+            <Td><span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${estadoColor(c.status)}`}>{c.status || ""}</span></Td>
             <Td>{c.facturado ? <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700">S�</span> : <span className="text-[11px] text-[var(--muted)]">No</span>}</Td>
-            <Td className="gmp-mono">S/ {(c.total || 0).toFixed(2)}</Td>
             <Td>
               <div className="flex gap-1">
                 <button onClick={() => setPreview(c)} className="p-1.5 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]" title="Ver detalle"><Eye size={15} /></button>
@@ -76,7 +89,7 @@ export default function OrdenTrabajoList() {
       {deleteTarget && (
         <Modal title="Anular orden" onClose={() => setDeleteTarget(null)}>
           <p className="text-sm text-[var(--muted)] mb-6">�Est�s seguro de anular esta orden?</p>
-          <p className="font-medium mb-6">{deleteTarget.cliente} � {deleteTarget.placa}</p>
+          <p className="font-medium mb-6">{deleteTarget.nombre_cliente || deleteTarget.Razon_social} � {deleteTarget.placa}</p>
           <div className="flex justify-end gap-2">
             <Btn variant="ghost" onClick={() => setDeleteTarget(null)}>Cancelar</Btn>
             <Btn variant="danger" onClick={() => { remove(deleteTarget.id); setDeleteTarget(null); }}>Anular</Btn>
@@ -84,7 +97,7 @@ export default function OrdenTrabajoList() {
         </Modal>
       )}
 
-      {preview && <DocumentPreviewModal title="Vista previa - Orden de Trabajo" data={{ ...preview, numeroorden: preview.numeroorden, facturado: preview.facturado ? "S�" : "No" }} fields={previewFields} collection="Facturas" onClose={() => setPreview(null)} />}
+      {preview && <DocumentPreviewModal title="Vista previa - Orden de Trabajo" data={{ ...preview, numeroorden: preview.numeroorden, facturado: preview.facturado ? "S�" : "No" }} fields={previewFields} collection="recepciones" onClose={() => setPreview(null)} />}
       {printTarget && <PrintDocument data={printTarget} onClose={() => setPrintTarget(null)} />}
       <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>

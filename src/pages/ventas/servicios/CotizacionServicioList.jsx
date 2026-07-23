@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+﻿import { useState, useCallback } from "react";
 import Pagination from "../../../components/ui/Pagination";
 import { exportToExcel } from "../../../lib/exportExcel";
 import { useNavigate } from "react-router-dom";
@@ -10,24 +10,37 @@ import Table, { Td } from "../../../components/ui/Table";
 import Modal from "../../../components/ui/Modal";
 import Btn from "../../../components/ui/Btn";
 import DocumentPreviewModal from "../../../components/documents/DocumentPreviewModal";
-import { useFirestoreDocuments } from "../../../store/firestoreDb";
+import { useFirestoreCollection } from "../../../store/firestoreDb";
+import { db as fbDb } from "../../../lib/firebase";
+import { deleteDoc, doc } from "firebase/firestore";
 
 const previewFields = [
-  { key: "nserie", label: "Serie" }, { key: "numero", label: "N?mero" },
-  { key: "Fecha", label: "Fecha" }, { key: "razonSNombre", label: "Cliente" },
-  { key: "placa", label: "Placa" }, { key: "subtotal", label: "Subtotal" },
-  { key: "igv", label: "IGV" }, { key: "total", label: "Total" }, { key: "Estado", label: "Estado" },
+  { key: "codeCT", label: "Documento" }, { key: "numeroorden", label: "N� OT" },
+  { key: "fecha_creacion", label: "Fecha" }, { key: "nombre_cliente", label: "Cliente" },
+  { key: "placa", label: "Placa" }, { key: "marca", label: "Marca" },
+  { key: "modelo", label: "Modelo" }, { key: "status", label: "Estado" },
 ];
+
+const ffecha = (ts) => {
+  if (!ts) return "";
+  if (typeof ts === "string") return ts.slice(0, 10);
+  if (ts.seconds) return new Date(ts.seconds * 1000).toISOString().slice(0, 10);
+  return "";
+};
 
 export default function CotizacionServicioList() {
   const navigate = useNavigate();
-  const [items, { remove }] = useFirestoreDocuments("vs-cotizacion");
+  const items = useFirestoreCollection("recepciones");
   const [q, setQ] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [preview, setPreview] = useState(null);
 
+  const remove = useCallback(async (id) => {
+    if (id) await deleteDoc(doc(fbDb, "recepciones", id));
+  }, []);
+
   const rows = items.filter((c) =>
-    ((c.razonSNombre || c.cliente || "") + (c.nserie || c.serie || "") + (c.numero || "")).toLowerCase().includes(q.toLowerCase())
+    ((c.nombre_cliente || c.Razon_social || "") + (c.codeCT || "") + (c.placa || "")).toLowerCase().includes(q.toLowerCase())
   );
   const [page, setPage] = useState(0);
   const totalPages = Math.ceil(rows.length / 20);
@@ -37,17 +50,17 @@ export default function CotizacionServicioList() {
     <div>
       <Toolbar title="Cotizaci?n de Servicio" count={rows.length} onNew={() => navigate("/vs-cotizacion/nuevo")} onExport={() => exportToExcel(rows, "CotizacionesServicio")} />
       <SearchBox value={q} onChange={setQ} />
-      <Table columns={["Serie", "N?mero", "Fecha", "Cliente", "Placa", "Servicio", "Total", "Acci?n"]}
+      <Table columns={["Documento", "N� OT", "Fecha", "Cliente", "Placa", "Servicio", "Estado", "Acci�n"]}
         rows={pageRows}
         renderRow={(c) => (
           <>
-            <Td className="gmp-mono text-[var(--muted)]">{c.nserie || c.serie || ""}</Td>
-            <Td className="gmp-mono">{c.numero || ""}</Td>
-            <Td className="text-[var(--muted)]">{c.Fecha || c.fecha || ""}</Td>
-            <Td className="font-medium">{c.razonSNombre || c.cliente || ""}</Td>
+            <Td className="gmp-mono text-[var(--muted)]">{c.codeCT || ""}</Td>
+            <Td className="gmp-mono">{c.numeroorden || ""}</Td>
+            <Td className="text-[var(--muted)]">{ffecha(c.fecha_creacion)}</Td>
+            <Td className="font-medium">{c.nombre_cliente || c.Razon_social || ""}</Td>
             <Td className="gmp-mono text-[var(--muted)]">{c.placa || ""}</Td>
-            <Td className="text-[var(--muted)]">{(c.items && c.items[0] && c.items[0].descripcion) || "?"}</Td>
-            <Td className="gmp-mono">S/ {Number(c.total || 0).toFixed(2)}</Td>
+            <Td className="text-[var(--muted)]">{c.tipo_servicio || "?"}</Td>
+            <Td><span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${c.status === "Recepci�n" ? "bg-yellow-100 text-yellow-700" : "bg-green-100 text-green-700"}`}>{c.status || ""}</span></Td>
             <Td>
               <div className="flex gap-1">
                 <button onClick={() => setPreview(c)} className="p-1.5 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]" title="Ver detalle"><Eye size={15} /></button>
@@ -61,9 +74,9 @@ export default function CotizacionServicioList() {
       />
 
       {deleteTarget && (
-        <Modal title="Anular cotizaci?n" onClose={() => setDeleteTarget(null)}>
-          <p className="text-sm text-[var(--muted)] mb-6">?Est?s seguro de anular esta cotizaci?n?</p>
-          <p className="font-medium mb-6">{deleteTarget.serie}-{deleteTarget.numero}</p>
+        <Modal title="Anular cotizaci�n" onClose={() => setDeleteTarget(null)}>
+          <p className="text-sm text-[var(--muted)] mb-6">�Est�s seguro de anular esta cotizaci�n?</p>
+          <p className="font-medium mb-6">{deleteTarget.codeCT || deleteTarget.id}</p>
           <div className="flex justify-end gap-2">
             <Btn variant="ghost" onClick={() => setDeleteTarget(null)}>Cancelar</Btn>
             <Btn variant="danger" onClick={() => { remove(deleteTarget.id); setDeleteTarget(null); }}>Anular</Btn>
@@ -71,7 +84,7 @@ export default function CotizacionServicioList() {
         </Modal>
       )}
 
-      {preview && <DocumentPreviewModal title="Vista previa - Cotizaci?n de Servicio" data={preview} fields={previewFields} collection="Facturas" onClose={() => setPreview(null)} />}
+      {preview && <DocumentPreviewModal title="Vista previa - Cotizaci�n de Servicio" data={preview} fields={previewFields} collection="recepciones" onClose={() => setPreview(null)} />}
       <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
