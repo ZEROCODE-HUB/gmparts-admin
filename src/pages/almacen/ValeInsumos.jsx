@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+﻿import { useState, useEffect, useMemo } from "react";
 import { Plus, Trash2, Package } from "lucide-react";
 import Toolbar from "../../components/ui/Toolbar";
 import SearchBox from "../../components/ui/SearchBox";
@@ -7,14 +7,21 @@ import Modal from "../../components/ui/Modal";
 import Btn from "../../components/ui/Btn";
 import Field, { inputCls } from "../../components/ui/Field";
 import { useStoreCollection } from "../../store/useStoreCollection";
-import { useFirestoreDocuments } from "../../store/firestoreDb";
+import { useFirestoreDocuments, useFirestoreCollection } from "../../store/firestoreDb";
 import almacenesSeed from "../../mock/seed.almacenes";
 import * as db from "../../store/db";
 import { searchArticles } from "../../store/firestoreStock";
 
 export default function ValeInsumos() {
   const [vales, { refresh }] = useStoreCollection("al-vale");
-  const [ots] = useFirestoreDocuments("vs-orden");
+  const [otsFactura] = useFirestoreDocuments("vs-orden");
+  const otsRecepcion = useFirestoreCollection("recepciones");
+  const ots = useMemo(() => {
+    const map = new Map();
+    for (const o of otsFactura) map.set(o.id, o);
+    for (const o of otsRecepcion) if (!map.has(o.id)) map.set(o.id, o);
+    return [...map.values()];
+  }, [otsFactura, otsRecepcion]);
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
@@ -87,7 +94,7 @@ export default function ValeInsumos() {
             <Field label="Orden de trabajo (opcional)">
               <select className={inputCls} value={form.recepcionRef} onChange={(e) => setForm({ ...form, recepcionRef: e.target.value })}>
                 <option value="">Sin OT</option>
-                {ots.filter((o) => !o.facturado).map((o) => <option key={o.id} value={o.id}>{o.placa} — {o.cliente}</option>)}
+                {ots.filter((o) => !o.facturado).map((o) => <option key={o.id} value={o.id}>{o.placa} — {o.nombre_cliente || o.Razon_social || o.cliente || o.razonSNombre || ""}</option>)}
               </select>
             </Field>
             <Field label="Observación"><input className={inputCls} value={form.observacion} onChange={(e) => setForm({ ...form, observacion: e.target.value })} placeholder="Motivo del vale" /></Field>
