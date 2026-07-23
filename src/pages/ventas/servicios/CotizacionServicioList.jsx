@@ -12,7 +12,7 @@ import Btn from "../../../components/ui/Btn";
 import DocumentPreviewModal from "../../../components/documents/DocumentPreviewModal";
 import { useFirestoreCollection } from "../../../store/firestoreDb";
 import { db as fbDb } from "../../../lib/firebase";
-import { deleteDoc, doc } from "firebase/firestore";
+import { deleteDoc, doc, where } from "firebase/firestore";
 
 const previewFields = [
   { key: "codeCT", label: "Documento" }, { key: "numeroorden", label: "N� OT" },
@@ -30,7 +30,7 @@ const ffecha = (ts) => {
 
 export default function CotizacionServicioList() {
   const navigate = useNavigate();
-  const items = useFirestoreCollection("recepciones");
+  const items = useFirestoreCollection("recepciones", [where("status", "in", ["Reparaci\u00f3n", "Finalizado", "Cotizaci\u00f3n", "Recepci\u00f3n"])]);
   const [q, setQ] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [preview, setPreview] = useState(null);

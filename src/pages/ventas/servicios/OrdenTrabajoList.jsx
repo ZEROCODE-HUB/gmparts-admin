@@ -12,7 +12,7 @@ import DocumentPreviewModal from "../../../components/documents/DocumentPreviewM
 import PrintDocument from "../../../components/documents/PrintDocument";
 import { useFirestoreCollection } from "../../../store/firestoreDb";
 import { db as fbDb } from "../../../lib/firebase";
-import { deleteDoc, doc } from "firebase/firestore";
+import { deleteDoc, doc, where } from "firebase/firestore";
 import * as db from "../../../store/db";
 
 const previewFields = [
@@ -38,7 +38,7 @@ const estadoColor = (e) => ({
 
 export default function OrdenTrabajoList() {
   const navigate = useNavigate();
-  const items = useFirestoreCollection("recepciones");
+  const items = useFirestoreCollection("recepciones", [where("status", "in", ["Reparaci\u00f3n", "Finalizado"])]);
   const [q, setQ] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [preview, setPreview] = useState(null);
