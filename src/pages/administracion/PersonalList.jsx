@@ -11,9 +11,9 @@ import Field, { inputCls } from "../../components/ui/Field";
 import { useFirestoreCollection, saveMaestro, deleteMaestro } from "../../store/firestoreDb";
 import { EMPLOYEE_ROLES, fbCreateUser } from "../../store/auth";
 import { hashPassword } from "../../lib/authLib";
-import { where, doc, updateDoc } from "firebase/firestore";
+import { where } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
-import { functions, db } from "../../lib/firebase";
+import { functions } from "../../lib/firebase";
 import { showToast } from "../../components/ui/Toast";
 
 const COL = "users";
@@ -101,14 +101,10 @@ export default function PersonalList() {
       if (form.password) {
         data.password_hash = await hashPassword(form.password);
       }
-      const newId = await saveMaestro(COL, { ...data, id: editing?.id });
-      const docId = editing?.id || newId;
+      await saveMaestro(COL, { ...data, id: editing?.id });
 
       if (form.password && !editing) {
-        const res = await fbCreateUser(form.email, form.password);
-        if (res.ok && res.uid) {
-          await updateDoc(doc(db, COL, docId), { auth_uid: res.uid });
-        }
+        await fbCreateUser(form.email, form.password);
       }
 
       closeModal();
