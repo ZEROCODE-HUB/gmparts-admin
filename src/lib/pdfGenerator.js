@@ -1075,16 +1075,15 @@ export async function abrirPDF(opts) {
 export function docToOpts(data, title) {
   let tipo = 'factura';
 
+  const code = data.codeCT || '';
   if (data.proveedor || data.proveedorDoc) {
     tipo = 'compra';
-  } else if (data.codeCT || data.numeroorden || data.tipo_servicio) {
-    if (title === 'Documento' || data.status === 'aprobado' || data.status === 'completado') {
-      tipo = 'orden';
-    } else {
-      tipo = 'cotizacion';
-    }
+  } else if (code.startsWith('OT') || code.startsWith('OT-')) {
+    tipo = 'orden';
+  } else if (code.startsWith('CT') || code.startsWith('SC') || data.tipo_servicio) {
+    tipo = 'cotizacion';
   } else if (data.diagnosticos || data.items?.some?.((it) => it.tipo === 'servicio' || it.tipo === 'mano_obra')) {
-    if (title === 'Documento' || (!data.total && data.items?.length > 0)) {
+    if (!data.total && data.items?.length > 0) {
       tipo = 'orden';
     } else {
       tipo = 'cotizacion';
