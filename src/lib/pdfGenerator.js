@@ -130,12 +130,12 @@ async function buildDocDefFactura(opts) {
           {
             width: '*',
             stack: [
-              { text: 'GEAR MOTOR PARTS S.A.C.', style: 'empresaNombre' },
-              { text: 'Dirección fiscal: Coo. Veintisiete de abril. Av. Nicolás Ayllón 3270, Ate, Lima', style: 'empresaDetalle' },
-              { text: 'Asc. Santa Cruz de Vista Alegre - Santa Anita', style: 'empresaDetalle' },
-              { text: 'Sucursal: Av. Nicolás Ayllón Nro. 3270 Coo. Vendedores de abril - Ate', style: 'empresaDetalle' },
-              { text: 'Tel.: 01 362 8667 - 924 483 844', style: 'empresaDetalle' },
-              { text: 'gearmparts@gmail.com', style: 'empresaDetalle' },
+              { text: 'GEAR MOTOR PARTS S.A.C.', fontSize: 18, bold: true, italics: true },
+              { text: 'Dirección fiscal: Av. Colectora Industrial Mza. A Lote. 6', fontSize: 7, margin: [0, 2, 0, 0] },
+              { text: 'Asc. Santa Cruz de Vista Alegre - Santa Anita', fontSize: 7 },
+              { text: 'Sucursal: Av. Nicolás Ayllón Nro. 3270 Coo. Veintisiete de abril - Ate', fontSize: 7 },
+              { text: 'Tel.: 01 362 8667 - 924 483 844', fontSize: 7 },
+              { text: 'gearmparts@gmail.com', fontSize: 7 },
             ],
           },
         ],
@@ -144,15 +144,19 @@ async function buildDocDefFactura(opts) {
         width: 180,
         table: {
           widths: ['*'],
-          body: [[
-            { stack: [
-              { text: 'R.U.C. 20601720621', style: 'ruc', alignment: 'center' },
-              { text: titulo, style: 'tituloDoc', alignment: 'center', margin: [0, 8, 0, 8] },
-              { text: `Nº ${numDoc}`, style: 'numeroDoc', alignment: 'center' },
-            ], margin: [10, 10, 10, 10] },
-          ]],
+          body: [
+            [{ text: 'R.U.C. 20601720621', fontSize: 9, bold: true, alignment: 'center', margin: [8, 6, 8, 6] }],
+            [{ text: titulo, fontSize: 12, bold: true, alignment: 'center', margin: [8, 6, 8, 6] }],
+            [{ text: `Nº ${numDoc}`, fontSize: 9, bold: true, alignment: 'center', margin: [8, 6, 8, 6] }],
+          ],
         },
-        layout: borderLayout(1.5, 1.5),
+        layout: {
+          hLineWidth: (i, node) => i === 0 || i === node.table.body.length ? 0.75 : 0.5,
+          vLineWidth: () => 0.75,
+          hLineColor: () => '#000000', vLineColor: () => '#000000',
+          paddingLeft: () => 0, paddingRight: () => 0,
+          paddingTop: () => 0, paddingBottom: () => 0,
+        },
       },
     ],
     margin: [0, 0, 0, 15],
@@ -304,9 +308,9 @@ async function buildDocDefFactura(opts) {
           {
             table: { widths: ['*'], body: [[
               { stack: [
-                { text: 'BCP CTA Soles: 191-2390862-0-19', fontSize: 8 },
-                { text: 'BCP CTA CCI: 002-19100239086201950', fontSize: 8 },
-                { text: 'BN DETRACCIÓN: 00-066-104419', fontSize: 8 },
+                { text: 'BCP CTA. CTE. SOLES  : 191-2390862-0-19', fontSize: 8 },
+                { text: 'BCP CTA. CCI. SOLES  : 002-19100239086201950', fontSize: 8 },
+                { text: 'BN DETRACCIÓN SOLES  : 00-066-104419', fontSize: 8 },
               ], margin: [6, 6, 6, 6] },
             ]]},
             layout: borderLayout(0.5, 0.5),
