@@ -9,6 +9,7 @@ import Modal from "../../components/ui/Modal";
 import Btn from "../../components/ui/Btn";
 import Field, { inputCls } from "../../components/ui/Field";
 import { useFirestoreCollection, saveMaestro, deleteMaestro } from "../../store/firestoreDb";
+import { fbCreateUser } from "../../store/auth";
 import { hashPassword } from "../../lib/authLib";
 import { where } from "firebase/firestore";
 
@@ -97,6 +98,11 @@ export default function ClientesList() {
         data.password_hash = await hashPassword(form.password);
       }
       await saveMaestro(COL, { ...data, id: editing?.id });
+
+      if (form.password && !editing) {
+        await fbCreateUser(form.email, form.password);
+      }
+
       setModalOpen(false);
       setToast("Cliente guardado");
       setTimeout(() => setToast(null), 2000);

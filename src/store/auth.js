@@ -1,7 +1,7 @@
 import { auth, db } from "../lib/firebase";
 import {
-  signInWithEmailAndPassword, signOut as fbSignOut,
-  onAuthStateChanged,
+  signInWithEmailAndPassword, createUserWithEmailAndPassword,
+  signOut as fbSignOut, onAuthStateChanged,
 } from "firebase/auth";
 import {
   collection, query, where, getDocs, doc, getDoc, updateDoc, limit as qLimit,
@@ -94,6 +94,16 @@ export function observeAuth(cb) {
     }
     cb(await loadRole(user));
   });
+}
+
+export async function fbCreateUser(email, password) {
+  try {
+    await createUserWithEmailAndPassword(auth, email, password);
+    await fbSignOut(auth);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: translateAuthError(e) };
+  }
 }
 
 export async function logout() {
