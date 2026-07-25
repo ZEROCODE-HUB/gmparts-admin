@@ -128,7 +128,7 @@ export default function PersonalList() {
       try {
         const fn = httpsCallable(functions, "deleteAuthUser");
         await fn({ uid: deleteTarget.auth_uid || deleteTarget.id, email: deleteTarget.email });
-      } catch { /* si no existe en Auth, ignorar */ }
+      } catch (e) { console.warn("deleteAuthUser:", e); }
       setDeleteTarget(null);
       showToast("Personal eliminado");
     } catch {
