@@ -123,6 +123,39 @@ exports.onUserDeleted = functions.auth.user().onDelete(async (user) => {
   }
 });
 
+// ── deleteAuthUser — HTTP callable ────────────────────────────────
+// Borra un usuario de Firebase Auth (Admin SDK).
+// Solo permitido para Administrador o Gerente General.
+// Llamada desde el frontend al eliminar personal/clientes.
+// ═════════════════════════════════════════════════════════════════
+exports.deleteAuthUser = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError("unauthenticated", "Debe iniciar sesión.");
+  }
+
+  const callerUid = context.auth.uid;
+  const callerSnap = await db.doc("users/" + callerUid).get();
+  const callerRole = callerSnap.exists ? callerSnap.data().user_role : "";
+  if (callerRole !== "Administrador" && callerRole !== "Gerente General") {
+    throw new functions.https.HttpsError("permission-denied", "No tienes permisos.");
+  }
+
+  const { uid } = data;
+  if (!uid) {
+    throw new functions.https.HttpsError("invalid-argument", "Falta uid.");
+  }
+
+  try {
+    await admin.auth().deleteUser(uid);
+    // También limpia los datos en Firestore
+    await cleanupUserReferences(uid);
+    return { ok: true };
+  } catch (e) {
+    console.error("deleteAuthUser ERROR:", e);
+    throw new functions.https.HttpsError("internal", "Error al eliminar usuario.");
+  }
+});
+
 // ═════════════════════════════════════════════════════════════════
 // generateDocumentPdf — HTTP callable
 // Recibe { collection, docId }, genera PDF, sube a Storage,

@@ -12,6 +12,8 @@ import { useFirestoreCollection, saveMaestro, deleteMaestro } from "../../store/
 import { EMPLOYEE_ROLES, fbCreateUser } from "../../store/auth";
 import { hashPassword } from "../../lib/authLib";
 import { where } from "firebase/firestore";
+import { httpsCallable } from "firebase/functions";
+import { functions } from "../../lib/firebase";
 
 const COL = "users";
 
@@ -104,7 +106,13 @@ export default function PersonalList() {
     setTimeout(() => setToast(null), 2000);
   };
   const confirmDelete = async () => {
-    if (deleteTarget) await deleteMaestro(COL, deleteTarget.id);
+    if (deleteTarget) {
+      await deleteMaestro(COL, deleteTarget.id);
+      try {
+        const fn = httpsCallable(functions, "deleteAuthUser");
+        await fn({ uid: deleteTarget.id });
+      } catch { /* si no existe en Auth, ignorar */ }
+    }
     setDeleteTarget(null);
     setToast("Personal eliminado");
     setTimeout(() => setToast(null), 2000);

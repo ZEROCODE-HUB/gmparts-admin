@@ -12,6 +12,8 @@ import { useFirestoreCollection, saveMaestro, deleteMaestro } from "../../store/
 import { fbCreateUser } from "../../store/auth";
 import { hashPassword } from "../../lib/authLib";
 import { where } from "firebase/firestore";
+import { httpsCallable } from "firebase/functions";
+import { functions } from "../../lib/firebase";
 
 const COL = "users";
 
@@ -116,7 +118,13 @@ export default function ClientesList() {
     }
   };
   const confirmDelete = async () => {
-    if (deleteTarget) await deleteMaestro(COL, deleteTarget.id);
+    if (deleteTarget) {
+      await deleteMaestro(COL, deleteTarget.id);
+      try {
+        const fn = httpsCallable(functions, "deleteAuthUser");
+        await fn({ uid: deleteTarget.id });
+      } catch { /* si no existe en Auth, ignorar */ }
+    }
     setDeleteTarget(null);
     setToast("Cliente eliminado");
     setTimeout(() => setToast(null), 2000);
