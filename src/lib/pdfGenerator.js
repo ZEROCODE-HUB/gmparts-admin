@@ -614,57 +614,55 @@ async function buildDocDefCotizacion(opts) {
     margin: [0, 0, 0, 10],
   });
 
-  content.push({
-    table: { widths: ['*'], body: [[
-      { stack: [
-        {
-          table: { widths: ['*'], body: [[
-            { text: 'DATOS DEL VEHÍCULO', fontSize: 10, bold: true, alignment: 'center', margin: [0, 5, 0, 5], background: '#E0E0E0' },
-          ]]},
-          layout: 'noBorders',
-        },
-        { columns: [
-          { width: '*', text: [{ text: 'PLACA : ', bold: true, fontSize: 10 }, { text: placa, fontSize: 10 }] },
-          { width: '*', text: [{ text: 'MARCA : ', bold: true, fontSize: 10 }, { text: marca, fontSize: 10 }] },
-          { width: '*', text: [{ text: 'MODELO : ', bold: true, fontSize: 10 }, { text: modelo, fontSize: 10 }] },
-        ], margin: [5, 5, 5, 3] },
-        { columns: [
-          { width: '*', text: [{ text: 'COLOR : ', bold: true, fontSize: 10 }, { text: color, fontSize: 10 }] },
-          { width: '*', text: [{ text: 'COMBUSTIBLE : ', bold: true, fontSize: 10 }, { text: combustible, fontSize: 10 }] },
-          { width: '*', text: [{ text: 'KILOMETRAJE : ', bold: true, fontSize: 10 }, { text: kilometraje, fontSize: 10 }] },
-        ], margin: [5, 0, 5, 3] },
-        { text: [{ text: 'AÑO DE FABRICACIÓN : ', bold: true, fontSize: 10 }, { text: anioFabricacion, fontSize: 10 }], margin: [5, 0, 5, 5] },
-      ]},
-    ]]},
-    layout: borderLayout(1, 1),
-    margin: [0, 0, 0, 10],
-  });
+  function sectionTable(title, contentStack) {
+    return {
+      table: {
+        widths: ['*'],
+        body: [
+          [{ text: title, fontSize: 10, bold: true, alignment: 'center', margin: [5, 5, 5, 5] }],
+          [{ stack: contentStack, margin: [5, 5, 5, 5] }],
+        ],
+      },
+      layout: {
+        hLineWidth: (i) => i === 1 ? 0 : 1,
+        vLineWidth: () => 1,
+        hLineColor: () => '#000',
+        vLineColor: () => '#000',
+        fillColor: (ri) => ri === 0 ? '#E0E0E0' : null,
+        paddingLeft: () => 0, paddingRight: () => 0,
+        paddingTop: () => 0, paddingBottom: () => 0,
+      },
+      margin: [0, 0, 0, 10],
+    };
+  }
 
-  content.push({
-    table: { widths: ['*'], body: [[
-      { stack: [
-        {
-          table: { widths: ['*'], body: [[
-            { text: 'CONDICIONES COMERCIALES', fontSize: 10, bold: true, alignment: 'center', margin: [0, 5, 0, 5], background: '#E0E0E0' },
-          ]]},
-          layout: 'noBorders',
-        },
-        { text: [{ text: 'FORMA DE PAGO : ', bold: true, fontSize: 10 }, { text: formaPago, fontSize: 10 }], margin: [5, 5, 5, 3] },
-        { text: [{ text: 'MONEDA : ', bold: true, fontSize: 10 }, { text: moneda, fontSize: 10 }], margin: [5, 0, 5, 3] },
-        { text: [{ text: 'LUGAR DE SERVICIO : ', bold: true, fontSize: 10 }, { text: lugarServicio, fontSize: 10 }], margin: [5, 0, 5, 3] },
-        { text: [{ text: 'PLAZO DE ENTREGA : ', bold: true, fontSize: 10 }, { text: plazoEntrega, fontSize: 10 }], margin: [5, 0, 5, 3] },
-        { text: [{ text: 'VALIDEZ DE LA OFERTA : ', bold: true, fontSize: 10 }, { text: validezOferta, fontSize: 10 }], margin: [5, 0, 5, 5] },
-        { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 10000, y2: 0, lineWidth: 1 }] },
-        { text: [{ text: 'FECHA DE SERVICIO : ', bold: true, fontSize: 10 }, { text: fechaServicio || fechaFormatted, fontSize: 10 }], margin: [5, 5, 5, 3] },
-        { columns: [
-          { width: '*', text: [{ text: 'TIPO DE SERVICIO : ', bold: true, fontSize: 10 }, { text: tipoServicio, fontSize: 10 }] },
-          { width: 'auto', text: [{ text: 'N° OR : ', bold: true, fontSize: 10 }, { text: numeroOrden, fontSize: 10 }], alignment: 'right' },
-        ], margin: [5, 0, 5, 5] },
-      ]},
-    ]]},
-    layout: borderLayout(1, 1),
-    margin: [0, 0, 0, 10],
-  });
+  content.push(sectionTable('DATOS DEL VEHÍCULO', [
+    { columns: [
+      { width: '*', text: [{ text: 'PLACA : ', bold: true, fontSize: 10 }, { text: placa, fontSize: 10 }] },
+      { width: '*', text: [{ text: 'MARCA : ', bold: true, fontSize: 10 }, { text: marca, fontSize: 10 }] },
+      { width: '*', text: [{ text: 'MODELO : ', bold: true, fontSize: 10 }, { text: modelo, fontSize: 10 }] },
+    ], margin: [0, 0, 0, 3] },
+    { columns: [
+      { width: '*', text: [{ text: 'COLOR : ', bold: true, fontSize: 10 }, { text: color, fontSize: 10 }] },
+      { width: '*', text: [{ text: 'COMBUSTIBLE : ', bold: true, fontSize: 10 }, { text: combustible, fontSize: 10 }] },
+      { width: '*', text: [{ text: 'KILOMETRAJE : ', bold: true, fontSize: 10 }, { text: kilometraje, fontSize: 10 }] },
+    ], margin: [0, 0, 0, 3] },
+    { text: [{ text: 'AÑO DE FABRICACIÓN : ', bold: true, fontSize: 10 }, { text: anioFabricacion, fontSize: 10 }] },
+  ]));
+
+  content.push(sectionTable('CONDICIONES COMERCIALES', [
+    { text: [{ text: 'FORMA DE PAGO : ', bold: true, fontSize: 10 }, { text: formaPago, fontSize: 10 }], margin: [0, 0, 0, 3] },
+    { text: [{ text: 'MONEDA : ', bold: true, fontSize: 10 }, { text: moneda, fontSize: 10 }], margin: [0, 0, 0, 3] },
+    { text: [{ text: 'LUGAR DE SERVICIO : ', bold: true, fontSize: 10 }, { text: lugarServicio, fontSize: 10 }], margin: [0, 0, 0, 3] },
+    { text: [{ text: 'PLAZO DE ENTREGA : ', bold: true, fontSize: 10 }, { text: plazoEntrega, fontSize: 10 }], margin: [0, 0, 0, 3] },
+    { text: [{ text: 'VALIDEZ DE LA OFERTA : ', bold: true, fontSize: 10 }, { text: validezOferta, fontSize: 10 }], margin: [0, 0, 0, 5] },
+    { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 10000, y2: 0, lineWidth: 1 }], margin: [0, 0, 0, 5] },
+    { text: [{ text: 'FECHA DE SERVICIO : ', bold: true, fontSize: 10 }, { text: fechaServicio || fechaFormatted, fontSize: 10 }], margin: [0, 0, 0, 3] },
+    { columns: [
+      { width: '*', text: [{ text: 'TIPO DE SERVICIO : ', bold: true, fontSize: 10 }, { text: tipoServicio, fontSize: 10 }] },
+      { width: 'auto', text: [{ text: 'N° OR : ', bold: true, fontSize: 10 }, { text: numeroOrden, fontSize: 10 }], alignment: 'right' },
+    ]},
+  ]));
 
   const tblBody = [
     [
@@ -756,7 +754,13 @@ async function buildDocDefCotizacion(opts) {
             { text: fechaVencimientoStr, fontSize: 14, bold: true, color: '#CC0000', alignment: 'center', margin: [0, 8, 0, 5] },
           ], margin: [8, 8, 8, 8] },
         ]]},
-        layout: borderLayout(1, 1),
+        layout: {
+          hLineWidth: () => 1, vLineWidth: () => 1,
+          hLineColor: () => '#000', vLineColor: () => '#000',
+          fillColor: () => '#F5F5F5',
+          paddingLeft: () => 0, paddingRight: () => 0,
+          paddingTop: () => 0, paddingBottom: () => 0,
+        },
       },
     ],
     margin: [0, 0, 0, 0],
@@ -816,14 +820,23 @@ async function buildDocDefOrden(opts) {
       },
       {
         width: 140,
-        table: { widths: ['*'], body: [[
-          { stack: [
-            { text: `R.U.C. ${ruc}`, fontSize: 10, bold: true, alignment: 'center' },
-            { text: 'ORDEN DE TRABAJO', fontSize: 12, bold: true, alignment: 'center', background: '#E0E0E0', margin: [0, 4, 0, 4] },
-            { text: numCotizacion, fontSize: 10, bold: true, alignment: 'center' },
-          ], margin: [8, 8, 8, 8] },
-        ]]},
-        layout: borderLayout(1, 1),
+        table: {
+          widths: ['*'],
+          body: [
+            [{ text: `R.U.C. ${ruc}`, fontSize: 10, bold: true, alignment: 'center', margin: [0, 6, 0, 4] }],
+            [{ text: 'ORDEN DE TRABAJO', fontSize: 12, bold: true, alignment: 'center', margin: [4, 4, 4, 4] }],
+            [{ text: numCotizacion, fontSize: 10, bold: true, alignment: 'center', margin: [0, 4, 0, 6] }],
+          ],
+        },
+        layout: {
+          hLineWidth: (i) => i === 1 || i === 2 ? 0 : 1,
+          vLineWidth: () => 1,
+          hLineColor: () => '#000',
+          vLineColor: () => '#000',
+          fillColor: (ri) => ri === 1 ? '#E0E0E0' : null,
+          paddingLeft: () => 0, paddingRight: () => 0,
+          paddingTop: () => 0, paddingBottom: () => 0,
+        },
       },
     ],
     margin: [0, 0, 0, 10],
@@ -854,31 +867,41 @@ async function buildDocDefOrden(opts) {
     margin: [0, 0, 0, 10],
   });
 
-  content.push({
-    table: { widths: ['*'], body: [[
-      { stack: [
-        {
-          table: { widths: ['*'], body: [[
-            { text: 'DATOS DEL VEHÍCULO', fontSize: 10, bold: true, alignment: 'center', margin: [0, 5, 0, 5], background: '#E0E0E0' },
-          ]]},
-          layout: 'noBorders',
-        },
-        { columns: [
-          { width: '*', text: [{ text: 'PLACA : ', bold: true, fontSize: 10 }, { text: placa, fontSize: 10 }] },
-          { width: '*', text: [{ text: 'MARCA : ', bold: true, fontSize: 10 }, { text: marca, fontSize: 10 }] },
-          { width: '*', text: [{ text: 'MODELO : ', bold: true, fontSize: 10 }, { text: modelo, fontSize: 10 }] },
-        ], margin: [5, 5, 5, 3] },
-        { columns: [
-          { width: '*', text: [{ text: 'COLOR : ', bold: true, fontSize: 10 }, { text: color, fontSize: 10 }] },
-          { width: '*', text: [{ text: 'COMBUSTIBLE : ', bold: true, fontSize: 10 }, { text: combustible, fontSize: 10 }] },
-          { width: '*', text: [{ text: 'KILOMETRAJE : ', bold: true, fontSize: 10 }, { text: kilometraje, fontSize: 10 }] },
-        ], margin: [5, 0, 5, 3] },
-        { text: [{ text: 'AÑO DE FABRICACIÓN : ', bold: true, fontSize: 10 }, { text: anioFabricacion, fontSize: 10 }], margin: [5, 0, 5, 5] },
-      ]},
-    ]]},
-    layout: borderLayout(1, 1),
-    margin: [0, 0, 0, 10],
-  });
+  function sectionTable(title, contentStack) {
+    return {
+      table: {
+        widths: ['*'],
+        body: [
+          [{ text: title, fontSize: 10, bold: true, alignment: 'center', margin: [5, 5, 5, 5] }],
+          [{ stack: contentStack, margin: [5, 5, 5, 5] }],
+        ],
+      },
+      layout: {
+        hLineWidth: (i) => i === 1 ? 0 : 1,
+        vLineWidth: () => 1,
+        hLineColor: () => '#000',
+        vLineColor: () => '#000',
+        fillColor: (ri) => ri === 0 ? '#E0E0E0' : null,
+        paddingLeft: () => 0, paddingRight: () => 0,
+        paddingTop: () => 0, paddingBottom: () => 0,
+      },
+      margin: [0, 0, 0, 10],
+    };
+  }
+
+  content.push(sectionTable('DATOS DEL VEHÍCULO', [
+    { columns: [
+      { width: '*', text: [{ text: 'PLACA : ', bold: true, fontSize: 10 }, { text: placa, fontSize: 10 }] },
+      { width: '*', text: [{ text: 'MARCA : ', bold: true, fontSize: 10 }, { text: marca, fontSize: 10 }] },
+      { width: '*', text: [{ text: 'MODELO : ', bold: true, fontSize: 10 }, { text: modelo, fontSize: 10 }] },
+    ], margin: [0, 0, 0, 3] },
+    { columns: [
+      { width: '*', text: [{ text: 'COLOR : ', bold: true, fontSize: 10 }, { text: color, fontSize: 10 }] },
+      { width: '*', text: [{ text: 'COMBUSTIBLE : ', bold: true, fontSize: 10 }, { text: combustible, fontSize: 10 }] },
+      { width: '*', text: [{ text: 'KILOMETRAJE : ', bold: true, fontSize: 10 }, { text: kilometraje, fontSize: 10 }] },
+    ], margin: [0, 0, 0, 3] },
+    { text: [{ text: 'AÑO DE FABRICACIÓN : ', bold: true, fontSize: 10 }, { text: anioFabricacion, fontSize: 10 }] },
+  ]));
 
   const tblBody = [
     [
