@@ -120,15 +120,19 @@ export default function PersonalList() {
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
+    console.log("confirmDelete:", deleteTarget.id, deleteTarget.email);
     try {
       await deleteMaestro(COL, deleteTarget.id);
+      console.log("deleteMaestro OK");
       try {
         const fn = httpsCallable(functions, "deleteAuthUser");
-        await fn({ uid: deleteTarget.auth_uid || deleteTarget.id, email: deleteTarget.email });
-      } catch (e) { console.warn("deleteAuthUser:", e); }
+        const result = await fn({ uid: deleteTarget.auth_uid || deleteTarget.id, email: deleteTarget.email });
+        console.log("deleteAuthUser OK:", result);
+      } catch (e) { console.error("deleteAuthUser ERROR:", e); }
       setDeleteTarget(null);
       showToast("Personal eliminado");
-    } catch {
+    } catch (e) {
+      console.error("confirmDelete ERROR:", e);
       showToast("Error al eliminar personal", "error");
     } finally {
       setDeleting(false);
