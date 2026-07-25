@@ -16,8 +16,8 @@ async function init() {
   _inited = true;
 }
 
-const LOGO_URL = "https://storage.googleapis.com/flutterflow-io-6f20.appspot.com/projects/g-m-parts-lac7fg/assets/za03o2h6k5tg/Capa_1.png";
-const ERP_LOGO_URL = "https://storage.googleapis.com/flutterflow-io-6f20.appspot.com/projects/g-m-parts-lac7fg/assets/za03o2h6k5tg/Capa_1.png";
+const LOGO_URL = "/logofinal.png";
+const ERP_LOGO_URL = "/logofinal.png";
 
 async function urlToDataUrl(url) {
   try {
