@@ -13,7 +13,7 @@ import { EMPLOYEE_ROLES, fbCreateUser } from "../../store/auth";
 import { hashPassword } from "../../lib/authLib";
 import { where, doc, updateDoc } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
-import { functions } from "../../lib/firebase";
+import { functions, db } from "../../lib/firebase";
 import { showToast } from "../../components/ui/Toast";
 
 const COL = "users";
@@ -107,7 +107,6 @@ export default function PersonalList() {
       if (form.password && !editing) {
         const res = await fbCreateUser(form.email, form.password);
         if (res.ok && res.uid) {
-          const { db } = await import("../../lib/firebase");
           await updateDoc(doc(db, COL, docId), { auth_uid: res.uid });
         }
       }

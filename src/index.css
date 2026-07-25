@@ -131,39 +131,3 @@ body {
   from { opacity: 0; transform: translateX(20px); }
   to { opacity: 1; transform: translateX(0); }
 }
-
-.gmp-modal-overlay {
-  animation: gmpOverlayIn .15s ease-out;
-}
-
-.gmp-modal-overlay.closing {
-  animation: gmpOverlayOut .12s ease-in forwards;
-}
-
-@keyframes gmpOverlayIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes gmpOverlayOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
-
-.gmp-modal-panel {
-  animation: gmpPanelIn .15s ease-out;
-}
-
-.gmp-modal-panel.closing {
-  animation: gmpPanelOut .12s ease-in forwards;
-}
-
-@keyframes gmpPanelIn {
-  from { opacity: 0; transform: translateY(6px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-@keyframes gmpPanelOut {
-  from { opacity: 1; transform: translateY(0) scale(1); }
-  to { opacity: 0; transform: translateY(4px) scale(0.98); }
-}
