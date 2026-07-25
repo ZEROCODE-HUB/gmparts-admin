@@ -924,14 +924,21 @@ async function buildDocDefOrden(opts) {
     const body = [];
     for (let i = 0; i < max; i++) {
       body.push([
-        { text: leftRows[i] || '', alignment: 'left' },
-        { text: rightRows[i] || '', alignment: 'left' },
+        { text: leftRows[i] || '', alignment: 'left', margin: [4, 2, 4, 2] },
+        { text: rightRows[i] || '', alignment: 'left', margin: [4, 2, 4, 2] },
       ]);
     }
 
     return {
       table: { widths: ['*', '*'], body },
-      layout: thinBorderLayout,
+      layout: {
+        hLineWidth: () => 0.75,
+        vLineWidth: (i, node) => i === 0 || i === node.table.widths.length ? 0.75 : 0,
+        hLineColor: () => '#000000',
+        vLineColor: () => '#000000',
+        paddingLeft: () => 0, paddingRight: () => 0,
+        paddingTop: () => 0, paddingBottom: () => 0,
+      },
       margin: [0, 0, 0, 8],
     };
   }
