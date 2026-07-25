@@ -103,11 +103,15 @@ export default function ClientesList() {
       if (form.password) {
         data.password_hash = await hashPassword(form.password);
       }
-      const newId = await saveMaestro(COL, { ...data, id: editing?.id });
 
-      if (form.password && !editing) {
-        const res = await fbCreateUser(form.email, form.password, editing?.id || newId);
-        if (!res.ok) showToast(res.error || "Error al crear usuario en Auth", "error");
+      if (!editing && form.password) {
+        const res = await fbCreateUser(form.email, form.password);
+        if (!res.ok) { showToast(res.error || "Error al crear usuario", "error"); setSaving(false); return; }
+        const { setDoc, doc } = await import("firebase/firestore");
+        const { db } = await import("../../lib/firebase");
+        await setDoc(doc(db, COL, res.uid), { ...data, password_hash: data.password_hash || '', auth_uid: res.uid });
+      } else {
+        await saveMaestro(COL, { ...data, id: editing?.id });
       }
 
       closeModal();

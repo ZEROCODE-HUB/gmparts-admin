@@ -96,10 +96,10 @@ export function observeAuth(cb) {
   });
 }
 
-export async function fbCreateUser(email, password, existingDocId) {
+export async function fbCreateUser(email, password) {
   try {
     const fn = httpsCallable(functions, "createAuthUser");
-    const res = await fn({ email, password, uid: existingDocId });
+    const res = await fn({ email, password });
     return { ok: true, uid: res.data.uid };
   } catch (e) {
     const msg = e?.message || e?.code || "";

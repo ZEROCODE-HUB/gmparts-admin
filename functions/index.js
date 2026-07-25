@@ -139,17 +139,13 @@ exports.createAuthUser = functions.https.onCall(async (data, context) => {
     throw new functions.https.HttpsError("permission-denied", "No tienes permisos.");
   }
 
-  const { email, password, uid: existingDocId } = data;
+  const { email, password } = data;
   if (!email || !password) {
     throw new functions.https.HttpsError("invalid-argument", "Faltan email y password.");
   }
 
   try {
     const userRecord = await admin.auth().createUser({ email, password });
-    // Guardar auth_uid en el documento Firestore
-    if (existingDocId) {
-      await db.doc("users/" + existingDocId).set({ auth_uid: userRecord.uid }, { merge: true });
-    }
     return { ok: true, uid: userRecord.uid };
   } catch (e) {
     console.error("createAuthUser ERROR:", e);
