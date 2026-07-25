@@ -10,6 +10,7 @@ import Btn from "../../components/ui/Btn";
 import Field, { inputCls } from "../../components/ui/Field";
 import { useFirestoreCollection, saveMaestro, deleteMaestro } from "../../store/firestoreDb";
 import { EMPLOYEE_ROLES } from "../../store/auth";
+import { hashPassword } from "../../lib/authLib";
 import { where } from "firebase/firestore";
 
 const COL = "users";
@@ -51,15 +52,13 @@ function toFirestore(f) {
     edad: f.edad,
     sexo: f.sexo,
     cargo_empleado: f.cargoEmpleado,
-    // user_role se setea solo en creación (igual a cargoEmpleado, como en Flutter create);
-    // en edición NO se re-seteará (ver handleSave)
   };
 }
 
 const empty = {
   displayName: "", email: "", telefono: "", wsp: "", DNI: "", direccion: "",
   distrito: "", provincia: "", departamento: "", fechaNacimiento: "", edad: "",
-  sexo: "Masculino", cargoEmpleado: "",
+  sexo: "Masculino", cargoEmpleado: "", password: "",
 };
 
 export default function PersonalList() {
@@ -89,10 +88,11 @@ export default function PersonalList() {
   const handleSave = async () => {
     const data = toFirestore(form);
     if (!editing) {
-      // creación: user_role = cargoEmpleado (igual que Flutter create: d_pc_crear_personal_widget.dart:2239-2240)
       data.user_role = form.cargoEmpleado;
     }
-    // edición: NO tocar user_role (Flutter edit no lo re-seteará)
+    if (form.password) {
+      data.password_hash = await hashPassword(form.password);
+    }
     await saveMaestro(COL, { ...data, id: editing?.id });
     setModalOpen(false);
     setToast("Personal guardado");
@@ -156,6 +156,9 @@ export default function PersonalList() {
                 <option value="">Selecciona un cargo</option>
                 {EMPLOYEE_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
               </select>
+            </Field>
+            <Field label={editing ? "Nueva contraseña (dejar vacío para mantener)" : "Contraseña"} span>
+              <input type="password" className={inputCls} value={form.password} onChange={(e) => set("password", e.target.value)} placeholder={editing ? "Dejar vacío para mantener" : "Asignar contraseña"} />
             </Field>
           </div>
           <div className="flex justify-end gap-2 mt-6">

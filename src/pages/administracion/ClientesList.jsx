@@ -9,6 +9,7 @@ import Modal from "../../components/ui/Modal";
 import Btn from "../../components/ui/Btn";
 import Field, { inputCls } from "../../components/ui/Field";
 import { useFirestoreCollection, saveMaestro, deleteMaestro } from "../../store/firestoreDb";
+import { hashPassword } from "../../lib/authLib";
 import { where } from "firebase/firestore";
 
 const COL = "users";
@@ -51,7 +52,8 @@ function toFirestore(f) {
 }
 const empty = {
   codigo: "", nombre: "", documento: "", tipoDocumento: "DNI", tipoPersona: "Persona",
-  email: "", telefono: "", wsp: "", direccion: "", distrito: "", provincia: "", departamento: "", encargado: "",
+  email: "", telefono: "", wsp: "", direccion: "", distrito: "", provincia: "", departamento: "",
+  encargado: "", password: "",
 };
 
 export default function ClientesList() {
@@ -90,7 +92,11 @@ export default function ClientesList() {
     setSaving(true);
     setError("");
     try {
-      await saveMaestro(COL, { ...toFirestore(form), id: editing?.id });
+      const data = toFirestore(form);
+      if (form.password) {
+        data.password_hash = await hashPassword(form.password);
+      }
+      await saveMaestro(COL, { ...data, id: editing?.id });
       setModalOpen(false);
       setToast("Cliente guardado");
       setTimeout(() => setToast(null), 2000);
@@ -161,6 +167,9 @@ export default function ClientesList() {
             <Field label="Provincia"><input className={inputCls} value={form.provincia} onChange={(e) => set("provincia", e.target.value)} /></Field>
             <Field label="Departamento"><input className={inputCls} value={form.departamento} onChange={(e) => set("departamento", e.target.value)} /></Field>
             <Field label="Encargado"><input className={inputCls} value={form.encargado} onChange={(e) => set("encargado", e.target.value)} /></Field>
+            <Field label={editing ? "Nueva contraseña (dejar vacío para mantener)" : "Contraseña"} span>
+              <input type="password" className={inputCls} value={form.password} onChange={(e) => set("password", e.target.value)} placeholder={editing ? "Dejar vacío para mantener" : "Asignar contraseña"} />
+            </Field>
           </div>
           <div className="flex justify-end gap-2 mt-6">
             <Btn variant="ghost" onClick={() => setModalOpen(false)}>Cancelar</Btn>
