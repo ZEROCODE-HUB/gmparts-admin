@@ -537,7 +537,7 @@ async function buildDocDefCotizacion(opts) {
   const etiquetaId = natural ? 'DNI' : 'RUC';
   const etiquetaNombre = natural ? 'NOMBRE COMPLETO' : 'RAZÓN SOCIAL';
   const nombreCliente = razonSocial || cliente;
-  const codCot = `CT${serie}-${numero}`.replace(/^CT-/, 'CT');
+  const codCot = serie && numero ? `CT${serie}-${numero}`.replace(/^CT-/, 'CT') : (numero || '');
 
   const logoData = await urlToDataUrl(logoUrl || LOGO_URL);
 
@@ -1041,6 +1041,12 @@ export function docToOpts(data, title) {
 
   if (data.proveedor || data.proveedorDoc) {
     tipo = 'compra';
+  } else if (data.codeCT || data.numeroorden || data.tipo_servicio) {
+    if (title === 'Documento' || data.status === 'aprobado' || data.status === 'completado') {
+      tipo = 'orden';
+    } else {
+      tipo = 'cotizacion';
+    }
   } else if (data.diagnosticos || data.items?.some?.((it) => it.tipo === 'servicio' || it.tipo === 'mano_obra')) {
     if (title === 'Documento' || (!data.total && data.items?.length > 0)) {
       tipo = 'orden';
@@ -1058,7 +1064,7 @@ export function docToOpts(data, title) {
     fecha: data.fecha || data.Fecha || data.fecha_creacion || '',
     formaPago: data.formaPago || data.FPago || 'CONTADO',
     serie: data.serie || data.nserie || data.Nserie || '',
-    numero: data.numero || data.NumCotizacion || data.numeroorden || '',
+    numero: data.numero || data.NumCotizacion || data.numeroorden || data.codeCT || '',
     subtotal: data.subtotal || 0,
     igv: data.igv || 0,
     total: data.total || data.Total || 0,
