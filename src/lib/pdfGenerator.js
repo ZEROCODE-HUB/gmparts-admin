@@ -820,7 +820,7 @@ async function buildDocDefOrden(opts) {
     contactoComercial = "", telefono = "", email = "",
     color = "", combustible = "", kilometraje = "", anioFabricacion = "",
     razonSocial = "", numeroOrden = "",
-    personaContacto = "", telefonoPersonaContacto = "", referencia = "",
+    personaContacto = "", telefonoPersonaContacto = "", telefonoContactoComercial = "", referencia = "",
   } = opts;
 
   const logoData = await urlToDataUrl(logoUrl || LOGO_URL);
