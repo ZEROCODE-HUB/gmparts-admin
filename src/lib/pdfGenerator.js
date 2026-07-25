@@ -1,20 +1,15 @@
 import pdfMake from "pdfmake/build/pdfmake";
+import pdfFonts from "pdfmake/build/vfs_fonts";
 
-let _inited = false;
-async function init() {
-  if (_inited) return;
-  const pdfFonts = await import("pdfmake/build/vfs_fonts");
-  pdfMake.vfs = pdfFonts.default;
-  pdfMake.fonts = {
-    Roboto: {
-      normal: "Roboto-Regular.ttf",
-      bold: "Roboto-Medium.ttf",
-      italics: "Roboto-Italic.ttf",
-      bolditalics: "Roboto-MediumItalic.ttf",
-    },
-  };
-  _inited = true;
-}
+pdfMake.vfs = pdfFonts.default || pdfFonts;
+pdfMake.fonts = {
+  Roboto: {
+    normal: "Roboto-Regular.ttf",
+    bold: "Roboto-Medium.ttf",
+    italics: "Roboto-Italic.ttf",
+    bolditalics: "Roboto-MediumItalic.ttf",
+  },
+};
 
 const LOGO_URL = "/logofinal.png";
 const ERP_LOGO_URL = "/logofinal.png";
@@ -100,7 +95,6 @@ const S = {
 };
 
 async function buildDocDefFactura(opts) {
-  await init();
 
   const {
     items = [], cliente = "CLIENTE GENÉRICO", clienteDoc = "00000000000",
@@ -335,8 +329,6 @@ async function buildDocDefFactura(opts) {
 }
 
 async function buildDocDefCompra(opts) {
-  await init();
-
   const {
     items = [], cliente = "PROVEEDOR GENÉRICO", clienteDoc = "00000000000",
     direccion = "SIN DIRECCIÓN", fecha = "", formaPago = "CONTADO",
@@ -523,8 +515,6 @@ async function buildDocDefCompra(opts) {
 }
 
 async function buildDocDefCotizacion(opts) {
-  await init();
-
   const {
     items = [], cliente = "", clienteDoc = "", direccion = "",
     fecha = "", formaPago = "CONTADO", serie = "", numero = "",
@@ -763,8 +753,6 @@ async function buildDocDefCotizacion(opts) {
 }
 
 async function buildDocDefOrden(opts) {
-  await init();
-
   const {
     items = [], cliente = "", clienteDoc = "",
     fecha = "", serie = "", numero = "",
