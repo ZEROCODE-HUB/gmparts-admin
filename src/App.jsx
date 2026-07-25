@@ -50,6 +50,7 @@ import ReporteVentas from "./pages/reportes/ReporteVentas";
 import ReporteDocElect from "./pages/reportes/ReporteDocElect";
 import Placeholder from "./pages/Placeholder";
 import { getSession, observeAuth } from "./store/auth";
+import ToastContainer from "./components/ui/Toast";
 
 const placeholderRoutes = [];
 
@@ -81,6 +82,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <ToastContainer />
       <Routes>
         <Route path="/splash" element={<Splash />} />
         <Route path="/login" element={<Login />} />

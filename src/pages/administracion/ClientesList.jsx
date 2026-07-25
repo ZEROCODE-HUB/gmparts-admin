@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+﻿import { useState, useCallback } from "react";
 import Pagination from "../../components/ui/Pagination";
 import { exportToExcel } from "../../lib/exportExcel";
 import { Pencil, Trash2 } from "lucide-react";
@@ -14,6 +14,7 @@ import { hashPassword } from "../../lib/authLib";
 import { where } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { functions } from "../../lib/firebase";
+import { showToast } from "../../components/ui/Toast";
 
 const COL = "users";
 
@@ -68,9 +69,9 @@ export default function ClientesList() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(empty);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [toast, setToast] = useState(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const rows = items.filter((c) =>
     (c.codigo + c.nombre + c.documento + c.direccion + c.email + c.distrito)
@@ -88,8 +89,8 @@ export default function ClientesList() {
     for (const k in empty) clean[k] = c[k] ?? empty[k];
     return clean;
   };
-  const openNew = () => { setError(""); setSaving(false); setEditing(null); setForm(empty); setModalOpen(true); };
-  const openEdit = (c) => { setError(""); setSaving(false); setEditing(c); setForm(cleanForm(c)); setModalOpen(true); };
+  const openNew = useCallback(() => { setError(""); setSaving(false); setEditing(null); setForm(empty); setModalOpen(true); }, []);
+  const openEdit = useCallback((c) => { setError(""); setSaving(false); setEditing(c); setForm(cleanForm(c)); setModalOpen(true); }, []);
 
   const handleSave = async () => {
     setSaving(true);
@@ -106,8 +107,7 @@ export default function ClientesList() {
       }
 
       setModalOpen(false);
-      setToast("Cliente guardado");
-      setTimeout(() => setToast(null), 2000);
+      showToast("Cliente guardado");
     } catch (e) {
       const msg = e.message || "";
       if (msg.includes("undefined")) setError("Completa todos los campos requeridos");
@@ -118,16 +118,21 @@ export default function ClientesList() {
     }
   };
   const confirmDelete = async () => {
-    if (deleteTarget) {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
       await deleteMaestro(COL, deleteTarget.id);
       try {
         const fn = httpsCallable(functions, "deleteAuthUser");
         await fn({ uid: deleteTarget.id });
       } catch { /* si no existe en Auth, ignorar */ }
+      setDeleteTarget(null);
+      showToast("Cliente eliminado");
+    } catch {
+      showToast("Error al eliminar cliente", "error");
+    } finally {
+      setDeleting(false);
     }
-    setDeleteTarget(null);
-    setToast("Cliente eliminado");
-    setTimeout(() => setToast(null), 2000);
   };
 
   return (
@@ -186,23 +191,21 @@ export default function ClientesList() {
             </Field>
           </div>
           <div className="flex justify-end gap-2 mt-6">
-            <Btn variant="ghost" onClick={() => setModalOpen(false)}>Cancelar</Btn>
+            <Btn variant="ghost" onClick={() => setModalOpen(false)} disabled={saving}>Cancelar</Btn>
             <Btn onClick={handleSave} loading={saving}>{editing ? "Guardar cambios" : "Crear cliente"}</Btn>
           </div>
         </Modal>
       )}
 
       {deleteTarget && (
-        <Modal title="Eliminar cliente" onClose={() => setDeleteTarget(null)}>
+        <Modal title="Eliminar cliente" onClose={() => !deleting && setDeleteTarget(null)}>
           <p className="text-sm text-[var(--muted)] mb-6">¿Eliminar a {deleteTarget.nombre}?</p>
           <div className="flex justify-end gap-2">
-            <Btn variant="ghost" onClick={() => setDeleteTarget(null)}>Cancelar</Btn>
-            <Btn variant="danger" onClick={confirmDelete}>Eliminar</Btn>
+            <Btn variant="ghost" onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancelar</Btn>
+            <Btn variant="danger" onClick={confirmDelete} loading={deleting}>Eliminar</Btn>
           </div>
         </Modal>
       )}
-
-      {toast && <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded shadow">{toast}</div>}
       <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
