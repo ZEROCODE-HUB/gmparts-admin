@@ -820,197 +820,226 @@ async function buildDocDefOrden(opts) {
     contactoComercial = "", telefono = "", email = "",
     color = "", combustible = "", kilometraje = "", anioFabricacion = "",
     razonSocial = "", numeroOrden = "",
+    personaContacto = "", telefonoPersonaContacto = "", referencia = "",
   } = opts;
 
   const logoData = await urlToDataUrl(logoUrl || LOGO_URL);
-  const ruc = clienteDoc || "20601720621";
-  const numCotizacion = numero || nroCot || numeroOrden;
+  const rucDefault = "20601720621";
+  const numOrden = numero || nroCot || numeroOrden || '';
 
-  const itemsAgrupados = {};
-  for (const it of items) {
-    const key = it.descripcion || it.articulo || '';
-    const codigo = it.codigo || '';
-    if (itemsAgrupados[key]) {
-      itemsAgrupados[key].cantidad += 1;
-    } else {
-      itemsAgrupados[key] = { cantidad: 1, codigo, descripcion: key };
-    }
+  const thinBorderLayout = {
+    hLineWidth: () => 0.75, vLineWidth: () => 0.75,
+    hLineColor: () => '#000000', vLineColor: () => '#000000',
+    paddingLeft: () => 4, paddingRight: () => 4,
+    paddingTop: () => 2, paddingBottom: () => 2,
+  };
+
+  function fieldRow(label, value, opts2 = {}) {
+    const fs = opts2.fontSize || 8;
+    return { text: [{ text: `${label} : `, bold: true, fontSize: fs }, { text: value || '', fontSize: fs }], ...(opts2.extra || {}) };
   }
 
-  const content = [];
-
-  content.push({
-    columns: [
-      logoData ? { image: logoData, width: 120, height: 80, fit: [120, 80], margin: [0, 0, 10, 0] } : { text: '', width: 130 },
-      {
-        width: '*',
-        stack: [
-          { text: 'GEAR MOTOR PARTS S.A.C.', fontSize: 14, bold: true },
-          { text: 'Dirección fiscal: Av. Nicolás Ayllón Nro. 3270', fontSize: 8, margin: [0, 3, 0, 0] },
-          { text: 'Sucursal: Av. Nicolás Ayllón Nro. 3270', fontSize: 8 },
-          { text: 'Tel.: 01 362 8667 - 924 483 844', fontSize: 8 },
-          { text: 'gearmparts@gmail.com', fontSize: 8 },
-        ],
-      },
-      {
-        width: 140,
-        table: {
-          widths: ['*'],
-          body: [
-            [{ text: `R.U.C. ${ruc}`, fontSize: 10, bold: true, alignment: 'center', margin: [0, 6, 0, 4] }],
-            [{ text: 'ORDEN DE TRABAJO', fontSize: 12, bold: true, alignment: 'center', margin: [4, 4, 4, 4] }],
-            [{ text: numCotizacion, fontSize: 10, bold: true, alignment: 'center', margin: [0, 4, 0, 6] }],
-          ],
-        },
-        layout: {
-          hLineWidth: (i) => i === 1 || i === 2 ? 0 : 1,
-          vLineWidth: () => 1,
-          hLineColor: () => '#000',
-          vLineColor: () => '#000',
-          fillColor: (ri) => ri === 1 ? '#E0E0E0' : null,
-          paddingLeft: () => 0, paddingRight: () => 0,
-          paddingTop: () => 0, paddingBottom: () => 0,
-        },
-      },
-    ],
-    margin: [0, 0, 0, 10],
-  });
-
-  const contactName = vendedor || contactoComercial;
-  const infoRows = [
-    { columns: [
-      { width: '60%', text: [{ text: 'RAZÓN SOCIAL : ', style: 'label10' }, { text: razonSocial || cliente, style: 'value10' }] },
-      { width: '40%', text: [{ text: 'CONTACTO COMERCIAL : ', style: 'label10' }, { text: contactName, style: 'value10' }] },
-    ], margin: [0, 0, 0, 2] },
-    { columns: [
-      { width: '60%', text: [{ text: 'RUC : ', style: 'label10' }, { text: ruc, style: 'value10' }] },
-      { width: '40%', text: [{ text: 'TELÉFONO : ', style: 'label10' }, { text: telefono, style: 'value10' }] },
-    ], margin: [0, 0, 0, 2] },
-    { columns: [
-      { width: '60%', text: [{ text: 'PERSONA CONTACTO : ', style: 'label10' }, { text: contactName, style: 'value10' }] },
-      { width: '40%', text: [{ text: 'E-MAIL : ', style: 'label10' }, { text: email, style: 'value10' }] },
-    ], margin: [0, 0, 0, 2] },
-    { text: [{ text: 'TELÉFONO : ', style: 'label10' }, { text: telefono || '/', style: 'value10' }], margin: [0, 0, 0, 2] },
-    { text: [{ text: 'E-MAIL : ', style: 'label10' }, { text: email || '', style: 'value10' }], margin: [0, 0, 0, 2] },
-    { text: [{ text: 'REFERENCIA : ', style: 'label10' }, { text: '-', style: 'value10' }] },
-  ];
-
-  content.push({
-    table: { widths: ['*'], body: [[{ stack: infoRows, margin: [6, 6, 6, 6] }]] },
-    layout: borderLayout(1, 1),
-    margin: [0, 0, 0, 10],
-  });
-
-  function sectionTable(title, contentStack) {
+  function sectionWithTitle(title, contentStack) {
     return {
       table: {
         widths: ['*'],
         body: [
-          [{ text: title, fontSize: 10, bold: true, alignment: 'center', margin: [5, 5, 5, 5] }],
-          [{ stack: contentStack, margin: [5, 5, 5, 5] }],
+          [{ text: title, fontSize: 8, bold: true, alignment: 'center', margin: [4, 4, 4, 4], fillColor: '#eeeeee' }],
+          [{ stack: contentStack, margin: [4, 4, 4, 4] }],
         ],
       },
       layout: {
-        hLineWidth: (i) => i === 1 ? 0 : 1,
-        vLineWidth: () => 1,
-        hLineColor: () => '#000',
-        vLineColor: () => '#000',
-        fillColor: (ri) => ri === 0 ? '#E0E0E0' : null,
+        hLineWidth: (i) => i === 1 ? 0 : 0.75,
+        vLineWidth: () => 0.75,
+        hLineColor: () => '#000000', vLineColor: () => '#000000',
+        fillColor: (ri) => ri === 0 ? '#eeeeee' : null,
         paddingLeft: () => 0, paddingRight: () => 0,
         paddingTop: () => 0, paddingBottom: () => 0,
       },
-      margin: [0, 0, 0, 10],
+      margin: [0, 0, 0, 8],
     };
   }
 
-  content.push(sectionTable('DATOS DEL VEHÍCULO', [
-    { columns: [
-      { width: '*', text: [{ text: 'PLACA : ', bold: true, fontSize: 10 }, { text: placa, fontSize: 10 }] },
-      { width: '*', text: [{ text: 'MARCA : ', bold: true, fontSize: 10 }, { text: marca, fontSize: 10 }] },
-      { width: '*', text: [{ text: 'MODELO : ', bold: true, fontSize: 10 }, { text: modelo, fontSize: 10 }] },
-    ], margin: [0, 0, 0, 3] },
-    { columns: [
-      { width: '*', text: [{ text: 'COLOR : ', bold: true, fontSize: 10 }, { text: color, fontSize: 10 }] },
-      { width: '*', text: [{ text: 'COMBUSTIBLE : ', bold: true, fontSize: 10 }, { text: combustible, fontSize: 10 }] },
-      { width: '*', text: [{ text: 'KILOMETRAJE : ', bold: true, fontSize: 10 }, { text: kilometraje, fontSize: 10 }] },
-    ], margin: [0, 0, 0, 3] },
-    { text: [{ text: 'AÑO DE FABRICACIÓN : ', bold: true, fontSize: 10 }, { text: anioFabricacion, fontSize: 10 }] },
-  ]));
+  function buildHeaderOT() {
+    return {
+      columns: [
+        {
+          width: '*',
+          columns: [
+            logoData ? { image: logoData, width: 100, height: 70, fit: [100, 70] } : { text: '', width: 100 },
+            { width: 8, text: '' },
+            {
+              width: '*',
+              stack: [
+                { text: 'GEAR MOTOR PARTS S.A.C.', fontSize: 18, bold: true, italics: true },
+                { text: 'Dirección fiscal: Av. Colectora Industrial Mza. A Lote. 6', fontSize: 7, margin: [0, 2, 0, 0] },
+                { text: 'Asc. Santa Cruz de Vista Alegre - Santa Anita', fontSize: 7 },
+                { text: 'Sucursal: Av. Nicolás Ayllón Nro. 3270 Coo. Veintisiete de abril - Ate', fontSize: 7 },
+                { text: 'Tel.: 01 362 8667 - 924 483 844', fontSize: 7 },
+                { text: 'gearmparts@gmail.com', fontSize: 7 },
+              ],
+            },
+          ],
+        },
+        {
+          width: 'auto',
+          table: {
+            widths: ['*'],
+            body: [
+              [{ text: 'R.U.C. 20601720621', fontSize: 9, bold: true, alignment: 'center', margin: [8, 6, 8, 6] }],
+              [{ text: 'ORDEN DE TRABAJO', fontSize: 12, bold: true, alignment: 'center', margin: [8, 6, 8, 6] }],
+              [{ text: numOrden, fontSize: 9, bold: true, alignment: 'center', margin: [8, 6, 8, 6] }],
+            ],
+          },
+          layout: {
+            hLineWidth: (i, node) => i === 0 || i === node.table.body.length ? 0.75 : 0.5,
+            vLineWidth: () => 0.75,
+            hLineColor: () => '#000000', vLineColor: () => '#000000',
+            paddingLeft: () => 0, paddingRight: () => 0,
+            paddingTop: () => 0, paddingBottom: () => 0,
+          },
+        },
+      ],
+      margin: [0, 0, 0, 8],
+    };
+  }
 
-  const tblBody = [
-    [
-      { text: 'ITEM', style: 'tableHeader10', alignment: 'center' },
-      { text: 'CÓDIGO', style: 'tableHeader10', alignment: 'center' },
-      { text: 'DESCRIPCIÓN', style: 'tableHeader10', alignment: 'center' },
-      { text: 'UNIDAD', style: 'tableHeader10', alignment: 'center' },
-      { text: 'CANT', style: 'tableHeader10', alignment: 'center' },
-      { text: 'CHECK', style: 'tableHeader10', alignment: 'center' },
-    ],
-  ];
-  let itemIdx = 1;
-  for (const key of Object.keys(itemsAgrupados)) {
-    const g = itemsAgrupados[key];
-    tblBody.push([
-      { text: String(itemIdx++), style: 'cell10', alignment: 'center' },
-      { text: g.codigo, style: 'cell10' },
-      { text: key, style: 'cell10' },
-      { text: 'HRS', style: 'cell10', alignment: 'center' },
-      { text: String(g.cantidad), style: 'cell10', alignment: 'center' },
-      { text: ' ', style: 'cell10', alignment: 'right' },
+  function buildClienteSectionOT() {
+    const leftRows = [
+      fieldRow('RAZÓN SOCIAL', razonSocial || cliente),
+      fieldRow('RUC', clienteDoc || rucDefault),
+      fieldRow('PERSONA CONTACTO', personaContacto || vendedor || contactoComercial),
+      fieldRow('TELÉFONO', telefono || telefonoPersonaContacto || '/'),
+      fieldRow('E-MAIL', email || ''),
+    ];
+    if (referencia) leftRows.push(fieldRow('REFERENCIA', referencia));
+
+    const rightRows = [
+      fieldRow('CONTACTO COMERCIAL', contactoComercial || vendedor || ''),
+      fieldRow('TELÉFONO', telefonoContactoComercial || telefono || ''),
+      fieldRow('E-MAIL', telefonoPersonaContacto || email || ''),
+    ];
+
+    const max = Math.max(leftRows.length, rightRows.length);
+    const body = [];
+    for (let i = 0; i < max; i++) {
+      body.push([
+        { text: leftRows[i] || '', alignment: 'left' },
+        { text: rightRows[i] || '', alignment: 'left' },
+      ]);
+    }
+
+    return {
+      table: { widths: ['*', '*'], body },
+      layout: thinBorderLayout,
+      margin: [0, 0, 0, 8],
+    };
+  }
+
+  function buildVehiculoSectionOT() {
+    return sectionWithTitle('DATOS DEL VEHÍCULO', [
+      { columns: [
+        { width: '*', text: fieldRow('PLACA', placa, { fontSize: 8 }) },
+        { width: '*', text: fieldRow('MARCA', marca, { fontSize: 8 }) },
+        { width: '*', text: fieldRow('MODELO', modelo, { fontSize: 8 }) },
+      ], margin: [0, 0, 0, 2] },
+      { columns: [
+        { width: '*', text: fieldRow('COLOR', color, { fontSize: 8 }) },
+        { width: '*', text: fieldRow('COMBUSTIBLE', combustible, { fontSize: 8 }) },
+        { width: '*', text: fieldRow('KILOMETRAJE', kilometraje, { fontSize: 8 }) },
+      ], margin: [0, 0, 0, 2] },
+      fieldRow('AÑO DE FABRICACIÓN', anioFabricacion, { fontSize: 8 }),
     ]);
   }
 
-  content.push({
-    table: { widths: [30, 55, '*', 45, 35, 50], body: tblBody },
-    layout: {
-      hLineWidth: () => 1, vLineWidth: () => 1,
-      hLineColor: () => '#000', vLineColor: () => '#000',
-      fillColor: (ri) => ri === 0 ? '#E0E0E0' : null,
-      paddingLeft: () => 4, paddingRight: () => 4,
-      paddingTop: () => 4, paddingBottom: () => 4,
-    },
-    margin: [0, 0, 0, 10],
-  });
+  function buildItemsTableOT() {
+    const tblBody = [
+      [
+        { text: 'ITEM', fontSize: 8, bold: true, alignment: 'center', margin: [3, 3, 3, 3] },
+        { text: 'CÓDIGO', fontSize: 8, bold: true, alignment: 'center', margin: [3, 3, 3, 3] },
+        { text: 'DESCRIPCIÓN', fontSize: 8, bold: true, alignment: 'center', margin: [3, 3, 3, 3] },
+        { text: 'UNIDAD', fontSize: 8, bold: true, alignment: 'center', margin: [3, 3, 3, 3] },
+        { text: 'CANT', fontSize: 8, bold: true, alignment: 'center', margin: [3, 3, 3, 3] },
+        { text: 'CHECK', fontSize: 8, bold: true, alignment: 'center', margin: [3, 3, 3, 3] },
+      ],
+    ];
+    let idx = 1;
+    for (const it of items) {
+      const c = it.cant ?? it.cantidad ?? 1;
+      const u = it.unidad || (it.tipo === 'servicio' || it.tipo === 'mano_obra' ? 'HRS' : 'UND');
+      tblBody.push([
+        { text: String(idx++), fontSize: 8, alignment: 'center' },
+        { text: it.codigo || '-', fontSize: 8, alignment: 'center' },
+        { text: (it.descripcion || it.articulo || '').toUpperCase(), fontSize: 8 },
+        { text: u, fontSize: 8, alignment: 'center' },
+        { text: String(c), fontSize: 8, alignment: 'center' },
+        { text: ' ', fontSize: 8, alignment: 'center' },
+      ]);
+    }
 
-  content.push(
-    { text: 'Observaciones de servicio:', bold: true, fontSize: 10, margin: [0, 0, 0, 5] },
-    {
+    return {
+      table: { widths: [25, 60, '*', 40, 30, 40], headerRows: 1, body: tblBody },
+      layout: {
+        hLineWidth: () => 0.75, vLineWidth: () => 0.75,
+        hLineColor: () => '#000000', vLineColor: () => '#000000',
+        fillColor: (ri) => ri === 0 ? '#eeeeee' : null,
+        paddingLeft: () => 3, paddingRight: () => 3,
+        paddingTop: () => 2, paddingBottom: () => 2,
+      },
+      margin: [0, 0, 0, 8],
+    };
+  }
+
+  function buildObservacionesOT() {
+    return [
+      { text: 'Observaciones de servicio:', bold: true, fontSize: 8, margin: [0, 0, 0, 4] },
+      { text: '', fontSize: 8, margin: [0, 0, 0, 8] },
+    ];
+  }
+
+  function buildFirmasOT() {
+    return {
       table: {
         widths: ['*', '*'],
         body: [[
           {
             stack: [
-              { text: 'Firma y/o sello conductor o responsable', fontSize: 10, margin: [0, 0, 0, 5] },
-              { text: 'NOMBRE: _______________________', fontSize: 10, margin: [0, 0, 0, 12] },
+              { text: 'Firma y/o sello conductor o responsable', bold: true, fontSize: 8, margin: [0, 0, 0, 4] },
+              { text: 'NOMBRE: ________________________', fontSize: 8, margin: [0, 0, 0, 12] },
               { columns: [
-                { width: 'auto', text: 'DNI: __________', fontSize: 10 },
-                { width: 30, text: '' },
-                { width: 'auto', text: 'FIRMA __________', fontSize: 10 },
+                { width: 'auto', text: 'DNI: __________', fontSize: 8 },
+                { width: 20, text: '' },
+                { width: 'auto', text: 'FIRMA __________', fontSize: 8 },
               ]},
-            ], margin: [8, 8, 8, 8],
+            ], margin: [6, 6, 6, 6],
           },
           {
             stack: [
-              { text: 'Recepción en Taller', fontSize: 10, margin: [0, 0, 0, 5] },
-              { text: 'GEAR MOTOR PARTS S.A.C.', fontSize: 10, margin: [0, 0, 0, 12] },
-              { text: 'NOMBRE: _______________________', fontSize: 10 },
-            ], margin: [8, 8, 8, 8],
+              { text: 'Recepción en Taller', bold: true, fontSize: 8, margin: [0, 0, 0, 4] },
+              { text: 'GEAR MOTOR PARTS S.A.C.', fontSize: 8, margin: [0, 0, 0, 12] },
+              { text: 'NOMBRE: ________________________', fontSize: 8 },
+            ], margin: [6, 6, 6, 6],
           },
         ]],
       },
-      layout: {
-        hLineWidth: () => 1, vLineWidth: () => 1,
-        hLineColor: () => '#000', vLineColor: () => '#000',
-        paddingLeft: () => 0, paddingRight: () => 0,
-        paddingTop: () => 0, paddingBottom: () => 0,
-      },
-    },
-  );
+      layout: thinBorderLayout,
+    };
+  }
+
+  const content = [
+    buildHeaderOT(),
+    buildClienteSectionOT(),
+    buildVehiculoSectionOT(),
+    buildItemsTableOT(),
+    ...buildObservacionesOT(),
+    buildFirmasOT(),
+  ];
 
   return {
-    pageSize: 'A4', pageMargins: [20, 20, 20, 20], content,
-    styles: { ...S, tableHeader10: { fontSize: 10, bold: true, alignment: 'center', margin: [4, 4, 4, 4] }, cell10: { fontSize: 10, margin: [3, 2, 3, 2] } },
-    defaultStyle: { fontName: 'Roboto' },
+    pageSize: 'A4',
+    pageMargins: [20, 20, 20, 20],
+    content,
+    defaultStyle: { fontName: 'Roboto', fontSize: 8 },
   };
 }
 
