@@ -542,13 +542,13 @@ async function buildDocDefCotizacion(opts) {
     numeroOrden = "", natural = true, razonSocial = "",
   } = opts;
 
-  const numDoc = `${serie}-${numero}`;
   const totalEnLetrasVal = ttl || totalEnLetras(total);
   const fechaFormatted = formatDateToDDMMYYYY(fecha || fechaServicio);
-  const fechaVencimientoStr = getNextMonthDueDate(fechaServicio || fecha);
   const etiquetaId = natural ? 'DNI' : 'RUC';
   const etiquetaNombre = natural ? 'NOMBRE COMPLETO' : 'RAZÓN SOCIAL';
   const nombreCliente = razonSocial || cliente;
+  const codCot = `CT${serie}-${numero}`;
+  const cleanCodCot = codCot.replace(/^CT-/, 'CT');
 
   const logoData = await urlToDataUrl(logoUrl || LOGO_URL);
 
@@ -560,23 +560,35 @@ async function buildDocDefCotizacion(opts) {
       {
         width: '*',
         stack: [
-          { text: 'GEAR MOTOR PARTS S.A.C.', fontSize: 14, bold: true },
-          { text: 'Dirección fiscal: Av. Nicolás Ayllón Nro. 3270', fontSize: 8, margin: [0, 3, 0, 0] },
-          { text: 'Sucursal: Av. Nicolás Ayllón Nro. 3270', fontSize: 8 },
+          { text: 'GEAR MOTOR PARTS S.A.C.', fontSize: 18, bold: true, italics: true, margin: [0, 0, 0, 2] },
+          { text: 'Dirección fiscal: Av. Colectora Industrial Mza. A Lote. 6', fontSize: 8 },
+          { text: 'Asc. Santa Cruz de Vista Alegre - Santa Anita', fontSize: 8 },
+          { text: 'Sucursal: Av. Nicolás Ayllón Nro. 3270 Coo. Veintisiete de abril - Ate', fontSize: 8 },
           { text: 'Tel.: 01 362 8667 - 924 483 844', fontSize: 8 },
           { text: 'gearmparts@gmail.com', fontSize: 8 },
         ],
       },
       {
         width: 'auto',
-        table: { widths: ['*'], body: [[
-          { stack: [
-            { text: 'R.U.C. 20601720621', fontSize: 10, bold: true, alignment: 'center' },
-            { text: `Cotizacion ${numero || nroCot}`, fontSize: 12, bold: true, alignment: 'center', margin: [0, 4, 0, 4] },
-            { text: `FECHA: ${fechaFormatted}`, fontSize: 10, bold: true, alignment: 'center' },
-          ], margin: [8, 8, 8, 8] },
-        ]]},
-        layout: borderLayout(1, 1),
+        table: {
+          widths: ['*'],
+          body: [
+            [{ text: 'R.U.C. 20601720621', fontSize: 10, bold: true, alignment: 'center', margin: [8, 6, 8, 6] }],
+            [{ text: `COTIZACIÓN ${cleanCodCot}`, fontSize: 12, bold: true, alignment: 'center', margin: [8, 6, 8, 6] }],
+            [{ text: `FECHA: ${fechaFormatted}`, fontSize: 10, bold: true, alignment: 'center', margin: [8, 6, 8, 6] }],
+          ],
+        },
+        layout: {
+          hLineWidth: (i, node) => {
+            if (i === 0 || i === node.table.body.length) return 1;
+            return 0.5;
+          },
+          vLineWidth: () => 1,
+          hLineColor: () => '#000',
+          vLineColor: () => '#000',
+          paddingLeft: () => 0, paddingRight: () => 0,
+          paddingTop: () => 0, paddingBottom: () => 0,
+        },
       },
     ],
     margin: [0, 0, 0, 10],
@@ -603,6 +615,7 @@ async function buildDocDefCotizacion(opts) {
     { width: '60%', text: [{ text: 'PERSONA CONTACTO : ', style: 'label10' }, { text: personaContacto, style: 'value10' }] },
     { width: '40%', text: [{ text: 'E-MAIL : ', style: 'label10' }, { text: telefonoPersonaContacto, style: 'value10' }] },
   ], margin: [0, 0, 0, 2] });
+  infoRows.push({ text: [{ text: 'TELÉFONO : ', style: 'label10' }, { text: telefonoContactoComercial || '/', style: 'value10' }], margin: [0, 0, 0, 2] });
   infoRows.push({ text: [{ text: 'E-MAIL : ', style: 'label10' }, { text: email || '', style: 'value10' }], margin: [0, 0, 0, 2] });
   if (referencia) {
     infoRows.push({ text: [{ text: 'REFERENCIA : ', style: 'label10' }, { text: referencia, style: 'value10' }] });
@@ -658,6 +671,7 @@ async function buildDocDefCotizacion(opts) {
     { text: [{ text: 'VALIDEZ DE LA OFERTA : ', bold: true, fontSize: 10 }, { text: validezOferta, fontSize: 10 }], margin: [0, 0, 0, 5] },
     { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 10000, y2: 0, lineWidth: 1 }], margin: [0, 0, 0, 5] },
     { text: [{ text: 'FECHA DE SERVICIO : ', bold: true, fontSize: 10 }, { text: fechaServicio || fechaFormatted, fontSize: 10 }], margin: [0, 0, 0, 3] },
+    { text: [{ text: 'SERVICIO : ', bold: true, fontSize: 10 }, { text: '', fontSize: 10 }], margin: [0, 0, 0, 3] },
     { columns: [
       { width: '*', text: [{ text: 'TIPO DE SERVICIO : ', bold: true, fontSize: 10 }, { text: tipoServicio, fontSize: 10 }] },
       { width: 'auto', text: [{ text: 'N° OR : ', bold: true, fontSize: 10 }, { text: numeroOrden, fontSize: 10 }], alignment: 'right' },
@@ -667,7 +681,6 @@ async function buildDocDefCotizacion(opts) {
   const tblBody = [
     [
       { text: 'ITEM', style: 'tableHeader10', alignment: 'center' },
-      { text: 'CODIGO', style: 'tableHeader10', alignment: 'center' },
       { text: 'DESCRIPCIÓN', style: 'tableHeader10', alignment: 'center' },
       { text: 'UNIDAD', style: 'tableHeader10', alignment: 'center' },
       { text: 'CANT', style: 'tableHeader10', alignment: 'center' },
@@ -683,7 +696,6 @@ async function buildDocDefCotizacion(opts) {
     const unidad = it.unidad || (it.tipo === 'servicio' || it.tipo === 'mano_obra' ? 'HRS' : 'UND');
     tblBody.push([
       { text: String(itemIdx++), style: 'cell10', alignment: 'center' },
-      { text: it.codigo || '', style: 'cell10' },
       { text: (it.descripcion || it.articulo || '').toUpperCase(), style: 'cell10' },
       { text: unidad, style: 'cell10', alignment: 'center' },
       { text: String(c), style: 'cell10', alignment: 'center' },
@@ -693,7 +705,7 @@ async function buildDocDefCotizacion(opts) {
   }
 
   content.push({
-    table: { widths: [30, 55, '*', 45, 35, 55, 55], body: tblBody },
+    table: { widths: [30, '*', 50, 40, 55, 55], body: tblBody },
     layout: {
       hLineWidth: () => 1, vLineWidth: () => 1,
       hLineColor: () => '#000', vLineColor: () => '#000',
@@ -704,14 +716,18 @@ async function buildDocDefCotizacion(opts) {
     margin: [0, 0, 0, 10],
   });
 
+  content.push(
+    { text: `SON: ${totalEnLetrasVal}`, bold: true, fontSize: 10, margin: [0, 0, 0, 8] },
+  );
+
   content.push({
     columns: [
-      { width: '*', text: '' },
+      { width: '*', text: [{ text: 'OBS :', bold: true, fontSize: 10 }] },
       {
         width: 'auto',
         stack: [
-          { text: `SUB TOTAL       S/ ${Number(subtotal).toFixed(2)}`, fontSize: 10, margin: [0, 0, 0, 2] },
-          { text: `I.G.V. (18%)   S/ ${Number(igv).toFixed(2)}`, fontSize: 10, margin: [0, 0, 0, 2] },
+          { text: `SUB TOTAL    S/ ${Number(subtotal).toFixed(2)}`, fontSize: 10, margin: [0, 0, 0, 2] },
+          { text: `I.G.V. (18%) S/ ${Number(igv).toFixed(2)}`, fontSize: 10, margin: [0, 0, 0, 2] },
           { text: `IMP. TOTAL   S/ ${Number(total).toFixed(2)}`, fontSize: 10, bold: true },
         ],
         alignment: 'right',
@@ -721,49 +737,22 @@ async function buildDocDefCotizacion(opts) {
   });
 
   content.push(
-    { text: `SON: ${totalEnLetrasVal}`, bold: true, fontSize: 10, margin: [0, 0, 0, 5] },
-    { text: 'OBS :', bold: true, fontSize: 10, margin: [0, 0, 0, 5] },
     { text: 'Esta cotización no incluye repuestos adicionales que se puedan presentar en el transcurso del servicio.', fontSize: 10, margin: [0, 0, 0, 3] },
     { text: 'Sin otro particular y a la espera de su orden de servicio nos despedimos.', fontSize: 10, margin: [0, 0, 0, 10] },
     { text: 'Atentamente,', fontSize: 10, margin: [0, 0, 0, 10] },
   );
 
   content.push({
-    columns: [
-      {
-        width: 180,
-        table: { widths: ['*'], body: [[
-          { stack: [
-            { text: 'CUENTAS BANCARIAS:', bold: true, fontSize: 10, margin: [0, 0, 0, 5] },
-            { text: 'BCP CTA. CTE. SOLES :', fontSize: 10 },
-            { text: '  191-2390862-0-19', fontSize: 10, margin: [0, 0, 0, 3] },
-            { text: 'BCP CTA. CCI. SOLES :', fontSize: 10 },
-            { text: '  002-19100239086201950', fontSize: 10, margin: [0, 0, 0, 3] },
-            { text: 'BN DETRACCIÓN SOLES :', fontSize: 10 },
-            { text: '  00-066-104419', fontSize: 10 },
-          ], margin: [5, 5, 5, 5] },
-        ]]},
-        layout: borderLayout(1, 1),
-      },
-      { width: 20, text: '' },
-      {
-        width: 150,
-        table: { widths: ['*'], body: [[
-          { stack: [
-            { text: 'FECHA DE VENCIMIENTO:', fontSize: 10, bold: true, color: '#CC0000', alignment: 'center' },
-            { text: fechaVencimientoStr, fontSize: 14, bold: true, color: '#CC0000', alignment: 'center', margin: [0, 8, 0, 5] },
-          ], margin: [8, 8, 8, 8] },
-        ]]},
-        layout: {
-          hLineWidth: () => 1, vLineWidth: () => 1,
-          hLineColor: () => '#000', vLineColor: () => '#000',
-          fillColor: () => '#F5F5F5',
-          paddingLeft: () => 0, paddingRight: () => 0,
-          paddingTop: () => 0, paddingBottom: () => 0,
-        },
-      },
-    ],
-    margin: [0, 0, 0, 0],
+    width: 180,
+    table: { widths: ['*'], body: [[
+      { stack: [
+        { text: 'CUENTAS BANCARIAS:', bold: true, fontSize: 10, margin: [0, 0, 0, 5] },
+        { text: 'BCP CTA. CTE. SOLES  : 191-2390862-0-19', fontSize: 10, margin: [0, 0, 0, 2] },
+        { text: 'BCP CTA. CCI. SOLES  : 002-19100239086201950', fontSize: 10, margin: [0, 0, 0, 2] },
+        { text: 'BN DETRACCIÓN SOLES  : 00-066-104419', fontSize: 10 },
+      ], margin: [5, 5, 5, 5] },
+    ]]},
+    layout: borderLayout(1, 1),
   });
 
   return {
