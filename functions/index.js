@@ -123,6 +123,43 @@ exports.onUserDeleted = functions.auth.user().onDelete(async (user) => {
   }
 });
 
+// ── createAuthUser — HTTP callable ────────────────────────────────
+// Crea un usuario en Firebase Auth (Admin SDK).
+// Solo permitido para Administrador o Gerente General.
+// No modifica la sesión del caller (no sign-in/sign-out).
+// ═════════════════════════════════════════════════════════════════
+exports.createAuthUser = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError("unauthenticated", "Debe iniciar sesión.");
+  }
+
+  const callerSnap = await db.doc("users/" + context.auth.uid).get();
+  const callerRole = callerSnap.exists ? callerSnap.data().user_role : "";
+  if (callerRole !== "Administrador" && callerRole !== "Gerente General") {
+    throw new functions.https.HttpsError("permission-denied", "No tienes permisos.");
+  }
+
+  const { email, password, uid: existingDocId } = data;
+  if (!email || !password) {
+    throw new functions.https.HttpsError("invalid-argument", "Faltan email y password.");
+  }
+
+  try {
+    const userRecord = await admin.auth().createUser({ email, password });
+    // Guardar auth_uid en el documento Firestore
+    if (existingDocId) {
+      await db.doc("users/" + existingDocId).set({ auth_uid: userRecord.uid }, { merge: true });
+    }
+    return { ok: true, uid: userRecord.uid };
+  } catch (e) {
+    console.error("createAuthUser ERROR:", e);
+    if (e.code === "auth/email-already-exists") {
+      throw new functions.https.HttpsError("already-exists", "El correo ya está registrado.");
+    }
+    throw new functions.https.HttpsError("internal", "Error al crear usuario.");
+  }
+});
+
 // ── deleteAuthUser — HTTP callable ────────────────────────────────
 // Borra un usuario de Firebase Auth (Admin SDK).
 // Solo permitido para Administrador o Gerente General.

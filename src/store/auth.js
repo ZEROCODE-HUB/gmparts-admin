@@ -1,8 +1,8 @@
-import { auth, db } from "../lib/firebase";
+import { auth, db, functions } from "../lib/firebase";
 import {
-  signInWithEmailAndPassword, createUserWithEmailAndPassword,
-  signOut as fbSignOut, onAuthStateChanged,
+  signInWithEmailAndPassword, signOut as fbSignOut, onAuthStateChanged,
 } from "firebase/auth";
+import { httpsCallable } from "firebase/functions";
 import {
   collection, query, where, getDocs, doc, getDoc, updateDoc, limit as qLimit,
 } from "firebase/firestore";
@@ -96,14 +96,17 @@ export function observeAuth(cb) {
   });
 }
 
-export async function fbCreateUser(email, password) {
+export async function fbCreateUser(email, password, existingDocId) {
   try {
-    const cred = await createUserWithEmailAndPassword(auth, email, password);
-    const uid = cred.user.uid;
-    await fbSignOut(auth);
-    return { ok: true, uid };
+    const fn = httpsCallable(functions, "createAuthUser");
+    const res = await fn({ email, password, uid: existingDocId });
+    return { ok: true, uid: res.data.uid };
   } catch (e) {
-    return { ok: false, error: translateAuthError(e) };
+    const msg = e?.message || e?.code || "";
+    if (msg.includes("already-exists") || msg.includes("already registered")) {
+      return { ok: false, error: "El correo ya está registrado." };
+    }
+    return { ok: false, error: "Error al crear usuario en Auth." };
   }
 }
 

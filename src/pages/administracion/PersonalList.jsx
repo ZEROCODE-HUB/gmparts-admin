@@ -101,10 +101,11 @@ export default function PersonalList() {
       if (form.password) {
         data.password_hash = await hashPassword(form.password);
       }
-      await saveMaestro(COL, { ...data, id: editing?.id });
+      const newId = await saveMaestro(COL, { ...data, id: editing?.id });
 
       if (form.password && !editing) {
-        await fbCreateUser(form.email, form.password);
+        const res = await fbCreateUser(form.email, form.password, editing?.id || newId);
+        if (!res.ok) showToast(res.error || "Error al crear usuario en Auth", "error");
       }
 
       closeModal();
