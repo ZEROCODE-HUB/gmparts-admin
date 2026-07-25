@@ -140,18 +140,36 @@ exports.deleteAuthUser = functions.https.onCall(async (data, context) => {
     throw new functions.https.HttpsError("permission-denied", "No tienes permisos.");
   }
 
-  const { uid } = data;
-  if (!uid) {
-    throw new functions.https.HttpsError("invalid-argument", "Falta uid.");
+  const { uid, email } = data;
+  if (!uid && !email) {
+    throw new functions.https.HttpsError("invalid-argument", "Falta uid o email.");
   }
 
+  let targetUid = uid;
   try {
-    await admin.auth().deleteUser(uid);
-    // También limpia los datos en Firestore
-    await cleanupUserReferences(uid);
+    // Si no hay uid o falla, intentar por email
+    if (!targetUid && email) {
+      const userRecord = await admin.auth().getUserByEmail(email);
+      targetUid = userRecord.uid;
+    }
+    if (targetUid) {
+      await admin.auth().deleteUser(targetUid);
+      await cleanupUserReferences(targetUid);
+    }
     return { ok: true };
   } catch (e) {
     console.error("deleteAuthUser ERROR:", e);
+    // Si falló con uid pero tenemos email, reintentar por email
+    if (uid && email && e.code !== "auth/user-not-found") {
+      try {
+        const userRecord = await admin.auth().getUserByEmail(email);
+        await admin.auth().deleteUser(userRecord.uid);
+        await cleanupUserReferences(userRecord.uid);
+        return { ok: true };
+      } catch (e2) {
+        console.error("deleteAuthUser retry by email ERROR:", e2);
+      }
+    }
     throw new functions.https.HttpsError("internal", "Error al eliminar usuario.");
   }
 });

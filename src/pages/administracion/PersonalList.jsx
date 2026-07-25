@@ -124,11 +124,10 @@ export default function PersonalList() {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      const authUid = deleteTarget.auth_uid || deleteTarget.id;
       await deleteMaestro(COL, deleteTarget.id);
       try {
         const fn = httpsCallable(functions, "deleteAuthUser");
-        await fn({ uid: authUid });
+        await fn({ uid: deleteTarget.auth_uid || deleteTarget.id, email: deleteTarget.email });
       } catch { /* si no existe en Auth, ignorar */ }
       setDeleteTarget(null);
       showToast("Personal eliminado");
