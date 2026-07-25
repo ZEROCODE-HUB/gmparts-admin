@@ -184,7 +184,7 @@ export default function PersonalList() {
             <Field label="Distrito"><input className={inputCls} value={form.distrito} onChange={(e) => set("distrito", e.target.value)} /></Field>
             <Field label="Provincia"><input className={inputCls} value={form.provincia} onChange={(e) => set("provincia", e.target.value)} /></Field>
             <Field label="Departamento"><input className={inputCls} value={form.departamento} onChange={(e) => set("departamento", e.target.value)} /></Field>
-            <Field label="Fecha nacimiento"><input className={inputCls} value={form.fechaNacimiento} onChange={(e) => set("fechaNacimiento", e.target.value)} /></Field>
+            <Field label="Fecha nacimiento"><input type="date" className={inputCls} value={form.fechaNacimiento} onChange={(e) => set("fechaNacimiento", e.target.value)} /></Field>
             <Field label="Edad"><input type="number" className={inputCls} value={form.edad} onChange={(e) => set("edad", e.target.value)} /></Field>
             <Field label="Sexo">
               <select className={inputCls} value={form.sexo} onChange={(e) => set("sexo", e.target.value)}>

@@ -12,7 +12,7 @@
 
 import { db } from "../lib/firebase";
 import {
-  collection, doc, getDocs, addDoc, setDoc, deleteDoc, query, where, orderBy, onSnapshot,
+  collection, doc, getDocs, addDoc, setDoc, deleteDoc, query, where, orderBy, onSnapshot, Timestamp,
 } from "firebase/firestore";
 import { useEffect, useState, useCallback } from "react";
 import { marcasSeed, gruposSeed, subgruposSeed, unidadesSeed } from "../mock/seed.articulos";
@@ -176,10 +176,24 @@ export function useFirestoreCollection(collectionName, constraints = []) {
   return items;
 }
 
+// Convierte campos con nombre de fecha (fecha, date, nacimiento, creacion, registro) a Timestamp
+function prepareDateFields(data) {
+  const DATE_KEYS = /^(fecha|date|nacimiento|creacion|registro|ingreso)/i;
+  const out = { ...data };
+  for (const key of Object.keys(out)) {
+    const val = out[key];
+    if (typeof val === "string" && DATE_KEYS.test(key) && /^\d{4}-\d{2}-\d{2}$/.test(val)) {
+      const d = new Date(val + "T00:00:00");
+      if (!isNaN(d.getTime())) out[key] = Timestamp.fromDate(d);
+    }
+  }
+  return out;
+}
+
 // Crea o actualiza un documento de maestro. Si `docData.id` existe (y no es semilla)
 // hace updateDoc(merge); si no, addDoc. Devuelve el id.
 export async function saveMaestro(collectionName, docData) {
-  const clean = { ...docData };
+  const clean = prepareDateFields({ ...docData });
   delete clean.id;
   if (docData.id && !String(docData.id).startsWith("seed:")) {
     await setDoc(doc(db, collectionName, docData.id), clean, { merge: true });
