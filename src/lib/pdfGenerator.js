@@ -1076,12 +1076,19 @@ export function docToOpts(data, title) {
   let tipo = 'factura';
 
   const code = data.codeCT || '';
+  const status = (data.status || '').toLowerCase();
   if (data.proveedor || data.proveedorDoc) {
     tipo = 'compra';
-  } else if (code.startsWith('OT') || code.startsWith('OT-')) {
+  } else if (code.startsWith('OT')) {
     tipo = 'orden';
   } else if (code.startsWith('CT') || code.startsWith('SC') || data.tipo_servicio) {
-    tipo = 'cotizacion';
+    // codeCT "SC" se usa tanto para cotizaciones como órdenes de trabajo.
+    // Diferenciar por status: reparación/finalizado = orden, el resto = cotización
+    if (status === 'reparación' || status === 'finalizado' || status === 'completado' || status === 'aprobado') {
+      tipo = 'orden';
+    } else {
+      tipo = 'cotizacion';
+    }
   } else if (data.diagnosticos || data.items?.some?.((it) => it.tipo === 'servicio' || it.tipo === 'mano_obra')) {
     if (!data.total && data.items?.length > 0) {
       tipo = 'orden';
