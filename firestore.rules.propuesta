@@ -80,8 +80,9 @@ service cloud.firestore {
     match /service/{doc}                      { allow write: if isAuth(); }
     match /LastCode/{doc}                     { allow write: if isAuth(); }
 
-    // ── users: cada uno puede editar su propio documento ─────
+    // ── users: lectura pública para login, escritura para admin/propietario ─────
     match /users/{uid} {
+      allow read: if true;
       allow write: if isAdminOrGG() || request.auth.uid == uid;
     }
 
