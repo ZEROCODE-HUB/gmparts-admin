@@ -98,9 +98,10 @@ export function observeAuth(cb) {
 
 export async function fbCreateUser(email, password) {
   try {
-    await createUserWithEmailAndPassword(auth, email, password);
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    const uid = cred.user.uid;
     await fbSignOut(auth);
-    return { ok: true };
+    return { ok: true, uid };
   } catch (e) {
     return { ok: false, error: translateAuthError(e) };
   }

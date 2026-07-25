@@ -11,7 +11,7 @@ import Field, { inputCls } from "../../components/ui/Field";
 import { useFirestoreCollection, saveMaestro, deleteMaestro } from "../../store/firestoreDb";
 import { fbCreateUser } from "../../store/auth";
 import { hashPassword } from "../../lib/authLib";
-import { where } from "firebase/firestore";
+import { where, doc, updateDoc } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { functions } from "../../lib/firebase";
 import { showToast } from "../../components/ui/Toast";
@@ -21,6 +21,7 @@ const COL = "users";
 function fromFirestore(d) {
   return {
     id: d.id,
+    auth_uid: d.auth_uid || '',
     codigo: d.codigo,
     nombre: d.display_name,
     documento: d.IdentityDocument,
@@ -102,10 +103,15 @@ export default function ClientesList() {
       if (form.password) {
         data.password_hash = await hashPassword(form.password);
       }
-      await saveMaestro(COL, { ...data, id: editing?.id });
+      const newId = await saveMaestro(COL, { ...data, id: editing?.id });
+      const docId = editing?.id || newId;
 
       if (form.password && !editing) {
-        await fbCreateUser(form.email, form.password);
+        const res = await fbCreateUser(form.email, form.password);
+        if (res.ok && res.uid) {
+          const { db } = await import("../../lib/firebase");
+          await updateDoc(doc(db, COL, docId), { auth_uid: res.uid });
+        }
       }
 
       closeModal();
@@ -123,10 +129,11 @@ export default function ClientesList() {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
+      const authUid = deleteTarget.auth_uid || deleteTarget.id;
       await deleteMaestro(COL, deleteTarget.id);
       try {
         const fn = httpsCallable(functions, "deleteAuthUser");
-        await fn({ uid: deleteTarget.id });
+        await fn({ uid: authUid });
       } catch { /* si no existe en Auth, ignorar */ }
       setDeleteTarget(null);
       showToast("Cliente eliminado");
