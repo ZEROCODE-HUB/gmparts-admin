@@ -86,6 +86,7 @@ export default function PersonalList() {
   const pageRows = rows.slice(page * 20, (page + 1) * 20);
 
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
+  const closeModal = useCallback(() => setModalOpen(false), []);
   const openNew = useCallback(() => { setEditing(null); setForm(empty); setModalOpen(true); }, []);
   const openEdit = useCallback((p) => { setEditing(p); setForm({ ...empty, ...p }); setModalOpen(true); }, []);
 
@@ -105,7 +106,7 @@ export default function PersonalList() {
         await fbCreateUser(form.email, form.password);
       }
 
-      setModalOpen(false);
+      closeModal();
       showToast("Personal guardado");
     } catch {
       showToast("Error al guardar personal", "error");
@@ -160,7 +161,7 @@ export default function PersonalList() {
       />
 
       {modalOpen && (
-        <Modal title={editing ? "Editar Personal" : "Nuevo Personal"} onClose={() => setModalOpen(false)}>
+        <Modal title={editing ? "Editar Personal" : "Nuevo Personal"} onClose={closeModal}>
           <div className="grid grid-cols-2 gap-4">
             <Field label="Nombre" span><input className={inputCls} value={form.displayName} onChange={(e) => set("displayName", e.target.value)} required /></Field>
             <Field label="Correo"><input className={inputCls} value={form.email} onChange={(e) => set("email", e.target.value)} /></Field>
@@ -189,7 +190,7 @@ export default function PersonalList() {
             </Field>
           </div>
           <div className="flex justify-end gap-2 mt-6">
-            <Btn variant="ghost" onClick={() => setModalOpen(false)} disabled={saving}>Cancelar</Btn>
+            <Btn variant="ghost" onClick={closeModal} disabled={saving}>Cancelar</Btn>
             <Btn onClick={handleSave} loading={saving}>{editing ? "Guardar cambios" : "Crear personal"}</Btn>
           </div>
         </Modal>
