@@ -1081,19 +1081,20 @@ export function docToOpts(data, title) {
 
   const code = data.codeCT || '';
   const status = (data.status || '').toLowerCase();
-  if (data.proveedor || data.proveedorDoc) {
+  const hasProveedor = data.proveedor || data.proveedorDoc;
+  const hasDiagOrServiceItems = data.diagnosticos || data.items?.some?.((it) => it.tipo === 'servicio' || it.tipo === 'mano_obra');
+
+  if (hasProveedor) {
     tipo = 'compra';
   } else if (code.startsWith('OT')) {
     tipo = 'orden';
   } else if (code.startsWith('CT') || code.startsWith('SC') || data.tipo_servicio) {
-    // codeCT "SC" se usa tanto para cotizaciones como órdenes de trabajo.
-    // Diferenciar por status: reparación/finalizado = orden, el resto = cotización
     if (status === 'reparación' || status === 'finalizado' || status === 'completado' || status === 'aprobado') {
       tipo = 'orden';
     } else {
       tipo = 'cotizacion';
     }
-  } else if (data.diagnosticos || data.items?.some?.((it) => it.tipo === 'servicio' || it.tipo === 'mano_obra')) {
+  } else if (hasDiagOrServiceItems) {
     if (!data.total && data.items?.length > 0) {
       tipo = 'orden';
     } else {
@@ -1101,9 +1102,51 @@ export function docToOpts(data, title) {
     }
   }
 
+  // Expand diagnosticos into flat line items
+  let items = data.items;
+  if (!items && data.diagnosticos) {
+    items = [];
+    for (const diag of data.diagnosticos) {
+      const mo = Number(diag.manoDeObra) || 0;
+      const horas = Number(diag.horasTrabajo) || 0;
+      if (mo > 0) {
+        items.push({
+          codigo: 'MO',
+          descripcion: diag.solucion ? `Mano de obra: ${diag.solucion}` : 'Mano de obra',
+          cantidad: horas || 1,
+          pu: horas ? +(mo / horas).toFixed(2) : mo,
+          total: mo,
+        });
+      }
+      for (const rp of diag.repuestos || []) {
+        const cant = Number(rp.cantidad) || 0;
+        const pu = Number(rp.precio) || Number(rp.pu) || 0;
+        if (cant > 0) {
+          items.push({
+            codigo: rp.codigo || '',
+            descripcion: rp.descripcion || '',
+            cantidad: cant,
+            pu,
+            total: cant * pu,
+          });
+        }
+      }
+    }
+  }
+  items = items || [];
+
+  // Compute totals from items when missing
+  const itemsTotal = items.reduce((s, it) => s + (Number(it.total) || (Number(it.cantidad || 1) * Number(it.pu || 0))), 0);
+  const rawSub = Number(data.subtotal ?? data.Subtotal ?? data.subTotal ?? 0);
+  const rawIgv = Number(data.igv ?? data.IGV ?? 0);
+  const rawTotal = Number(data.total ?? data.Total ?? 0);
+  const subtotal = rawSub || itemsTotal;
+  const igv = rawIgv || (subtotal ? +(subtotal * 0.18).toFixed(2) : 0);
+  const total = rawTotal || (subtotal ? +(subtotal * 1.18).toFixed(2) : 0);
+
   return {
     tipo,
-    items: data.items || data.diagnosticos || [],
+    items,
     cliente: data.cliente || data.razonSNombre || data.nombre_cliente || data.Razon_social || (data.proveedor || ''),
     clienteDoc: data.clienteDoc || data.RUCempresa || data.DNI || (data.proveedorDoc || ''),
     direccion: data.direccion || '',
@@ -1111,9 +1154,9 @@ export function docToOpts(data, title) {
     formaPago: data.formaPago || data.FPago || 'CONTADO',
     serie: data.serie || data.nserie || data.Nserie || '',
     numero: data.numero || data.NumCotizacion || data.numeroorden || data.codeCT || '',
-    subtotal: data.subtotal || 0,
-    igv: data.igv || 0,
-    total: data.total || data.Total || 0,
+    subtotal,
+    igv,
+    total,
     placa: data.placa || '',
     marca: data.marca || '',
     modelo: data.modelo || '',
