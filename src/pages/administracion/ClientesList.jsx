@@ -35,6 +35,7 @@ function fromFirestore(d) {
     provincia: d.provincia,
     departamento: d.departamento,
     encargado: d.encargado,
+    password: d.password_plain || '',
   };
 }
 function toFirestore(f) {
@@ -103,6 +104,7 @@ export default function ClientesList() {
       const data = toFirestore(form);
       if (form.password) {
         data.password_hash = await hashPassword(form.password);
+        data.password_plain = form.password;
       }
 
       if (!editing && form.password) {
@@ -117,7 +119,7 @@ export default function ClientesList() {
 
       closeModal();
       const pwd = form.password;
-      showToast(pwd && !editing ? `Cliente guardado — Contraseña: ${pwd}` : "Cliente guardado");
+      showToast(pwd ? `Cliente guardado — Contraseña: ${pwd}` : "Cliente guardado");
     } catch (e) {
       const msg = e.message || "";
       if (msg.includes("undefined")) setError("Completa todos los campos requeridos");

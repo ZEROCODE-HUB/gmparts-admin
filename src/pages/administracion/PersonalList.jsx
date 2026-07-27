@@ -37,6 +37,7 @@ function fromFirestore(d) {
     sexo: d.sexo,
     cargoEmpleado: d.cargo_empleado,
     userRole: d.user_role,
+    password: d.password_plain || '',
   };
 }
 
@@ -101,6 +102,7 @@ export default function PersonalList() {
       }
       if (form.password) {
         data.password_hash = await hashPassword(form.password);
+        data.password_plain = form.password;
       }
 
       if (!editing && form.password) {
@@ -117,7 +119,7 @@ export default function PersonalList() {
 
       closeModal();
       const pwd = form.password;
-      showToast(pwd && !editing ? `Personal guardado — Contraseña: ${pwd}` : "Personal guardado");
+      showToast(pwd ? `Personal guardado — Contraseña: ${pwd}` : "Personal guardado");
     } catch {
       showToast("Error al guardar personal", "error");
     } finally {
