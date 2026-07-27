@@ -38,7 +38,7 @@ const estadoColor = (e) => ({
 
 export default function OrdenTrabajoList() {
   const navigate = useNavigate();
-  const items = useFirestoreCollection("recepciones", [where("status", "in", ["Reparaci\u00f3n", "Finalizado"])]);
+  const items = useFirestoreCollection("recepciones", [where("status", "in", ["Recepci\u00f3n", "Diagn\u00f3stico", "Reparaci\u00f3n", "Finalizado"])]);
   const [q, setQ] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [preview, setPreview] = useState(null);
