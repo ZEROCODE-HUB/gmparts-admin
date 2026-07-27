@@ -1,7 +1,7 @@
 ﻿import { useState, useCallback } from "react";
 import Pagination from "../../components/ui/Pagination";
 import { exportToExcel } from "../../lib/exportExcel";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, Eye, EyeOff } from "lucide-react";
 import Toolbar from "../../components/ui/Toolbar";
 import SearchBox from "../../components/ui/SearchBox";
 import Table, { Td } from "../../components/ui/Table";
@@ -76,6 +76,7 @@ export default function PersonalList() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const rows = items.filter((p) =>
     (p.displayName + p.email + p.DNI + p.direccion + p.cargoEmpleado + p.userRole)
@@ -115,7 +116,8 @@ export default function PersonalList() {
       }
 
       closeModal();
-      showToast("Personal guardado");
+      const pwd = form.password;
+      showToast(pwd && !editing ? `Personal guardado — Contraseña: ${pwd}` : "Personal guardado");
     } catch {
       showToast("Error al guardar personal", "error");
     } finally {
@@ -198,7 +200,10 @@ export default function PersonalList() {
               </select>
             </Field>
             <Field label={editing ? "Nueva contraseña (dejar vacío para mantener)" : "Contraseña"} span>
-              <input type="password" className={inputCls} value={form.password} onChange={(e) => set("password", e.target.value)} placeholder={editing ? "Dejar vacío para mantener" : "Asignar contraseña"} />
+              <div className="flex gap-1">
+                <input type={showPassword ? "text" : "password"} className={inputCls} value={form.password} onChange={(e) => set("password", e.target.value)} placeholder={editing ? "Dejar vacío para mantener" : "Asignar contraseña"} />
+                <button type="button" onClick={() => setShowPassword((v) => !v)} className="p-2 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]" tabIndex={-1}>{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button>
+              </div>
             </Field>
           </div>
           <div className="flex justify-end gap-2 mt-6">
