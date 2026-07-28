@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import Btn from "../ui/Btn";
 import Field, { inputCls } from "../ui/Field";
 import { useDebouncedCallback } from "../../lib/debounce";
+import { useFirestoreCollection } from "../../store/firestoreDb";
 import proveedoresSeed from "../../mock/seed.proveedores";
 import almacenesSeed from "../../mock/seed.almacenes";
 import * as db from "../../store/db";
@@ -19,6 +20,16 @@ function normalizeIgv(v) {
   if (v === "INCLUIDO IGV" || v === "INCLUIDO") return "INCLUIDO";
   if (v === "MAS IGV" || v === "MAS") return "MAS";
   return v || "INCLUIDO";
+}
+
+function normalizeProvider(d) {
+  return {
+    id: d.id,
+    nombre: d.nombre || "",
+    documento: d.Documento || d.documento || "",
+    razonSocial: d.razon_social || "",
+    correo: d.correo || "",
+  };
 }
 
 export default function CompraEditor({ title, backPath, docKey, onSave, mode = "create" }) {
@@ -37,6 +48,8 @@ export default function CompraEditor({ title, backPath, docKey, onSave, mode = "
   const [artSearch, setArtSearch] = useState("");
   const [artResults, setArtResults] = useState([]);
   const [artQty, setArtQty] = useState(1);
+  const fireProviders = useFirestoreCollection("Proveedores").map(normalizeProvider);
+  const allProviders = [...proveedoresSeed, ...fireProviders];
 
   const isGuia = docKey === "c-guia";
   const isOrdenPago = docKey === "c-orden";
@@ -81,10 +94,10 @@ export default function CompraEditor({ title, backPath, docKey, onSave, mode = "
   const set = (k, v) => setForm((prev) => ({ ...prev, [k]: v }));
 
   const handleProveedorChange = (nombre) => {
-    const p = proveedoresSeed.find((pr) => (pr.nombre || pr.razonSocial) === nombre);
+    const p = allProviders.find((pr) => (pr.nombre || pr.razonSocial) === nombre);
     if (p) {
       set("proveedor", p.nombre || p.razonSocial);
-      set("proveedorDoc", p.documento || p.ruc || "");
+      set("proveedorDoc", p.documento || "");
     }
   };
 
@@ -306,7 +319,7 @@ export default function CompraEditor({ title, backPath, docKey, onSave, mode = "
               <Field label="Proveedor">
                 <select className={inputCls} value={form.proveedor} onChange={(e) => handleProveedorChange(e.target.value)}>
                   <option value="">Selecciona proveedor</option>
-                  {proveedoresSeed.map((p) => <option key={p.id} value={p.nombre || p.razonSocial}>{p.nombre || p.razonSocial} - {p.documento || p.ruc}</option>)}
+                  {allProviders.map((p) => <option key={p.id} value={p.nombre || p.razonSocial}>{p.nombre || p.razonSocial} - {p.documento}</option>)}
                 </select>
               </Field>
               <Field label="Documento"><input className={inputCls} value={form.proveedorDoc} readOnly /></Field>
@@ -349,7 +362,7 @@ export default function CompraEditor({ title, backPath, docKey, onSave, mode = "
               <Field label="Proveedor">
                 <select className={inputCls} value={form.proveedor} onChange={(e) => handleProveedorChange(e.target.value)}>
                   <option value="">Selecciona proveedor</option>
-                  {proveedoresSeed.map((p) => <option key={p.id} value={p.nombre || p.razonSocial}>{p.nombre || p.razonSocial} - {p.documento || p.ruc}</option>)}
+                  {allProviders.map((p) => <option key={p.id} value={p.nombre || p.razonSocial}>{p.nombre || p.razonSocial} - {p.documento}</option>)}
                 </select>
               </Field>
               <Field label="Documento"><input className={inputCls} value={form.proveedorDoc} readOnly /></Field>
@@ -419,7 +432,7 @@ export default function CompraEditor({ title, backPath, docKey, onSave, mode = "
             <Field label="Proveedor">
               <select className={inputCls} value={form.proveedor} onChange={(e) => handleProveedorChange(e.target.value)}>
                 <option value="">Selecciona proveedor</option>
-                {proveedoresSeed.map((p) => <option key={p.id} value={p.nombre || p.razonSocial}>{p.nombre || p.razonSocial} - {p.documento || p.ruc}</option>)}
+                {allProviders.map((p) => <option key={p.id} value={p.nombre || p.razonSocial}>{p.nombre || p.razonSocial} - {p.documento}</option>)}
               </select>
             </Field>
             <Field label="Documento"><input className={inputCls} value={form.proveedorDoc} readOnly /></Field>

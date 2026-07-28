@@ -94,48 +94,23 @@ const S = {
   detraccionBold: { fontSize: 9, bold: true },
 };
 
-async function buildDocDefFactura(opts) {
+// ---- Shared layout helpers (Factura / Compra) ----
 
-  const {
-    items = [], cliente = "CLIENTE GENÉRICO", clienteDoc = "00000000000",
-    direccion = "SIN DIRECCIÓN", fecha = "", formaPago = "CONTADO",
-    serie = "001", numero = "000000", subtotal = 0, igv = 0, total = 0,
-    placa = "", marca = "", modelo = "", km = "", observaciones = "",
-    titulo = "FACTURA ELECTRÓNICA", vendedor = "SIN ESPECIFICAR",
-    nroCot = "", ordenCompra = "", totalEnLetras: ttl, qrData: qr,
-    logoUrl, erpLogoUrl,
-  } = opts;
-
-  const numDoc = `${serie}-${numero}`;
-  const totalEnLetrasVal = ttl || totalEnLetras(total);
-  const qrData = qr || `${cliente}|${numDoc}|${total}`;
-  const fechaFormatted = formatDateToDDMMYYYY(fecha);
-  const fechaVencimientoStr = getNextMonthDueDate();
-  const detraccion = total > 700 ? total * 0.12 : null;
-  const montoNeto = detraccion ? total - detraccion : null;
-  const [logoData, erpData] = await Promise.all([
-    urlToDataUrl(logoUrl || LOGO_URL),
-    urlToDataUrl(erpLogoUrl || ERP_LOGO_URL),
-  ]);
-
-  const content = [];
-
-  content.push({
+function buildHeader(logoData, titulo, numDoc) {
+  return {
     columns: [
       {
         width: '*',
         columns: [
-          ...(logoData ? [{ image: logoData, width: 80, height: 80, fit: [80, 80] }] : [{ text: '', width: 80 }]),
-          { width: 10, text: '' },
+          ...(logoData ? [{ image: logoData, width: 80, height: 80 }] : [{ text: '', width: 80 }]),
+          { width: 12, text: '' },
           {
             width: '*',
             stack: [
-              { text: 'GEAR MOTOR PARTS S.A.C.', fontSize: 18, bold: true, italics: true },
-              { text: 'Dirección fiscal: Av. Colectora Industrial Mza. A Lote. 6', fontSize: 7, margin: [0, 2, 0, 0] },
-              { text: 'Asc. Santa Cruz de Vista Alegre - Santa Anita', fontSize: 7 },
-              { text: 'Sucursal: Av. Nicolás Ayllón Nro. 3270 Coo. Veintisiete de abril - Ate', fontSize: 7 },
-              { text: 'Tel.: 01 362 8667 - 924 483 844', fontSize: 7 },
-              { text: 'gearmparts@gmail.com', fontSize: 7 },
+              { text: 'GEAR MOTOR PARTS S.A.C.', fontSize: 16, bold: true },
+              { text: 'Dirección fiscal: Av. Nicolás Ayllón 3270, Ate, Lima', fontSize: 7.5, margin: [0, 3, 0, 0] },
+              { text: 'Tel.: 01 362 8667 - 924 483 844', fontSize: 7.5 },
+              { text: 'gearmparts@gmail.com', fontSize: 7.5 },
             ],
           },
         ],
@@ -144,27 +119,109 @@ async function buildDocDefFactura(opts) {
         width: 180,
         table: {
           widths: ['*'],
-          body: [
-            [{ text: 'R.U.C. 20601720621', fontSize: 9, bold: true, alignment: 'center', margin: [8, 6, 8, 6] }],
-            [{ text: titulo, fontSize: 12, bold: true, alignment: 'center', margin: [8, 6, 8, 6] }],
-            [{ text: `Nº ${numDoc}`, fontSize: 9, bold: true, alignment: 'center', margin: [8, 6, 8, 6] }],
-          ],
+          body: [[
+            { stack: [
+              { text: 'R.U.C. 20601720621', fontSize: 11, bold: true, alignment: 'center' },
+              { text: titulo, fontSize: 13, bold: true, alignment: 'center', margin: [0, 8, 0, 8] },
+              { text: `Nº ${numDoc}`, fontSize: 11, bold: true, alignment: 'center' },
+            ], margin: [10, 10, 10, 10] },
+          ]],
         },
-        layout: {
-          hLineWidth: (i, node) => i === 0 || i === node.table.body.length ? 0.75 : 0.5,
-          vLineWidth: () => 0.75,
-          hLineColor: () => '#000000', vLineColor: () => '#000000',
-          paddingLeft: () => 0, paddingRight: () => 0,
-          paddingTop: () => 0, paddingBottom: () => 0,
-        },
+        layout: borderLayout(1.5, 1.5),
       },
     ],
     margin: [0, 0, 0, 15],
-  });
+  };
+}
+
+function buildCustomerBlock(rows) {
+  return {
+    table: { widths: ['*'], body: [[{ stack: rows, margin: [8, 8, 8, 8] }]] },
+    layout: borderLayout(1, 1),
+    margin: [0, 0, 0, 15],
+  };
+}
+
+function buildItemsTable(items) {
+  const body = [
+    [
+      { text: 'CÓDIGO', style: 'tableHeader', alignment: 'center' },
+      { text: 'CANT.', style: 'tableHeader', alignment: 'center' },
+      { text: 'UNID.', style: 'tableHeader', alignment: 'center' },
+      { text: 'DESCRIPCIÓN', style: 'tableHeader', alignment: 'center' },
+      { text: 'P.UNIT.', style: 'tableHeader', alignment: 'center' },
+      { text: 'IMPORTE', style: 'tableHeader', alignment: 'center' },
+    ],
+  ];
+  for (const it of items) {
+    const c = it.cant ?? it.cantidad ?? 1;
+    const p = it.pu ?? it.precioVenta ?? 0;
+    const t = it.total ?? c * p;
+    body.push([
+      { text: it.codigo || '', style: 'cell', alignment: 'center' },
+      { text: String(c), style: 'cell', alignment: 'center' },
+      { text: it.unidad || 'UND', style: 'cell', alignment: 'center' },
+      { text: (it.descripcion || it.articulo || '').toUpperCase(), style: 'cell' },
+      { text: Number(p).toFixed(2), style: 'cell', alignment: 'right' },
+      { text: Number(t).toFixed(2), style: 'cell', alignment: 'right' },
+    ]);
+  }
+  while (body.length < 11) {
+    body.push([
+      { text: '', style: 'cell' }, { text: '', style: 'cell' },
+      { text: '', style: 'cell' }, { text: '', style: 'cell' },
+      { text: '', style: 'cell' }, { text: '', style: 'cell' },
+    ]);
+  }
+  return {
+    table: { widths: [60, 40, 40, '*', 80, 60], body },
+    layout: {
+      hLineWidth: () => 0.5, vLineWidth: () => 0.5,
+      hLineColor: () => '#000', vLineColor: () => '#000',
+      fillColor: (ri) => ri === 0 ? '#EEEEEE' : null,
+      paddingLeft: () => 4, paddingRight: () => 4,
+      paddingTop: () => 4, paddingBottom: () => 4,
+    },
+    margin: [0, 0, 0, 8],
+  };
+}
+
+function buildAmountRow(label, value, style) {
+  return {
+    columns: [
+      { width: 'auto', text: label, style },
+      { width: '*', text: `S/ ${Number(value).toFixed(2)}`, style, alignment: 'right' },
+    ],
+  };
+}
+
+async function buildDocDefFactura(opts) {
+
+  const {
+    items = [], cliente = "CLIENTE GENÉRICO", clienteDoc = "00000000000",
+    direccion = "SIN DIRECCIÓN", fecha = "", formaPago = "CONTADO",
+    serie = "001", numero = "000000", subtotal = 0, igv = 0, total = 0,
+    placa = "", marca = "", modelo = "", km = "", observaciones = "",
+    titulo = "FACTURA ELECTRÓNICA", vendedor = "SIN ESPECIFICAR",
+    nroCot = "", ordenCompra = "", totalEnLetras: ttl,
+    logoUrl,
+  } = opts;
+
+  const numDoc = `${serie}-${numero}`;
+  const totalEnLetrasVal = ttl || totalEnLetras(total);
+  const fechaFormatted = formatDateToDDMMYYYY(fecha);
+  const fechaVencimientoStr = getNextMonthDueDate();
+  const detraccion = total > 700 ? total * 0.12 : null;
+  const montoNeto = detraccion ? total - detraccion : null;
+  const logoData = await urlToDataUrl(logoUrl || LOGO_URL);
+
+  const content = [];
+
+  content.push(buildHeader(logoData, titulo, numDoc));
 
   const custRows = [
     { columns: [
-      { width: '50%', text: [{ text: 'SEÑOR (ES) : ', bold: true, fontSize: 9 }, { text: cliente.toUpperCase(), fontSize: 9 }] },
+      { width: '50%', text: [{ text: 'CLIENTE : ', bold: true, fontSize: 9 }, { text: cliente.toUpperCase(), fontSize: 9 }] },
       { width: '50%', text: [{ text: 'FECHA EMISIÓN : ', bold: true, fontSize: 9 }, { text: fechaFormatted, fontSize: 9 }] },
     ], margin: [0, 0, 0, 4] },
     { columns: [
@@ -178,70 +235,25 @@ async function buildDocDefFactura(opts) {
     { columns: [
       { width: '50%', text: [{ text: 'NRO COT : ', bold: true, fontSize: 9 }, { text: nroCot, fontSize: 9 }] },
       { width: '50%', text: [{ text: 'COND. DE PAGO : ', bold: true, fontSize: 9 }, { text: formaPago.toUpperCase(), fontSize: 9 }] },
-    ], margin: [0, 0, 0, observaciones ? 4 : 0] },
+    ], margin: [0, 0, 0, 4] },
+    { columns: [
+      { width: 'auto', text: [{ text: 'OBSERVACIONES : ', bold: true, fontSize: 9 }] },
+      { width: '*', text: (observaciones || '').toUpperCase(), fontSize: 9 },
+    ], margin: [0, 0, 0, 4] },
   ];
-  if (observaciones) {
+  const hasVehicle = placa || marca || modelo || km;
+  if (hasVehicle) {
+    custRows.push({ canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 0.5 }], margin: [0, 4, 0, 4] });
     custRows.push({ columns: [
-      { width: 'auto', text: [{ text: 'OBSERVA : ', bold: true, fontSize: 9 }] },
-      { width: '*', text: observaciones.toUpperCase(), fontSize: 9 },
-    ], margin: [0, 0, 0, 4] });
-  }
-  custRows.push({ canvas: [{ type: 'line', x1: 0, y1: 0, x2: 10000, y2: 0, lineWidth: 0.5 }], margin: [0, 4, 0, 4] });
-  custRows.push({ columns: [
-    { width: '25%', text: [{ text: 'PLACA : ', bold: true, fontSize: 9 }, { text: placa.toUpperCase(), fontSize: 9 }] },
-    { width: '25%', text: [{ text: 'MARCA : ', bold: true, fontSize: 9 }, { text: marca.toUpperCase(), fontSize: 9 }] },
-    { width: '25%', text: [{ text: 'MODELO : ', bold: true, fontSize: 9 }, { text: modelo.toUpperCase(), fontSize: 9 }] },
-    { width: '25%', text: [{ text: 'KM : ', bold: true, fontSize: 9 }, { text: km, fontSize: 9 }] },
-  ]});
-
-  content.push({
-    table: { widths: ['*'], body: [[{ stack: custRows, margin: [8, 8, 8, 8] }]] },
-    layout: borderLayout(1, 1),
-    margin: [0, 0, 0, 15],
-  });
-
-  const tblBody = [
-    [
-      { text: 'CÓDIGO', style: 'tableHeader', alignment: 'center' },
-      { text: 'CANT.', style: 'tableHeader', alignment: 'center' },
-      { text: 'UNID.', style: 'tableHeader', alignment: 'center' },
-      { text: 'DESCRIPCIÓN', style: 'tableHeader', alignment: 'center' },
-      { text: 'P.UNITARIO', style: 'tableHeader', alignment: 'center' },
-      { text: 'IMPORTE', style: 'tableHeader', alignment: 'center' },
-    ],
-  ];
-  for (const it of items) {
-    const c = it.cant ?? it.cantidad ?? 1;
-    const p = it.pu ?? it.precioVenta ?? 0;
-    const t = it.total ?? c * p;
-    tblBody.push([
-      { text: it.codigo || '', style: 'cell', alignment: 'center' },
-      { text: String(c), style: 'cell', alignment: 'center' },
-      { text: it.unidad || 'UND', style: 'cell', alignment: 'center' },
-      { text: (it.descripcion || it.articulo || '').toUpperCase(), style: 'cell' },
-      { text: Number(p).toFixed(2), style: 'cell', alignment: 'right' },
-      { text: Number(t).toFixed(2), style: 'cell', alignment: 'right' },
-    ]);
-  }
-  while (tblBody.length < 11) {
-    tblBody.push([
-      { text: '', style: 'cell' }, { text: '', style: 'cell' },
-      { text: '', style: 'cell' }, { text: '', style: 'cell' },
-      { text: '', style: 'cell' }, { text: '', style: 'cell' },
-    ]);
+      { width: '25%', text: [{ text: 'PLACA : ', bold: true, fontSize: 9 }, { text: placa.toUpperCase(), fontSize: 9 }] },
+      { width: '25%', text: [{ text: 'MARCA : ', bold: true, fontSize: 9 }, { text: marca.toUpperCase(), fontSize: 9 }] },
+      { width: '25%', text: [{ text: 'MODELO : ', bold: true, fontSize: 9 }, { text: modelo.toUpperCase(), fontSize: 9 }] },
+      { width: '25%', text: [{ text: 'KM : ', bold: true, fontSize: 9 }, { text: km, fontSize: 9 }] },
+    ]});
   }
 
-  content.push({
-    table: { widths: [60, 40, 40, '*', 80, 60], body: tblBody },
-    layout: {
-      hLineWidth: () => 0.5, vLineWidth: () => 0.5,
-      hLineColor: () => '#000', vLineColor: () => '#000',
-      fillColor: (ri) => ri === 0 ? '#EEEEEE' : null,
-      paddingLeft: () => 4, paddingRight: () => 4,
-      paddingTop: () => 4, paddingBottom: () => 4,
-    },
-    margin: [0, 0, 0, 8],
-  });
+  content.push(buildCustomerBlock(custRows));
+  content.push(buildItemsTable(items));
 
   content.push({
     columns: [
@@ -252,39 +264,21 @@ async function buildDocDefFactura(opts) {
   });
 
   const totalsStack = [
-    { columns: [
-      { width: '*', text: 'OP. GRAVADA', style: 'totalLine' },
-      { width: 'auto', text: `S/ ${Number(subtotal).toFixed(2)}`, style: 'totalLine', alignment: 'right' },
-    ]},
-    { columns: [
-      { width: '*', text: 'I.G.V. (18%)', style: 'totalLine' },
-      { width: 'auto', text: `S/ ${Number(igv).toFixed(2)}`, style: 'totalLine', alignment: 'right' },
-    ]},
-    { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 10000, y2: 0, lineWidth: 0.5 }], margin: [0, 4, 0, 4] },
-    { columns: [
-      { width: '*', text: 'IMPORTE TOTAL', style: 'totalBold' },
-      { width: 'auto', text: `S/ ${Number(total).toFixed(2)}`, style: 'totalBold', alignment: 'right' },
-    ]},
+    buildAmountRow('OP. GRAVADA', subtotal, 'totalLine'),
+    buildAmountRow('I.G.V. (18%)', igv, 'totalLine'),
+    { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 0.5 }], margin: [0, 4, 0, 4] },
+    buildAmountRow('IMPORTE TOTAL', total, 'totalBold'),
   ];
   if (detraccion != null) {
-    totalsStack.push({ canvas: [{ type: 'line', x1: 0, y1: 0, x2: 10000, y2: 0, lineWidth: 0.5 }], margin: [0, 4, 0, 4] });
+    totalsStack.push({ canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 0.5 }], margin: [0, 4, 0, 4] });
     totalsStack.push({
       background: '#F5F5F5',
       stack: [
         { text: 'DETRACCIÓN 12%', style: 'detraccion' },
-        { columns: [
-          { width: '*', text: 'Base:', style: 'detraccionDetail' },
-          { width: 'auto', text: `S/ ${Number(total).toFixed(2)}`, style: 'detraccionDetail', alignment: 'right' },
-        ]},
-        { columns: [
-          { width: '*', text: 'Monto:', style: 'detraccionDetail' },
-          { width: 'auto', text: `S/ ${Number(detraccion).toFixed(2)}`, style: 'detraccionDetail', alignment: 'right' },
-        ]},
-        { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 10000, y2: 0, lineWidth: 0.5 }], margin: [0, 2, 0, 2] },
-        { columns: [
-          { width: '*', text: 'Neto a pagar:', style: 'detraccionBold' },
-          { width: 'auto', text: `S/ ${Number(montoNeto).toFixed(2)}`, style: 'detraccionBold', alignment: 'right' },
-        ]},
+        buildAmountRow('Base:', total, 'detraccionDetail'),
+        buildAmountRow('Monto:', detraccion, 'detraccionDetail'),
+        { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 0.5 }], margin: [0, 2, 0, 2] },
+        buildAmountRow('Neto a pagar:', montoNeto, 'detraccionBold'),
         { text: 'Sujeto a Sistema de Pago Obligaciones Tributarias', fontSize: 6, margin: [0, 4, 0, 0] },
       ],
       margin: [4, 4, 4, 4],
@@ -296,8 +290,7 @@ async function buildDocDefFactura(opts) {
       {
         width: 'auto',
         stack: [
-          { qr: qrData, fit: 90, alignment: 'center' },
-          { text: 'Representación impresa de la FACTURA ELECTRÓNICA', fontSize: 6, alignment: 'left', width: 150, margin: [0, 4, 0, 0] },
+          { text: 'Representación impresa de la FACTURA ELECTRÓNICA', fontSize: 6, alignment: 'left', width: 150 },
           { text: 'CONSULTE SU DOCUMENTO EN WWW.SUNAT.GOB.PE CON SU CLAVE SOL', fontSize: 6, alignment: 'left', width: 150 },
           { text: 'gearmparts@gmail.com', fontSize: 6, alignment: 'left', width: 150 },
         ],
@@ -325,10 +318,6 @@ async function buildDocDefFactura(opts) {
     margin: [0, 0, 0, 10],
   });
 
-  if (erpData) {
-    content.push({ image: erpData, width: 80, height: 35, fit: [80, 35], alignment: 'right' });
-  }
-
   return { pageSize: 'A4', pageMargins: [20, 20, 20, 20], content, styles: S, defaultStyle: { fontName: 'Roboto' } };
 }
 
@@ -337,58 +326,21 @@ async function buildDocDefCompra(opts) {
     items = [], cliente = "PROVEEDOR GENÉRICO", clienteDoc = "00000000000",
     direccion = "SIN DIRECCIÓN", fecha = "", formaPago = "CONTADO",
     serie = "001", numero = "000000", subtotal = 0, igv = 0, total = 0,
-    observaciones = "", titulo = "COMPROBANTE", vendedor = "SIN ESPECIFICAR",
+    observaciones = "", titulo = "FACTURA ELECTRÓNICA", vendedor = "SIN ESPECIFICAR",
     nroCot = "", ordenCompra = "", totalEnLetras: ttl, qrData: qr,
     logoUrl, erpLogoUrl,
   } = opts;
 
   const numDoc = `${serie}-${numero}`;
   const totalEnLetrasVal = ttl || totalEnLetras(total);
-  const qrData = qr || `${cliente}|${numDoc}|${total}`;
   const fechaFormatted = formatDateToDDMMYYYY(fecha);
-  const [logoData, erpData] = await Promise.all([
-    urlToDataUrl(logoUrl || LOGO_URL),
-    urlToDataUrl(erpLogoUrl || ERP_LOGO_URL),
-  ]);
+  const logoData = await urlToDataUrl(logoUrl || LOGO_URL);
 
   function rep(s) { return (s || '').replace(/Ñ/g, 'N'); }
 
   const content = [];
 
-  content.push({
-    columns: [
-      {
-        width: '*',
-        columns: [
-          ...(logoData ? [{ image: logoData, width: 80, height: 80, fit: [80, 80] }] : [{ text: '', width: 80 }]),
-          { width: 10, text: '' },
-          {
-            width: '*',
-            stack: [
-              { text: 'GEAR MOTOR PARTS S.A.C.', style: 'empresaNombre' },
-              { text: 'Dirección fiscal: Coo. Veintisiete de abril. Av. Nicolás Ayllón 3270, Ate, Lima', style: 'empresaDetalle' },
-              { text: 'Asc. Santa Cruz de Vista Alegre - Santa Anita', style: 'empresaDetalle' },
-              { text: 'Sucursal: Av. Nicolás Ayllón Nro. 3270 Coo. Vendedores de abril - Ate', style: 'empresaDetalle' },
-              { text: 'Tel.: 01 362 8667 - 924 483 844', style: 'empresaDetalle' },
-              { text: 'gearmparts@gmail.com', style: 'empresaDetalle' },
-            ],
-          },
-        ],
-      },
-      {
-        width: 180,
-        table: { widths: ['*'], body: [[
-          { stack: [
-            { text: 'R.U.C. 20601720621', style: 'ruc', alignment: 'center' },
-            { text: rep(titulo), style: 'tituloDoc', alignment: 'center', margin: [0, 8, 0, 8] },
-            { text: `Nº ${numDoc}`, style: 'numeroDoc', alignment: 'center' },
-          ], margin: [10, 10, 10, 10] },
-        ]]},
-        layout: borderLayout(1.5, 1.5),
-      },
-    ],
-    margin: [0, 0, 0, 15],
-  });
+  content.push(buildHeader(logoData, rep(titulo), numDoc));
 
   const custRows = [
     { columns: [
@@ -406,54 +358,15 @@ async function buildDocDefCompra(opts) {
     { columns: [
       { width: '50%', text: [{ text: 'NRO COT : ', bold: true, fontSize: 9 }, { text: nroCot, fontSize: 9 }] },
       { width: '50%', text: [{ text: 'COND. DE PAGO : ', bold: true, fontSize: 9 }, { text: rep(formaPago.toUpperCase()), fontSize: 9 }] },
-    ], margin: [0, 0, 0, 0] },
+    ], margin: [0, 0, 0, 4] },
+    { columns: [
+      { width: 'auto', text: [{ text: 'OBSERVACIONES : ', bold: true, fontSize: 9 }] },
+      { width: '*', text: rep((observaciones || '').toUpperCase()), fontSize: 9 },
+    ], margin: [0, 0, 0, 4] },
   ];
-  custRows.push({ columns: [
-    { width: 'auto', text: [{ text: 'OBSERVACIONES : ', bold: true, fontSize: 9 }] },
-    { width: '*', text: rep((observaciones || '').toUpperCase()), fontSize: 9 },
-  ]});
 
-  content.push({
-    table: { widths: ['*'], body: [[{ stack: custRows, margin: [8, 8, 8, 8] }]] },
-    layout: borderLayout(1, 1),
-    margin: [0, 0, 0, 15],
-  });
-
-  const tblBody = [
-    [
-      { text: 'CÓDIGO', style: 'tableHeader', alignment: 'center' },
-      { text: 'CANT.', style: 'tableHeader', alignment: 'center' },
-      { text: 'UNID.', style: 'tableHeader', alignment: 'center' },
-      { text: 'DESCRIPCIÓN', style: 'tableHeader', alignment: 'center' },
-      { text: 'P. UNIT.', style: 'tableHeader', alignment: 'center' },
-      { text: 'IMPORTE', style: 'tableHeader', alignment: 'center' },
-    ],
-  ];
-  for (const it of items) {
-    const c = it.cant ?? it.cantidad ?? 1;
-    const p = it.pu ?? it.precioVenta ?? 0;
-    const t = it.total ?? c * p;
-    tblBody.push([
-      { text: it.codigo || '', style: 'cell', alignment: 'center' },
-      { text: String(c), style: 'cell', alignment: 'center' },
-      { text: 'HORAS', style: 'cell', alignment: 'center' },
-      { text: rep((it.descripcion || it.articulo || '').toUpperCase()), style: 'cell' },
-      { text: Number(p).toFixed(2), style: 'cell', alignment: 'right' },
-      { text: Number(t).toFixed(2), style: 'cell', alignment: 'right' },
-    ]);
-  }
-
-  content.push({
-    table: { widths: [60, 40, 40, '*', 80, 60], body: tblBody },
-    layout: {
-      hLineWidth: () => 0.5, vLineWidth: () => 0.5,
-      hLineColor: () => '#000', vLineColor: () => '#000',
-      fillColor: (ri) => ri === 0 ? '#EEEEEE' : null,
-      paddingLeft: () => 4, paddingRight: () => 4,
-      paddingTop: () => 4, paddingBottom: () => 4,
-    },
-    margin: [0, 0, 0, 8],
-  });
+  content.push(buildCustomerBlock(custRows));
+  content.push(buildItemsTable(items));
 
   content.push({
     columns: [
@@ -463,13 +376,19 @@ async function buildDocDefCompra(opts) {
     margin: [5, 0, 5, 10],
   });
 
+  const totalsStack = [
+    buildAmountRow('OP. GRAVADA', subtotal, 'totalLine'),
+    buildAmountRow('I.G.V. (18%)', igv, 'totalLine'),
+    { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 0.5 }], margin: [0, 4, 0, 4] },
+    buildAmountRow('IMPORTE TOTAL', total, 'totalBold'),
+  ];
+
   content.push({
     columns: [
       {
         width: 'auto',
         stack: [
-          { qr: qrData, fit: 90, alignment: 'center' },
-          { text: 'Representación impresa de la FACTURA ELECTRÓNICA', fontSize: 6, alignment: 'left', width: 150, margin: [0, 4, 0, 0] },
+          { text: 'Representación impresa de la FACTURA ELECTRÓNICA', fontSize: 6, alignment: 'left', width: 150 },
           { text: 'CONSULTE SU DOCUMENTO EN WWW.SUNAT.GOB.PE CON SU CLAVE SOL', fontSize: 6, alignment: 'left', width: 150 },
           { text: 'gearmparts@gmail.com', fontSize: 6, alignment: 'left', width: 150 },
         ],
@@ -478,42 +397,18 @@ async function buildDocDefCompra(opts) {
         width: '*',
         table: { widths: ['*'], body: [[
           { stack: [
-            { text: 'BCP CTA Soles: 191-2390862-0-19', fontSize: 8 },
-            { text: 'BCP CTA CCI: 002-19100239086201950', fontSize: 8 },
-            { text: 'BN DETRACCIÓN: 00-066-104419', fontSize: 8 },
+            { text: 'BCP CTA. CTE. SOLES  : 191-2390862-0-19', fontSize: 8 },
+            { text: 'BCP CTA. CCI. SOLES  : 002-19100239086201950', fontSize: 8 },
+            { text: 'BN DETRACCIÓN SOLES  : 00-066-104419', fontSize: 8 },
           ], margin: [6, 6, 6, 6] },
         ]]},
         layout: borderLayout(0.5, 0.5),
         margin: [0, 0, 10, 0],
       },
-      {
-        width: 150,
-        table: { widths: ['*'], body: [[
-          { stack: [
-            { columns: [
-              { width: '*', text: 'OP. GRAVADA', style: 'totalLine' },
-              { width: 'auto', text: `S/ ${Number(subtotal).toFixed(2)}`, style: 'totalLine', alignment: 'right' },
-            ]},
-            { columns: [
-              { width: '*', text: 'I.G.V. (18%)', style: 'totalLine' },
-              { width: 'auto', text: `S/ ${Number(igv).toFixed(2)}`, style: 'totalLine', alignment: 'right' },
-            ]},
-            { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 10000, y2: 0, lineWidth: 0.5 }], margin: [0, 4, 0, 4] },
-            { columns: [
-              { width: '*', text: 'IMPORTE TOTAL', style: 'totalBold' },
-              { width: 'auto', text: `S/ ${Number(total).toFixed(2)}`, style: 'totalBold', alignment: 'right' },
-            ]},
-          ], margin: [8, 8, 8, 8] },
-        ]]},
-        layout: borderLayout(0.5, 0.5),
-      },
+      { width: 180, stack: totalsStack },
     ],
     margin: [0, 0, 0, 10],
   });
-
-  if (erpData) {
-    content.push({ image: erpData, width: 80, height: 35, fit: [80, 35], alignment: 'right' });
-  }
 
   return { pageSize: 'A4', pageMargins: [20, 20, 20, 20], content, styles: S, defaultStyle: { fontName: 'Roboto' } };
 }
@@ -1162,7 +1057,7 @@ export function docToOpts(data, title) {
     modelo: data.modelo || '',
     km: data.km_ingreso || data.kilometraje || '',
     observaciones: data.observacion || data.motivo || data.observaciones || '',
-    titulo: title || 'FACTURA ELECTRÓNICA',
+    titulo: (title && title !== "Comprobante") ? title : 'FACTURA ELECTRÓNICA',
     vendedor: data.vendedor || data.Vendedor || 'VENDEDOR 1',
     nroCot: data.nroCot || data.NroCot || data.NumCotizacion || '',
     ordenCompra: data.ordenCompra || data.orden_compra || '',

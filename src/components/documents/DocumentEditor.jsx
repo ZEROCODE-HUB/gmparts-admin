@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ArrowLeft, Plus, Trash2, Package } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
+import { where } from "firebase/firestore";
 import Btn from "../ui/Btn";
 import Field, { inputCls } from "../ui/Field";
 import { useDebouncedCallback } from "../../lib/debounce";
+import { useFirestoreCollection } from "../../store/firestoreDb";
 import clientesSeed from "../../mock/seed.clientes";
 import almacenesSeed from "../../mock/seed.almacenes";
 import { cotizacionesVASeed, facturasVASeed, boletasVASeed, guiasVASeed, notasCreditoSeed } from "../../mock/seed.facturas";
@@ -20,12 +22,27 @@ function findSeedById(id, key) {
   return null;
 }
 
+function normalizeClient(d) {
+  const tp = d.tipo_de_persona || d.tipoPersona || "";
+  return {
+    id: d.id,
+    nombre: d.display_name || d.nombre || "",
+    documento: d.IdentityDocument || d.documento || "",
+    tipoDocumento: d.tipo_de_documento || d.tipoDocumento || "",
+    tipoPersona: tp === "Persona" ? "Natural" : tp === "Empresa" ? "Jurídica" : tp,
+    direccion: d.direccion || "",
+    email: d.email || "",
+  };
+}
+
 export default function DocumentEditor({ title, backPath, onSave, mode = "create", docKey }) {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEdit = mode === "edit";
   const isView = mode === "view";
   const [docId, setDocId] = useState(id && id !== "nuevo" ? id : null);
+  const fireClients = useFirestoreCollection("users", [where("user_role", "==", "Cliente")]).map(normalizeClient);
+  const allClients = [...clientesSeed, ...fireClients];
 
   const [form, setForm] = useState({
     serie: "", numero: "", fecha: new Date().toISOString().split("T")[0],
@@ -94,7 +111,7 @@ export default function DocumentEditor({ title, backPath, onSave, mode = "create
 
   const handleClienteChange = (nombre) => {
     if (!nombre) return;
-    const c = clientesSeed.find((cl) => cl.nombre === nombre);
+    const c = allClients.find((cl) => cl.nombre === nombre);
     if (c) {
       set("cliente", c.nombre);
       set("clienteDoc", c.documento);
@@ -206,7 +223,7 @@ export default function DocumentEditor({ title, backPath, onSave, mode = "create
     if (!form.tipoIgv) return "Seleccione tipo de IGV";
     if (!form.almacen) return "Seleccione almacen";
     if (items.length === 0) return "Seleccione articulos";
-    const c = clientesSeed.find((cl) => cl.nombre === form.cliente);
+    const c = allClients.find((cl) => cl.nombre === form.cliente);
     if (title.toLowerCase().startsWith("factura") && c && c.tipoPersona !== "Jurídica") {
       return "Persona debe ser Jurídica para generar Factura";
     }
@@ -368,8 +385,10 @@ export default function DocumentEditor({ title, backPath, onSave, mode = "create
             <Field label="Cliente">
               <select className={inputCls} value={form.cliente} onChange={(e) => handleClienteChange(e.target.value)}>
                 <option value="">Selecciona cliente</option>
-                {clientesSeed.map((c) => <option key={c.id} value={c.nombre}>{c.nombre} - {c.documento}</option>)}
-                {form.cliente && !clientesSeed.some((c) => c.nombre === form.cliente) && (
+                {allClients.filter((c, i, a) => a.findIndex((x) => x.nombre === c.nombre) === i).map((c) => (
+                  <option key={c.id} value={c.nombre}>{c.nombre} - {c.documento}</option>
+                ))}
+                {form.cliente && !allClients.some((c) => c.nombre === form.cliente) && (
                   <option value={form.cliente}>{form.cliente}</option>
                 )}
               </select>

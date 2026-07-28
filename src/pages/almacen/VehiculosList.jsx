@@ -8,6 +8,7 @@ import SearchBox from "../../components/ui/SearchBox";
 import Table, { Td } from "../../components/ui/Table";
 import Modal from "../../components/ui/Modal";
 import Btn from "../../components/ui/Btn";
+import { inputCls } from "../../components/ui/Field";
 import { useFirestoreCollection, deleteMaestro } from "../../store/firestoreDb";
 
 const COL = "Vehiculos";
@@ -44,12 +45,18 @@ export default function VehiculosList() {
   return (
     <div>
       <Toolbar title="Vehículos" count={rows.length} onNew={() => navigate("/al-vehiculos/nuevo")} onExport={() => exportToExcel(rows, "Vehiculos")} />
-      <div className="flex flex-wrap gap-3 mb-3">
+      <div className="flex flex-wrap items-end gap-3 mb-3">
         <SearchBox value={q} onChange={setQ} placeholder="Buscar placa, propietario, marca..." />
-        <input className="border rounded px-3 py-1.5 text-sm" placeholder="Filtrar por placa" value={idSearch} onChange={(e) => setIdSearch(e.target.value)} />
-        <select className="border rounded px-3 py-1.5 text-sm" value={estadoFilter} onChange={(e) => setEstadoFilter(e.target.value)}>
-          {["Todos", "Activo", "Inactivo", "En Taller"].map((o) => <option key={o} value={o}>{o}</option>)}
-        </select>
+        <div>
+          <label className="text-[11px] text-[var(--muted)] block mb-1">Placa</label>
+          <input className={inputCls} placeholder="Filtrar por placa" value={idSearch} onChange={(e) => setIdSearch(e.target.value)} />
+        </div>
+        <div>
+          <label className="text-[11px] text-[var(--muted)] block mb-1">Estado</label>
+          <select className={inputCls} value={estadoFilter} onChange={(e) => setEstadoFilter(e.target.value)}>
+            {["Todos", "Activo", "Inactivo", "En Taller"].map((o) => <option key={o} value={o}>{o}</option>)}
+          </select>
+        </div>
       </div>
       <Table columns={["Placa", "Propietario", "Marca", "Modelo", "Año", "Estado", "Acción"]}
         rows={pageRows}

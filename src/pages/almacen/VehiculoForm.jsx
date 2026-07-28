@@ -1,11 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Plus } from "lucide-react";
 import Btn from "../../components/ui/Btn";
 import Field, { inputCls } from "../../components/ui/Field";
 import { saveMaestro, deleteMaestro } from "../../store/firestoreDb";
 import { db } from "../../lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import { where } from "firebase/firestore";
+import { useFirestoreCollection } from "../../store/firestoreDb";
 import { useCatalog } from "../../store/useCatalog";
 
 const COL = "Vehiculos";
@@ -27,6 +29,19 @@ export default function VehiculoForm() {
   const [loading, setLoading] = useState(false);
   const vehMarcaOpts = useCatalog("cat-vehmarca");
   const vehModeloOpts = useCatalog("cat-vehmodelo");
+  const clientesRaw = useFirestoreCollection("users", [where("user_role", "==", "Cliente")]);
+  const clientesOpts = clientesRaw.map((d) => ({
+    id: d.id,
+    nombre: d.display_name || d.nombre || "",
+    documento: d.IdentityDocument || d.documento || "",
+  }));
+  const filteredModelos = useMemo(() => {
+    if (!form.Marca) return [];
+    return vehModeloOpts.filter((m) => {
+      const marca = m.seed ? m.marca : m.raw?.marca;
+      return marca === form.Marca;
+    });
+  }, [form.Marca, vehModeloOpts]);
 
   useEffect(() => {
     if (!isEdit) return;
@@ -85,8 +100,25 @@ export default function VehiculoForm() {
                 {["Persona", "Empresa"].map((o) => <option key={o} value={o}>{o}</option>)}
               </select>
             </Field>
-            <Field label="Propietario" span><input className={inputCls} value={form.Propietario_name} onChange={(e) => set("Propietario_name", e.target.value)} /></Field>
-            <Field label="Documento propietario"><input className={inputCls} value={form.Propietario_Document} onChange={(e) => set("Propietario_Document", e.target.value)} /></Field>
+            <Field label="Propietario" span>
+              <div className="flex gap-2">
+                <select
+                  className={inputCls}
+                  value={form.Propietario_name}
+                  onChange={(e) => {
+                    const selected = e.target.value;
+                    if (selected === "__new__") { navigate("/administracion/clientes"); return; }
+                    const c = clientesOpts.find((cl) => cl.nombre === selected);
+                    set("Propietario_name", selected);
+                    set("Propietario_Document", c?.documento || "");
+                  }}
+                >
+                  <option value="">Selecciona cliente</option>
+                  {clientesOpts.map((c) => <option key={c.id} value={c.nombre}>{c.nombre}</option>)}
+                  <option value="__new__" className="text-[var(--accent)]">+ Nuevo</option>
+                </select>
+              </div>
+            </Field>
 
             <Field label="Marca">
               <select className={inputCls} value={form.Marca} onChange={(e) => set("Marca", e.target.value)}>
@@ -97,7 +129,7 @@ export default function VehiculoForm() {
             <Field label="Modelo">
               <select className={inputCls} value={form.Modelo} onChange={(e) => set("Modelo", e.target.value)}>
                 <option value="">Selecciona</option>
-                {vehModeloOpts.map((m) => <option key={m.id} value={m.name}>{m.name}</option>)}
+                {filteredModelos.map((m) => <option key={m.id} value={m.name}>{m.name}</option>)}
               </select>
             </Field>
             <Field label="Versión"><input className={inputCls} value={form.Version} onChange={(e) => set("Version", e.target.value)} /></Field>

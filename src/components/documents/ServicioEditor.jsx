@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { ArrowLeft, Plus, Trash2, Wrench, Package } from "lucide-react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { where } from "firebase/firestore";
 import Btn from "../ui/Btn";
 import Field, { inputCls } from "../ui/Field";
 import { useDebouncedCallback } from "../../lib/debounce";
+import { useFirestoreCollection } from "../../store/firestoreDb";
 import clientesSeed from "../../mock/seed.clientes";
 import serviciosSeed from "../../mock/seed.servicios";
 import * as db from "../../store/db";
@@ -34,6 +36,15 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
   const [saving, setSaving] = useState(false);
   const [cotModal, setCotModal] = useState(false);
   const [cotFilter, setCotFilter] = useState("");
+  const fireClients = useFirestoreCollection("users", [where("user_role", "==", "Cliente")]).map((d) => ({
+    id: d.id,
+    nombre: d.display_name || d.nombre || "",
+    documento: d.IdentityDocument || d.documento || "",
+    tipoDocumento: d.tipo_de_documento || d.tipoDocumento || "",
+    tipoPersona: (d.tipo_de_persona || d.tipoPersona || "") === "Persona" ? "Natural" : (d.tipo_de_persona || d.tipoPersona || "") === "Empresa" ? "Jurídica" : (d.tipo_de_persona || d.tipoPersona || ""),
+    direccion: d.direccion || "",
+  }));
+  const allClients = [...clientesSeed, ...fireClients];
 
   useEffect(() => {
     if (id && id !== "nuevo" && (isEdit || isView)) {
@@ -229,7 +240,7 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
     if (!form.moneda) return "Seleccione Moneda";
     if (!form.fecha) return "La fecha es obligatoria";
     if (items.length === 0) return "Seleccione articulos";
-    const c = clientesSeed.find((cl) => cl.nombre === form.cliente);
+    const c = allClients.find((cl) => cl.nombre === form.cliente);
     if (title.toLowerCase().startsWith("factura") && c && c.tipoPersona !== "Jurídica") {
       return "Persona debe ser Jurídica para generar Factura";
     }
@@ -397,9 +408,9 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
             <Field label="Número"><input className={inputMono} value={form.numero} onChange={(e) => set("numero", e.target.value)} placeholder="000001" /></Field>
             <Field label="Fecha"><input type="date" className={inputMono} value={form.fecha} onChange={(e) => set("fecha", e.target.value)} /></Field>
             <Field label="Cliente">
-              <select className={inputMono} value={form.cliente} onChange={(e) => { const c = clientesSeed.find((x) => x.nombre === e.target.value); set("cliente", e.target.value); if (c) { set("clienteDoc", c.documento); set("tipoDoc", c.tipoDocumento); } }}>
+              <select className={inputMono} value={form.cliente} onChange={(e) => { const c = allClients.find((x) => x.nombre === e.target.value); set("cliente", e.target.value); if (c) { set("clienteDoc", c.documento); set("tipoDoc", c.tipoDocumento); } }}>
                 <option value="">Selecciona cliente</option>
-                {clientesSeed.map((c) => <option key={c.id} value={c.nombre}>{c.nombre}</option>)}
+                {allClients.filter((c, i, a) => a.findIndex((x) => x.nombre === c.nombre) === i).map((c) => <option key={c.id} value={c.nombre}>{c.nombre}</option>)}
               </select>
             </Field>
             <Field label="Documento"><input className={inputMono} value={form.clienteDoc} readOnly /></Field>
