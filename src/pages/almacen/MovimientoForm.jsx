@@ -3,7 +3,11 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import Btn from "../../components/ui/Btn";
 import Field, { inputCls } from "../../components/ui/Field";
-import almacenesSeed from "../../mock/seed.almacenes";
+const ALMACENES = [
+  { id: "w1", Nombre: "Almacén Principal" },
+  { id: "w2", Nombre: "Almacén Secundario" },
+  { id: "w3", Nombre: "Depósito Taller" },
+];
 import * as db from "../../store/db";
 import { searchArticles, updateArticleStockByCode } from "../../store/firestoreStock";
 import { db as firestore } from "../../lib/firebase";
@@ -149,7 +153,7 @@ export default function MovimientoForm() {
             <Field label="Almacén">
               <select className={inputCls} value={form.warehouse} onChange={(e) => set("warehouse", e.target.value)}>
                 <option value="">Selecciona</option>
-                {almacenesSeed.map((w) => <option key={w.id} value={w.id}>{w.Nombre}</option>)}
+                {ALMACENES.map((w) => <option key={w.id} value={w.id}>{w.Nombre}</option>)}
               </select>
             </Field>
             <Field label="Comentario"><input className={inputCls} value={form.comment} onChange={(e) => set("comment", e.target.value)} placeholder="Escribe aquí" /></Field>

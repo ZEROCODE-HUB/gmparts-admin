@@ -6,12 +6,19 @@ import Btn from "../ui/Btn";
 import Field, { inputCls } from "../ui/Field";
 import { useDebouncedCallback } from "../../lib/debounce";
 import { useFirestoreCollection } from "../../store/firestoreDb";
-import clientesSeed from "../../mock/seed.clientes";
-import serviciosSeed from "../../mock/seed.servicios";
 import * as db from "../../store/db";
 import { searchArticles, firestoreSaveDocument } from "../../store/firestoreStock";
 
 const COSTO_HORA = 60;
+
+const SERVICIOS = [
+  { id: "s1", Codigo: "SVC-001", Descripcion: "Cambio de Aceite y Filtro", Precio: 85.00 },
+  { id: "s2", Codigo: "SVC-002", Descripcion: "Alineamiento y Balanceo", Precio: 120.00 },
+  { id: "s3", Codigo: "SVC-003", Descripcion: "Revisión de Frenos", Precio: 60.00 },
+  { id: "s4", Codigo: "SVC-004", Descripcion: "Cambio de Pastillas de Freno", Precio: 180.00 },
+  { id: "s5", Codigo: "SVC-005", Descripcion: "Escaneo Electrónico", Precio: 50.00 },
+  { id: "s6", Codigo: "SVC-006", Descripcion: "Cambio de Batería", Precio: 250.00 },
+];
 
 export default function ServicioEditor({ title, backPath, onSave, mode = "create", docKey }) {
   const navigate = useNavigate();
@@ -44,7 +51,7 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
     tipoPersona: (d.tipo_de_persona || d.tipoPersona || "") === "Persona" ? "Natural" : (d.tipo_de_persona || d.tipoPersona || "") === "Empresa" ? "Jurídica" : (d.tipo_de_persona || d.tipoPersona || ""),
     direccion: d.direccion || "",
   }));
-  const allClients = [...clientesSeed, ...fireClients];
+  const allClients = fireClients;
 
   useEffect(() => {
     if (id && id !== "nuevo" && (isEdit || isView)) {
@@ -89,7 +96,7 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
   const addServicioItem = () => {
     const term = servicioSearch.trim().toLowerCase();
     if (!term) return;
-    const found = serviciosSeed.find((s) =>
+    const found = SERVICIOS.find((s) =>
       s.Descripcion.toLowerCase().includes(term)
     );
     if (found) {
@@ -168,7 +175,7 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
     return results.find((a) =>
       (a.Nombre_name || "").toLowerCase().includes((nombre || "").toLowerCase()));
   };
-  const servicioMatch = (nombre) => serviciosSeed.find((s) =>
+  const servicioMatch = (nombre) => SERVICIOS.find((s) =>
     (s.Descripcion || "").toLowerCase().includes((nombre || "").toLowerCase()));
 
   const loadFromCotizacion = async (cot) => {
@@ -447,7 +454,7 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
                 <button type="button" onClick={addServicioItem} className="shrink-0 p-2 rounded-lg text-[var(--accent)] hover:bg-[var(--accent-dim)] border border-[var(--line-soft)]" title="Agregar servicio"><Plus size={18} /></button>
               </div>
               <datalist id="svc-list">
-                {serviciosSeed.map((s) => <option key={s.id} value={s.Descripcion} />)}
+                {SERVICIOS.map((s) => <option key={s.id} value={s.Descripcion} />)}
               </datalist>
             </div>
             <div>

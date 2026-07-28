@@ -8,7 +8,11 @@ import Btn from "../../components/ui/Btn";
 import Field, { inputCls } from "../../components/ui/Field";
 import { useStoreCollection } from "../../store/useStoreCollection";
 import { useFirestoreDocuments, useFirestoreCollection } from "../../store/firestoreDb";
-import almacenesSeed from "../../mock/seed.almacenes";
+const ALMACENES = [
+  { id: "w1", Nombre: "Almacén Principal" },
+  { id: "w2", Nombre: "Almacén Secundario" },
+  { id: "w3", Nombre: "Depósito Taller" },
+];
 import * as db from "../../store/db";
 import { searchArticles } from "../../store/firestoreStock";
 
@@ -73,7 +77,7 @@ export default function ValeInsumos() {
         renderRow={(v) => (
           <>
             <Td className="gmp-mono">{v.fecha || ""}</Td>
-            <Td>{(almacenesSeed.find((a) => a.id === v.almacen) || {}).nombre || v.almacen}</Td>
+            <Td>{(ALMACENES.find((a) => a.id === v.almacen) || {}).Nombre || v.almacen}</Td>
             <Td className="gmp-mono text-[var(--muted)]">{v.recepcionRef || "—"}</Td>
             <Td>{(v.repuestos || []).length} ítem(s)</Td>
             <Td className="text-[var(--muted)]">{v.observacion || "—"}</Td>
@@ -88,7 +92,7 @@ export default function ValeInsumos() {
             <Field label="Fecha"><input type="date" className={inputCls} value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} /></Field>
             <Field label="Almacén">
               <select className={inputCls} value={form.almacen} onChange={(e) => setForm({ ...form, almacen: e.target.value })}>
-                {almacenesSeed.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
+                {ALMACENES.map((a) => <option key={a.id} value={a.id}>{a.Nombre}</option>)}
               </select>
             </Field>
             <Field label="Orden de trabajo (opcional)">

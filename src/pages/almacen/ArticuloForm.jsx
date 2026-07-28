@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Plus, Upload } from "lucide-react";
 import Btn from "../../components/ui/Btn";
 import Field, { inputCls } from "../../components/ui/Field";
-import { monedasSeed, productTypesSeed, warrantySeed, serialSeed } from "../../mock/seed.articulos";
+
 import { useCatalog } from "../../store/useCatalog";
 import { addCatalogEntry } from "../../store/firestoreDb";
 import { db } from "../../lib/firebase";
@@ -76,7 +76,7 @@ export default function ArticuloForm() {
             <Field label="Código"><input className={inputCls} value={form.Codigo} onChange={(e) => set("Codigo", e.target.value)} placeholder="Escribe aquí" /></Field>
             <Field label="Producto / Servicio">
               <select className={inputCls} value={form.Product_type} onChange={(e) => set("Product_type", e.target.value)}>
-                {productTypesSeed.map((o) => <option key={o} value={o}>{o}</option>)}
+                {["Producto", "Servicio"].map((o) => <option key={o} value={o}>{o}</option>)}
               </select>
             </Field>
             <Field label="OEM"><input className={inputCls} value={form.OEM} onChange={(e) => set("OEM", e.target.value)} placeholder="Escribe aquí" /></Field>
@@ -121,12 +121,12 @@ export default function ArticuloForm() {
             <Field label="Garantía">
               <select className={inputCls} value={form.Garantia_Warranty} onChange={(e) => set("Garantia_Warranty", e.target.value)}>
                 <option value="">Selecciona</option>
-                {warrantySeed.map((w) => <option key={w} value={w}>{w}</option>)}
+                {["1 mes", "3 meses", "6 meses", "12 meses", "24 meses"].map((w) => <option key={w} value={w}>{w}</option>)}
               </select>
             </Field>
             <Field label="Tiene serie">
               <select className={inputCls} value={form.No_Sere_If_Have_Serial_Nr} onChange={(e) => set("No_Sere_If_Have_Serial_Nr", e.target.value)}>
-                {serialSeed.map((s) => <option key={s} value={s}>{s}</option>)}
+                {["Sí", "No"].map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </Field>
             <Field label="Stock mínimo"><input type="number" className={inputCls} value={form.Stock_minimo_Minimum_Stock} onChange={(e) => set("Stock_minimo_Minimum_Stock", Number(e.target.value))} placeholder="0" /></Field>
@@ -136,7 +136,7 @@ export default function ArticuloForm() {
           <div className="grid grid-cols-3 gap-4">
             <Field label="Moneda">
               <select className={inputCls} value={form.Moneda_Currency} onChange={(e) => set("Moneda_Currency", e.target.value)}>
-                {monedasSeed.map((m) => <option key={m} value={m}>{m}</option>)}
+                {["PEN", "USD"].map((m) => <option key={m} value={m}>{m}</option>)}
               </select>
             </Field>
             <Field label="Precio compra"><input type="number" step="0.01" className={inputCls} value={form.Precio_compra_Purchase_price} onChange={(e) => { set("Precio_compra_Purchase_price", Number(e.target.value)); }} placeholder="0.00" /></Field>

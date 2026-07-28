@@ -2,17 +2,16 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Users, Gauge, Wrench, ClipboardList, ChevronRight, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import Badge from "../components/ui/Badge";
-import { dashboardStats as seedStats, weeklySales as seedWeekly, stockCritico as seedStock, vehiculosTaller as seedVehiculos } from "../mock/seed.dashboard";
 import { db } from "../lib/firebase";
 import { collection, getDocs, query, where } from "firebase/firestore";
 
 const DAYS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sab"];
 
 function useDashboardData() {
-  const [stats, setStats] = useState(seedStats);
-  const [weekly, setWeekly] = useState(seedWeekly);
-  const [stock, setStock] = useState(seedStock);
-  const [taller, setTaller] = useState(seedVehiculos);
+  const [stats, setStats] = useState({ clientes: 0, pendientes: 0, cotizaciones: 0, ingresos: 0 });
+  const [weekly, setWeekly] = useState([]);
+  const [stock, setStock] = useState([]);
+  const [taller, setTaller] = useState([]);
 
   useEffect(() => {
     (async () => {

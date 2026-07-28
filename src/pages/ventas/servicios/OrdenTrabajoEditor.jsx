@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Plus, Trash2, Wrench, Package } from "lucide-react";
+import { where } from "firebase/firestore";
 import Btn from "../../../components/ui/Btn";
 import Field, { inputCls } from "../../../components/ui/Field";
-import clientesSeed from "../../../mock/seed.clientes";
+import { useFirestoreCollection } from "../../../store/firestoreDb";
 import * as db from "../../../store/db";
 import { searchArticles, firestoreSaveDocument } from "../../../store/firestoreStock";
 import { useCatalog } from "../../../store/useCatalog";
@@ -14,6 +15,11 @@ export default function OrdenTrabajoEditor({ backPath, mode = "create" }) {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEdit = mode === "edit";
+  const clientesOpts = useFirestoreCollection("users", [where("user_role", "==", "Cliente")]).map((d) => ({
+    id: d.id,
+    nombre: d.display_name || d.nombre || "",
+    documento: d.IdentityDocument || d.documento || "",
+  }));
   const [docId, setDocId] = useState(id && id !== "nuevo" ? id : null);
 
   const [form, setForm] = useState({
@@ -109,9 +115,9 @@ export default function OrdenTrabajoEditor({ backPath, mode = "create" }) {
         <h2 className="text-sm font-semibold text-[var(--text)] mb-4 uppercase tracking-wide">Recepción de vehículo</h2>
         <div className="grid grid-cols-3 gap-4">
           <Field label="Cliente">
-            <select className={inputMono} value={form.cliente} onChange={(e) => { const c = clientesSeed.find((x) => x.nombre === e.target.value); set("cliente", e.target.value); if (c) set("clienteDoc", c.documento); }}>
+            <select className={inputMono} value={form.cliente} onChange={(e) => { const c = clientesOpts.find((x) => x.nombre === e.target.value); set("cliente", e.target.value); if (c) set("clienteDoc", c.documento); }}>
               <option value="">Selecciona cliente</option>
-              {clientesSeed.map((c) => <option key={c.id} value={c.nombre}>{c.nombre}</option>)}
+              {clientesOpts.map((c) => <option key={c.id} value={c.nombre}>{c.nombre}</option>)}
             </select>
           </Field>
           <Field label="Documento"><input className={inputMono} value={form.clienteDoc} readOnly /></Field>

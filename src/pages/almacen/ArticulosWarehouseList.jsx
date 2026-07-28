@@ -9,7 +9,11 @@ import Modal from "../../components/ui/Modal";
 import Btn from "../../components/ui/Btn";
 import Field, { inputCls } from "../../components/ui/Field";
 import { useFirestoreCollection, saveMaestro, deleteMaestro } from "../../store/firestoreDb";
-import almacenesSeed from "../../mock/seed.almacenes";
+const ALMACENES = [
+  { id: "w1", Nombre: "Almacén Principal" },
+  { id: "w2", Nombre: "Almacén Secundario" },
+  { id: "w3", Nombre: "Depósito Taller" },
+];
 
 const COL = "Articles_Warehouse";
 const DOC_TYPES = ["Ingreso", "Salida", "Ajuste", "Transferencia"];
@@ -138,7 +142,7 @@ export default function ArticulosWarehouseList() {
             <Field label="Almacén">
               <select className={inputCls} value={form.Warehouse} onChange={(e) => set("Warehouse", e.target.value)}>
                 <option value="">Selecciona</option>
-                {almacenesSeed.map((w) => <option key={w.id} value={w.Nombre}>{w.Nombre}</option>)}
+                {ALMACENES.map((w) => <option key={w.id} value={w.Nombre}>{w.Nombre}</option>)}
               </select>
             </Field>
             <Field label="Observación" span>

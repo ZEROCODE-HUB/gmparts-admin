@@ -15,8 +15,7 @@ import {
   collection, doc, getDocs, addDoc, setDoc, deleteDoc, query, where, orderBy, onSnapshot, Timestamp,
 } from "firebase/firestore";
 import { useEffect, useState, useCallback } from "react";
-import { marcasSeed, gruposSeed, subgruposSeed, unidadesSeed } from "../mock/seed.articulos";
-import { marcasVehiculosSeed, modelosSeed } from "../mock/seed.vehiculos";
+
 
 // docKey interno (React) -> colección Firestore
 export const CATALOG_MAP = {
@@ -44,22 +43,7 @@ export const CATALOG_NAME_FIELD = {
   "cat-encargado": "nombre",
 };
 
-// Valores semilla locales como fallback (se mezclan con lo vivo de Firestore)
-// Nota: subgrupos y modelos incluyen su relación (grupo/marca) para visualización
-export const CATALOG_SEED = {
-  "cat-marca": marcasSeed.map((m) => m.nombre),
-  "cat-grupo": gruposSeed.map((g) => g.nombre),
-  "cat-subgrupo": subgruposSeed.map((s) => ({
-    name: s.nombre,
-    grupo: gruposSeed.find((g) => g.id === s.grupo)?.nombre || "",
-  })),
-  "cat-unidad": unidadesSeed.map((u) => u.nombre),
-  "cat-vehmarca": marcasVehiculosSeed,
-  "cat-vehmodelo": Object.entries(modelosSeed).flatMap(([marca, modelos]) =>
-    modelos.map((m) => ({ name: m, marca }))
-  ),
-  "cat-encargado": [],
-};
+
 
 // Split confirmado en D3: vs-* → Facturas, va-*/c-* → FacturasVentasCompras
 export function mapDocKeyToCollection(docKey) {

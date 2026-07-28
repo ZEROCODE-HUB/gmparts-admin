@@ -2,6 +2,25 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, within, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
+const MOCK_CLIENTS = [
+  { id: "c1", nombre: "Jose Quiñonez", documento: "12345678", tipoPersona: "Natural", tipoDocumento: "DNI", direccion: "Av. Nicolás Ayllón 12345" },
+  { id: "c4", nombre: "Gear Motor Parts SAC", documento: "20601720621", tipoPersona: "Jurídica", tipoDocumento: "RUC", direccion: "Av. Industrial 500" },
+];
+
+vi.mock("../store/firestoreDb", async () => {
+  const actual = await vi.importActual("../store/firestoreDb");
+  return {
+    ...actual,
+    useFirestoreCollection: vi.fn((col) => {
+      if (col === "users") return MOCK_CLIENTS;
+      if (col === "Proveedores") return [
+        { id: "p1", nombre: "Proveedor Test", documento: "20123456789", Documento: "20123456789" },
+      ];
+      return [];
+    }),
+  };
+});
+
 vi.mock("../store/firestoreStock", () => {
   const MOCK_ARTICLE = {
     id: "art-001",

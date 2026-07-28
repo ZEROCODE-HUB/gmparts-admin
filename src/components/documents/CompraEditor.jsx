@@ -5,9 +5,13 @@ import Btn from "../ui/Btn";
 import Field, { inputCls } from "../ui/Field";
 import { useDebouncedCallback } from "../../lib/debounce";
 import { useFirestoreCollection } from "../../store/firestoreDb";
-import proveedoresSeed from "../../mock/seed.proveedores";
-import almacenesSeed from "../../mock/seed.almacenes";
 import * as db from "../../store/db";
+
+const ALMACENES = [
+  { id: "w1", Nombre: "Almacén Principal" },
+  { id: "w2", Nombre: "Almacén Secundario" },
+  { id: "w3", Nombre: "Depósito Taller" },
+];
 import { searchArticles, firestoreSaveDocument } from "../../store/firestoreStock";
 
 function findSeedById(id, docKey) {
@@ -48,8 +52,7 @@ export default function CompraEditor({ title, backPath, docKey, onSave, mode = "
   const [artSearch, setArtSearch] = useState("");
   const [artResults, setArtResults] = useState([]);
   const [artQty, setArtQty] = useState(1);
-  const fireProviders = useFirestoreCollection("Proveedores").map(normalizeProvider);
-  const allProviders = [...proveedoresSeed, ...fireProviders];
+  const allProviders = useFirestoreCollection("Proveedores").map(normalizeProvider);
 
   const isGuia = docKey === "c-guia";
   const isOrdenPago = docKey === "c-orden";
@@ -375,7 +378,7 @@ export default function CompraEditor({ title, backPath, docKey, onSave, mode = "
               <Field label="Almacén">
                 <select className={inputCls} value={form.almacen} onChange={(e) => set("almacen", e.target.value)}>
                   <option value="">Selecciona</option>
-                  {almacenesSeed.map((w) => <option key={w.id} value={w.Nombre}>{w.Nombre}</option>)}
+                  {ALMACENES.map((w) => <option key={w.id} value={w.Nombre}>{w.Nombre}</option>)}
                 </select>
               </Field>
               <Field label="Doc. Relación"><input className={inputCls} value={form.docRelacion} onChange={(e) => set("docRelacion", e.target.value)} placeholder="Factura de referencia" /></Field>
@@ -457,7 +460,7 @@ export default function CompraEditor({ title, backPath, docKey, onSave, mode = "
             <Field label="Almacén">
               <select className={inputCls} value={form.almacen} onChange={(e) => set("almacen", e.target.value)}>
                 <option value="">Selecciona</option>
-                {almacenesSeed.map((w) => <option key={w.id} value={w.Nombre}>{w.Nombre}</option>)}
+                {ALMACENES.map((w) => <option key={w.id} value={w.Nombre}>{w.Nombre}</option>)}
               </select>
             </Field>
             <Field label="Usuario"><input className={inputCls} value={form.usuario} onChange={(e) => set("usuario", e.target.value)} /></Field>

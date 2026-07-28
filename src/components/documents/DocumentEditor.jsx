@@ -6,19 +6,17 @@ import Btn from "../ui/Btn";
 import Field, { inputCls } from "../ui/Field";
 import { useDebouncedCallback } from "../../lib/debounce";
 import { useFirestoreCollection } from "../../store/firestoreDb";
-import clientesSeed from "../../mock/seed.clientes";
-import almacenesSeed from "../../mock/seed.almacenes";
-import { cotizacionesVASeed, facturasVASeed, boletasVASeed, guiasVASeed, notasCreditoSeed } from "../../mock/seed.facturas";
 import * as db from "../../store/db";
+
+const ALMACENES = [
+  { id: "w1", Nombre: "Almacén Principal" },
+  { id: "w2", Nombre: "Almacén Secundario" },
+  { id: "w3", Nombre: "Depósito Taller" },
+];
 import { searchArticles, firestoreSaveDocument } from "../../store/firestoreStock";
 
 function findSeedById(id, key) {
   if (key) return db.getDocumentById(key, id);
-  const pools = [cotizacionesVASeed, facturasVASeed, boletasVASeed, guiasVASeed, notasCreditoSeed];
-  for (const pool of pools) {
-    const found = pool.find((item) => item.id === id);
-    if (found) return found;
-  }
   return null;
 }
 
@@ -41,8 +39,7 @@ export default function DocumentEditor({ title, backPath, onSave, mode = "create
   const isEdit = mode === "edit";
   const isView = mode === "view";
   const [docId, setDocId] = useState(id && id !== "nuevo" ? id : null);
-  const fireClients = useFirestoreCollection("users", [where("user_role", "==", "Cliente")]).map(normalizeClient);
-  const allClients = [...clientesSeed, ...fireClients];
+  const allClients = useFirestoreCollection("users", [where("user_role", "==", "Cliente")]).map(normalizeClient);
 
   const [form, setForm] = useState({
     serie: "", numero: "", fecha: new Date().toISOString().split("T")[0],
@@ -418,7 +415,7 @@ export default function DocumentEditor({ title, backPath, onSave, mode = "create
             <Field label="Almacén">
               <select className={inputCls} value={form.almacen} onChange={(e) => set("almacen", e.target.value)}>
                 <option value="">Selecciona</option>
-                {almacenesSeed.map((w) => <option key={w.id} value={w.Nombre}>{w.Nombre}</option>)}
+                {ALMACENES.map((w) => <option key={w.id} value={w.Nombre}>{w.Nombre}</option>)}
               </select>
             </Field>
           </div>

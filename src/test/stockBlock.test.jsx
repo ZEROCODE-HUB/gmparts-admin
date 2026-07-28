@@ -2,6 +2,25 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, within, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
+vi.mock("../store/firestoreDb", () => ({
+  useFirestoreCollection: vi.fn((col) => {
+    if (col === "users") return [
+      { id: "c1", nombre: "Jose Quiñonez", documento: "12345678", tipoPersona: "Natural", tipoDocumento: "DNI", direccion: "" },
+      { id: "c4", nombre: "Gear Motor Parts SAC", documento: "20601720621", tipoPersona: "Jurídica", tipoDocumento: "RUC", direccion: "" },
+    ];
+    if (col === "Proveedores") return [
+      { id: "p1", nombre: "Proveedor Test", documento: "20123456789", Documento: "20123456789" },
+    ];
+    return [];
+  }),
+  useCatalog: vi.fn(() => []),
+  saveMaestro: vi.fn(),
+  deleteMaestro: vi.fn(),
+  addCatalogEntry: vi.fn(),
+  editCatalogEntry: vi.fn(),
+  deleteCatalogEntry: vi.fn(),
+}));
+
 vi.mock("../store/firestoreStock", () => {
   const spy = vi.fn((term) => {
     if (term.includes("ART-000") || term.includes("Sin Stock")) return [{
