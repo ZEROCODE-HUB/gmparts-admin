@@ -60,7 +60,6 @@ export default function ProveedoresList() {
   const [form, setForm] = useState(empty);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [toast, setToast] = useState(null);
-  const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
   const rows = items.filter((p) =>
@@ -78,12 +77,11 @@ export default function ProveedoresList() {
     for (const k in empty) clean[k] = c[k] ?? empty[k];
     return clean;
   };
-  const openNew = () => { setError(""); setSaving(false); setEditing(null); setForm(empty); setModalOpen(true); };
-  const openEdit = (p) => { setError(""); setSaving(false); setEditing(p); setForm(cleanForm(p)); setModalOpen(true); };
+  const openNew = () => { setSaving(false); setEditing(null); setForm(empty); setModalOpen(true); };
+  const openEdit = (p) => { setSaving(false); setEditing(p); setForm(cleanForm(p)); setModalOpen(true); };
 
   const handleSave = async () => {
     setSaving(true);
-    setError("");
     try {
       await saveMaestro(COL, { ...toFirestore(form), id: editing?.id });
       setModalOpen(false);
@@ -91,9 +89,9 @@ export default function ProveedoresList() {
       setTimeout(() => setToast(null), 2000);
     } catch (e) {
       const msg = e.message || "";
-      if (msg.includes("undefined")) setError("Completa todos los campos requeridos");
-      else if (msg.includes("permission")) setError("No tienes permisos para realizar esta acci\u00f3n");
-      else setError("Error al guardar. Verifica los datos e intenta de nuevo.");
+      if (msg.includes("undefined")) showToast("Completa todos los campos requeridos", "error", true);
+      else if (msg.includes("permission")) showToast("No tienes permisos para realizar esta acción", "error", true);
+      else showToast("Error al guardar. Verifica los datos e intenta de nuevo.", "error", true);
     } finally {
       setSaving(false);
     }
@@ -132,7 +130,6 @@ export default function ProveedoresList() {
 
       {modalOpen && (
         <Modal title={editing ? "Editar Proveedor" : "Nuevo Proveedor"} onClose={() => setModalOpen(false)}>
-          {error && <p className="text-sm text-[var(--danger)] mb-3">{error}</p>}
           <div className="grid grid-cols-2 gap-4">
             <Field label="Nombre" span><input className={inputCls} value={form.nombre} onChange={(e) => set("nombre", e.target.value)} required /></Field>
             <Field label="Documento"><input className={inputCls} value={form.documento} onChange={(e) => set("documento", e.target.value)} /></Field>

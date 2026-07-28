@@ -8,6 +8,7 @@ import { useDebouncedCallback } from "../../lib/debounce";
 import { useFirestoreCollection, mapDocKeyToCollection } from "../../store/firestoreDb";
 import { doc, getDoc } from "firebase/firestore";
 import { db as fbDb } from "../../lib/firebase";
+import { showToast, dismissAll } from "../ui/Toast";
 import * as db from "../../store/db";
 import { searchArticles, firestoreSaveDocument } from "../../store/firestoreStock";
 
@@ -237,7 +238,6 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
     setOrigen({ tipo: "cotizacion", ref: `${cot.serie}-${cot.numero}` });
     setCotModal(false);
     setCotFilter("");
-    setError("");
   };
 
   const debouncedRecalc = useDebouncedCallback((idx, field, value) => {
@@ -270,8 +270,6 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
     ? { subtotal: sumaItems / 1.18, igv: sumaItems - sumaItems / 1.18, total: sumaItems }
     : { subtotal: sumaItems, igv: sumaItems * 0.18, total: sumaItems * 1.18 };
 
-  const [error, setError] = useState("");
-
   const validate = () => {
     if (!form.moneda) return "Seleccione Moneda";
     if (!form.fecha) return "La fecha es obligatoria";
@@ -289,8 +287,8 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
   const handleSubmit = async (e) => {
     e.preventDefault();
     const err = validate();
-    if (err) { setError(err); return; }
-    setError("");
+    if (err) { showToast(err, "error", true); return; }
+    dismissAll();
     setSaving(true);
     const doc = { ...form, id: docId, items, subtotal, igv, total, origen, estado: form.estado || "Emitida" };
     try {
@@ -300,7 +298,7 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
       navigate(backPath);
     } catch (saveErr) {
       console.error(saveErr);
-      setError("Error al guardar el documento");
+      showToast("Error al guardar el documento", "error", true);
     } finally {
       setSaving(false);
     }

@@ -8,6 +8,7 @@ import { useDebouncedCallback } from "../../lib/debounce";
 import { useFirestoreCollection, mapDocKeyToCollection } from "../../store/firestoreDb";
 import { doc, getDoc } from "firebase/firestore";
 import { db as fbDb } from "../../lib/firebase";
+import { showToast, dismissAll } from "../ui/Toast";
 import * as db from "../../store/db";
 
 const ALMACENES = [
@@ -48,7 +49,6 @@ export default function DocumentEditor({ title, backPath, onSave, mode = "create
     cliente: "", clienteDoc: "", tipoDoc: "DNI", direccion: "", motivo: "",
     formaPago: "Contado", moneda: "PEN", tipoIgv: "INCLUIDO", almacen: "",
   });
-  const [error, setError] = useState("");
   const [items, setItems] = useState([]);
   const [origen, setOrigen] = useState(null);
   const [artSearch, setArtSearch] = useState("");
@@ -170,7 +170,7 @@ export default function DocumentEditor({ title, backPath, onSave, mode = "create
       // Flutter elegir_articulos_widget.dart línea 285: en Venta, si stock <= 0
       // se bloquea la selección (snackbar "No hay stock disponible").
       if (found.Stock <= 0) {
-        setError("No hay stock disponible");
+        showToast("No hay stock disponible", "error");
         return;
       }
       const qty = Math.max(1, artQty);
@@ -190,7 +190,6 @@ export default function DocumentEditor({ title, backPath, onSave, mode = "create
       }]);
         setArtSearch("");
         setArtQty(1);
-        setError("");
       }
   };
 
@@ -280,8 +279,8 @@ export default function DocumentEditor({ title, backPath, onSave, mode = "create
     console.log("[D3-DIAG] form state before validate:", { moneda: form.moneda, fecha: form.fecha, formaPago: form.formaPago, tipoIgv: form.tipoIgv, almacen: form.almacen, cliente: form.cliente });
     const err = validate();
     console.log("[D3-DIAG] validate result:", err || "(passed)");
-    if (err) { console.log("[D3-DIAG] validation FAILED, setting error"); setError(err); return; }
-    setError("");
+    if (err) { console.log("[D3-DIAG] validation FAILED, setting error"); showToast(err, "error", true); return; }
+    dismissAll();
     setSaving(true);
     const doc = { ...form, id: docId, items, subtotal, igv, total, origen, estado: form.estado || "Emitida" };
     console.log("[D3-DIAG] doc built, calling firestoreSaveDocument", { docKey, hasDocId: !!docId });
@@ -496,12 +495,9 @@ export default function DocumentEditor({ title, backPath, onSave, mode = "create
           </div>
         </div>
 
-        <div className="flex flex-col items-end gap-2 mt-6">
-          {error && <div className="rounded-lg border border-[var(--danger)] bg-[var(--danger-dim)] px-4 py-2.5 text-sm text-[var(--danger)]">{error}</div>}
-          <div className="flex gap-2">
-            <Btn variant="ghost" onClick={() => navigate(backPath)}>Cancelar</Btn>
-            <Btn type="submit" loading={saving}>{isEdit ? "Guardar cambios" : "Generar documento"}</Btn>
-          </div>
+        <div className="flex justify-end gap-2 mt-6">
+          <Btn variant="ghost" onClick={() => navigate(backPath)}>Cancelar</Btn>
+          <Btn type="submit" loading={saving}>{isEdit ? "Guardar cambios" : "Generar documento"}</Btn>
         </div>
       </form>
 

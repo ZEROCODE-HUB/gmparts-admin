@@ -49,11 +49,12 @@ vi.mock("../store/firestoreStock", () => {
 
 import DocumentEditor from "../components/documents/DocumentEditor";
 import CompraEditor from "../components/documents/CompraEditor";
+import ToastContainer from "../components/ui/Toast";
 
 const ARTICULO = "ART-001 - Filtro de Aceite 150A";
 
 function renderWithRouter(ui) {
-  return render(<MemoryRouter>{ui}</MemoryRouter>);
+  return render(<MemoryRouter><ToastContainer />{ui}</MemoryRouter>);
 }
 
 function selectByOption(text) {

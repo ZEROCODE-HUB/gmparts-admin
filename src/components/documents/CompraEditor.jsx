@@ -7,6 +7,7 @@ import { useDebouncedCallback } from "../../lib/debounce";
 import { useFirestoreCollection, mapDocKeyToCollection } from "../../store/firestoreDb";
 import { doc, getDoc } from "firebase/firestore";
 import { db as fbDb } from "../../lib/firebase";
+import { showToast, dismissAll } from "../ui/Toast";
 import * as db from "../../store/db";
 
 const ALMACENES = [
@@ -212,8 +213,6 @@ export default function CompraEditor({ title, backPath, docKey, onSave, mode = "
     ? { subtotal: sumaItems / 1.18, igv: sumaItems - sumaItems / 1.18, total: sumaItems }
     : { subtotal: sumaItems, igv: sumaItems * 0.18, total: sumaItems * 1.18 };
 
-  const [error, setError] = useState("");
-
   const validate = () => {
     if (!form.moneda) return "Seleccione Moneda";
     if (!form.fecha) return "La fecha es obligatoria";
@@ -227,8 +226,8 @@ export default function CompraEditor({ title, backPath, docKey, onSave, mode = "
   const handleSubmit = async (e) => {
     e.preventDefault();
     const err = validate();
-    if (err) { setError(err); return; }
-    setError("");
+    if (err) { showToast(err, "error", true); return; }
+    dismissAll();
     setSaving(true);
     const doc = { ...form, items, subtotal, igv, total, estado: form.estado || "Registrado" };
     if (docId) doc.id = docId;
@@ -372,12 +371,9 @@ export default function CompraEditor({ title, backPath, docKey, onSave, mode = "
               <Field label="Monto total"><input type="number" className={inputCls} value={total || ""} onChange={(e) => {}} placeholder="S/ 0.00" readOnly /></Field>
             </div>
           </div>
-          <div className="flex flex-col items-end gap-2 mt-6">
-            {error && <div className="rounded-lg border border-[var(--danger)] bg-[var(--danger-dim)] px-4 py-2.5 text-sm text-[var(--danger)]">{error}</div>}
-            <div className="flex gap-2">
-              <Btn variant="ghost" onClick={() => navigate(backPath)}>Cancelar</Btn>
-              <Btn type="submit" loading={saving}>{isEdit ? "Guardar cambios" : "Generar orden de pago"}</Btn>
-            </div>
+          <div className="flex justify-end gap-2 mt-6">
+            <Btn variant="ghost" onClick={() => navigate(backPath)}>Cancelar</Btn>
+            <Btn type="submit" loading={saving}>{isEdit ? "Guardar cambios" : "Generar orden de pago"}</Btn>
           </div>
         </form>
       </div>
@@ -443,12 +439,9 @@ export default function CompraEditor({ title, backPath, docKey, onSave, mode = "
               <div className="flex gap-8 font-bold text-base border-t border-[var(--line-soft)] pt-2 mt-1"><span>Total artículos:</span><span className="gmp-mono w-24 text-right">{items.reduce((s, i) => s + i.cant, 0)} und.</span></div>
             </div>
           </div>
-          <div className="flex flex-col items-end gap-2 mt-6">
-            {error && <div className="rounded-lg border border-[var(--danger)] bg-[var(--danger-dim)] px-4 py-2.5 text-sm text-[var(--danger)]">{error}</div>}
-            <div className="flex gap-2">
-              <Btn variant="ghost" onClick={() => navigate(backPath)}>Cancelar</Btn>
-              <Btn type="submit" loading={saving}>{isEdit ? "Guardar cambios" : "Generar guía"}</Btn>
-            </div>
+          <div className="flex justify-end gap-2 mt-6">
+            <Btn variant="ghost" onClick={() => navigate(backPath)}>Cancelar</Btn>
+            <Btn type="submit" loading={saving}>{isEdit ? "Guardar cambios" : "Generar guía"}</Btn>
           </div>
         </form>
       </div>
@@ -532,12 +525,9 @@ export default function CompraEditor({ title, backPath, docKey, onSave, mode = "
           </div>
         </div>
 
-        <div className="flex flex-col items-end gap-2 mt-6">
-          {error && <div className="rounded-lg border border-[var(--danger)] bg-[var(--danger-dim)] px-4 py-2.5 text-sm text-[var(--danger)]">{error}</div>}
-          <div className="flex gap-2">
-            <Btn variant="ghost" onClick={() => navigate(backPath)}>Cancelar</Btn>
-            <Btn type="submit" loading={saving}>{isEdit ? "Guardar cambios" : "Generar documento"}</Btn>
-          </div>
+        <div className="flex justify-end gap-2 mt-6">
+          <Btn variant="ghost" onClick={() => navigate(backPath)}>Cancelar</Btn>
+          <Btn type="submit" loading={saving}>{isEdit ? "Guardar cambios" : "Generar documento"}</Btn>
         </div>
       </form>
     </div>

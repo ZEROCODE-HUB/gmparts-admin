@@ -45,9 +45,10 @@ vi.mock("../store/firestoreStock", () => {
 });
 
 import DocumentEditor from "../components/documents/DocumentEditor";
+import ToastContainer from "../components/ui/Toast";
 
 function renderWithRouter(ui) {
-  return render(<MemoryRouter>{ui}</MemoryRouter>);
+  return render(<MemoryRouter><ToastContainer />{ui}</MemoryRouter>);
 }
 
 function selectByOption(text) {

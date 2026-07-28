@@ -71,7 +71,6 @@ export default function ClientesList() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(empty);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -94,12 +93,11 @@ export default function ClientesList() {
     for (const k in empty) clean[k] = c[k] ?? empty[k];
     return clean;
   };
-  const openNew = useCallback(() => { setError(""); setSaving(false); setEditing(null); setForm(empty); setModalOpen(true); }, []);
-  const openEdit = useCallback((c) => { setError(""); setSaving(false); setEditing(c); setForm(cleanForm(c)); setModalOpen(true); }, []);
+  const openNew = useCallback(() => { setSaving(false); setEditing(null); setForm(empty); setModalOpen(true); }, []);
+  const openEdit = useCallback((c) => { setSaving(false); setEditing(c); setForm(cleanForm(c)); setModalOpen(true); }, []);
 
   const handleSave = async () => {
     setSaving(true);
-    setError("");
     try {
       const data = toFirestore(form);
       if (form.password) {
@@ -122,9 +120,9 @@ export default function ClientesList() {
       showToast(pwd ? `Cliente guardado — Contraseña: ${pwd}` : "Cliente guardado");
     } catch (e) {
       const msg = e.message || "";
-      if (msg.includes("undefined")) setError("Completa todos los campos requeridos");
-      else if (msg.includes("permission")) setError("No tienes permisos para realizar esta acci\u00f3n");
-      else setError("Error al guardar. Verifica los datos e intenta de nuevo.");
+      if (msg.includes("undefined")) showToast("Completa todos los campos requeridos", "error", true);
+      else if (msg.includes("permission")) showToast("No tienes permisos para realizar esta acción", "error", true);
+      else showToast("Error al guardar. Verifica los datos e intenta de nuevo.", "error", true);
     } finally {
       setSaving(false);
     }
@@ -175,7 +173,6 @@ export default function ClientesList() {
 
       {modalOpen && (
         <Modal title={editing ? "Editar Cliente" : "Nuevo Cliente"} onClose={closeModal}>
-          {error && <p className="text-sm text-[var(--danger)] mb-3">{error}</p>}
           <div className="grid grid-cols-2 gap-4">
             <Field label="Código"><input className={inputCls} value={form.codigo} onChange={(e) => set("codigo", e.target.value)} /></Field>
             <Field label="Nombre" span><input className={inputCls} value={form.nombre} onChange={(e) => set("nombre", e.target.value)} required /></Field>
