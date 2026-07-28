@@ -975,12 +975,15 @@ export function docToOpts(data, title) {
   let tipo = 'factura';
 
   const code = data.codeCT || '';
+  const tipofactura = (data.tipofactura || '').toLowerCase();
   const status = (data.status || '').toLowerCase();
   const hasProveedor = data.proveedor || data.proveedorDoc;
   const hasDiagOrServiceItems = data.diagnosticos || data.items?.some?.((it) => it.tipo === 'servicio' || it.tipo === 'mano_obra');
 
   if (hasProveedor) {
     tipo = 'compra';
+  } else if (tipofactura === 'cotizacion') {
+    tipo = 'cotizacion';
   } else if (code.startsWith('OT')) {
     tipo = 'orden';
   } else if (code.startsWith('CT') || code.startsWith('SC') || data.tipo_servicio) {
@@ -1057,7 +1060,7 @@ export function docToOpts(data, title) {
     modelo: data.modelo || '',
     km: data.km_ingreso || data.kilometraje || '',
     observaciones: data.observacion || data.motivo || data.observaciones || '',
-    titulo: (title && title !== "Comprobante") ? title : 'FACTURA ELECTRÓNICA',
+    titulo: (title && title !== "Comprobante") ? title : undefined,
     vendedor: data.vendedor || data.Vendedor || 'VENDEDOR 1',
     nroCot: data.nroCot || data.NroCot || data.NumCotizacion || '',
     ordenCompra: data.ordenCompra || data.orden_compra || '',
