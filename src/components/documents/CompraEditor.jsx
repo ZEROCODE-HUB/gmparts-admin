@@ -226,7 +226,7 @@ export default function CompraEditor({ title, backPath, docKey, onSave, mode = "
   const handleSubmit = async (e) => {
     e.preventDefault();
     const err = validate();
-    if (err) { showToast(err, "error", true); return; }
+    if (err) { showToast(err, "error"); return; }
     dismissAll();
     setSaving(true);
     const doc = { ...form, items, subtotal, igv, total, estado: form.estado || "Registrado" };

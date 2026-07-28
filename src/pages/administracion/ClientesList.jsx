@@ -120,9 +120,9 @@ export default function ClientesList() {
       showToast(pwd ? `Cliente guardado — Contraseña: ${pwd}` : "Cliente guardado");
     } catch (e) {
       const msg = e.message || "";
-      if (msg.includes("undefined")) showToast("Completa todos los campos requeridos", "error", true);
-      else if (msg.includes("permission")) showToast("No tienes permisos para realizar esta acción", "error", true);
-      else showToast("Error al guardar. Verifica los datos e intenta de nuevo.", "error", true);
+      if (msg.includes("undefined")) showToast("Completa todos los campos requeridos", "error");
+      else if (msg.includes("permission")) showToast("No tienes permisos para realizar esta acción", "error");
+      else showToast("Error al guardar. Verifica los datos e intenta de nuevo.", "error");
     } finally {
       setSaving(false);
     }

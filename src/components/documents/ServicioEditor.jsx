@@ -287,7 +287,7 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
   const handleSubmit = async (e) => {
     e.preventDefault();
     const err = validate();
-    if (err) { showToast(err, "error", true); return; }
+    if (err) { showToast(err, "error"); return; }
     dismissAll();
     setSaving(true);
     const doc = { ...form, id: docId, items, subtotal, igv, total, origen, estado: form.estado || "Emitida" };
@@ -298,7 +298,7 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
       navigate(backPath);
     } catch (saveErr) {
       console.error(saveErr);
-      showToast("Error al guardar el documento", "error", true);
+      showToast("Error al guardar el documento", "error");
     } finally {
       setSaving(false);
     }

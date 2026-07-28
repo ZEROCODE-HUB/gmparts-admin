@@ -279,7 +279,7 @@ export default function DocumentEditor({ title, backPath, onSave, mode = "create
     console.log("[D3-DIAG] form state before validate:", { moneda: form.moneda, fecha: form.fecha, formaPago: form.formaPago, tipoIgv: form.tipoIgv, almacen: form.almacen, cliente: form.cliente });
     const err = validate();
     console.log("[D3-DIAG] validate result:", err || "(passed)");
-    if (err) { console.log("[D3-DIAG] validation FAILED, setting error"); showToast(err, "error", true); return; }
+    if (err) { console.log("[D3-DIAG] validation FAILED, setting error"); showToast(err, "error"); return; }
     dismissAll();
     setSaving(true);
     const doc = { ...form, id: docId, items, subtotal, igv, total, origen, estado: form.estado || "Emitida" };
