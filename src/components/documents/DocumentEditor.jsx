@@ -5,7 +5,9 @@ import { where } from "firebase/firestore";
 import Btn from "../ui/Btn";
 import Field, { inputCls } from "../ui/Field";
 import { useDebouncedCallback } from "../../lib/debounce";
-import { useFirestoreCollection } from "../../store/firestoreDb";
+import { useFirestoreCollection, mapDocKeyToCollection } from "../../store/firestoreDb";
+import { doc, getDoc } from "firebase/firestore";
+import { db as fbDb } from "../../lib/firebase";
 import * as db from "../../store/db";
 
 const ALMACENES = [
@@ -57,7 +59,49 @@ export default function DocumentEditor({ title, backPath, onSave, mode = "create
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (id && id !== "nuevo" && (isEdit || isView)) {
+    if (!id || id === "nuevo" || !(isEdit || isView)) return;
+    (async () => {
+      // Try Firebase first
+      try {
+        const colName = mapDocKeyToCollection(docKey);
+        const ref = doc(fbDb, colName, id);
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          const data = snap.data();
+          setDocId(id);
+          setForm({
+            serie: data.serie || data.nserie || "",
+            numero: data.numero || "",
+            fecha: data.fecha || data.Fecha || "",
+            cliente: data.cliente || data.razonSNombre || "",
+            clienteDoc: data.clienteDoc || data.RUCempresa || "",
+            tipoDoc: data.tipoDoc || "DNI",
+            direccion: data.direccion || "",
+            motivo: data.motivo || data.observacion || "",
+            formaPago: data.formaPago || data.FPago || "Contado",
+            moneda: data.moneda || "PEN",
+            tipoIgv: data.tipoIgv === "INCLUIDO IGV" ? "INCLUIDO" : data.tipoIgv === "MAS IGV" ? "MAS" : data.tipoIgv || "INCLUIDO",
+            almacen: data.almacen || "",
+          });
+          if (data.items) {
+            setItems(data.items.map((li) => ({
+              tipo: "repuesto",
+              codigo: li.codigo || li.Codigo || "",
+              descripcion: li.art || li.descripcion || "",
+              cant: li.cant ?? li.cantidad ?? 1,
+              pu: li.pu ?? li.precioVenta ?? 0,
+              total: li.total ?? 0,
+              moneda: li.moneda || "PEN",
+              stock: li.stock ?? null,
+              precioCompra: li.precioCompra ?? 0,
+              utilidad: li.utilidad ?? 0,
+            })));
+          }
+          if (data.origen) setOrigen(data.origen);
+          return;
+        }
+      } catch (e) { /* fallback below */ }
+      // Fallback to localStorage
       const existing = findSeedById(id, docKey);
       if (existing) {
         setDocId(existing.id);
@@ -91,8 +135,8 @@ export default function DocumentEditor({ title, backPath, onSave, mode = "create
         }
         if (existing.origen) setOrigen(existing.origen);
       }
-    }
-  }, [id, isEdit, isView]);
+    })();
+  }, [id, isEdit, isView, docKey]);
 
   useEffect(() => {
     const term = artSearch.trim();
@@ -239,7 +283,7 @@ export default function DocumentEditor({ title, backPath, onSave, mode = "create
     if (err) { console.log("[D3-DIAG] validation FAILED, setting error"); setError(err); return; }
     setError("");
     setSaving(true);
-    const doc = { ...form, items, subtotal, igv, total, origen, estado: form.estado || "Emitida" };
+    const doc = { ...form, id: docId, items, subtotal, igv, total, origen, estado: form.estado || "Emitida" };
     console.log("[D3-DIAG] doc built, calling firestoreSaveDocument", { docKey, hasDocId: !!docId });
     if (docKey) {
       try {
@@ -370,9 +414,6 @@ export default function DocumentEditor({ title, backPath, onSave, mode = "create
         <h1 className="gmp-display text-xl font-bold">{isEdit ? `Editar ${title}` : `Nuev${title.toLowerCase().startsWith("f") ? "a" : "o"} ${title}`}</h1>
       </div>
       <form onSubmit={handleSubmit}>
-        {error && (
-          <div className="mb-4 rounded-lg border border-[var(--danger)] bg-[var(--danger-dim)] px-4 py-3 text-sm text-[var(--danger)]">{error}</div>
-        )}
         <div className="bg-[var(--panel)] rounded-lg p-6 border border-[var(--line-soft)] mb-6">
           <h2 className="text-sm font-semibold text-[var(--text)] mb-4 uppercase tracking-wide">Datos del documento</h2>
           <div className="grid grid-cols-3 gap-4">
@@ -455,9 +496,12 @@ export default function DocumentEditor({ title, backPath, onSave, mode = "create
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 mt-6">
-          <Btn variant="ghost" onClick={() => navigate(backPath)}>Cancelar</Btn>
-          <Btn type="submit" loading={saving}>{isEdit ? "Guardar cambios" : "Generar documento"}</Btn>
+        <div className="flex flex-col items-end gap-2 mt-6">
+          {error && <div className="rounded-lg border border-[var(--danger)] bg-[var(--danger-dim)] px-4 py-2.5 text-sm text-[var(--danger)]">{error}</div>}
+          <div className="flex gap-2">
+            <Btn variant="ghost" onClick={() => navigate(backPath)}>Cancelar</Btn>
+            <Btn type="submit" loading={saving}>{isEdit ? "Guardar cambios" : "Generar documento"}</Btn>
+          </div>
         </div>
       </form>
 

@@ -5,7 +5,9 @@ import { where } from "firebase/firestore";
 import Btn from "../ui/Btn";
 import Field, { inputCls } from "../ui/Field";
 import { useDebouncedCallback } from "../../lib/debounce";
-import { useFirestoreCollection } from "../../store/firestoreDb";
+import { useFirestoreCollection, mapDocKeyToCollection } from "../../store/firestoreDb";
+import { doc, getDoc } from "firebase/firestore";
+import { db as fbDb } from "../../lib/firebase";
 import * as db from "../../store/db";
 import { searchArticles, firestoreSaveDocument } from "../../store/firestoreStock";
 
@@ -54,7 +56,34 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
   const allClients = fireClients;
 
   useEffect(() => {
-    if (id && id !== "nuevo" && (isEdit || isView)) {
+    if (!id || id === "nuevo" || !(isEdit || isView)) return;
+    (async () => {
+      try {
+        const colName = mapDocKeyToCollection(docKey);
+        const ref = doc(fbDb, colName, id);
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          const data = snap.data();
+          setDocId(id);
+          setForm((prev) => ({
+            ...prev,
+            serie: data.serie || data.nserie || "",
+            numero: data.numero || "",
+            fecha: data.fecha || data.Fecha || "",
+            cliente: data.cliente || data.razonSNombre || "",
+            placa: data.placa || "",
+            clienteDoc: data.clienteDoc || data.RUCempresa || "",
+            tipoDoc: data.tipoDoc || "DNI",
+            observacion: data.observacion || data.motivo || "",
+            tipoIgv: data.tipoIgv === "INCLUIDO IGV" ? "INCLUIDO" : data.tipoIgv === "MAS IGV" ? "MAS" : data.tipoIgv || "INCLUIDO",
+            formaPago: data.formaPago || data.FPago || "Contado",
+            moneda: data.moneda || "PEN",
+          }));
+          if (data.items) setItems(data.items.map((li) => ({ ...li })));
+          if (data.origen) setOrigen(data.origen);
+          return;
+        }
+      } catch (e) { /* fallback below */ }
       const existing = db.getDocumentById(docKey, id);
       if (existing) {
         setDocId(existing.id);
@@ -77,8 +106,8 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
         }
         if (existing.origen) setOrigen(existing.origen);
       }
-    }
-  }, [id, isEdit, isView]);
+    })();
+  }, [id, isEdit, isView, docKey]);
 
   // Precargar desde una Orden de Trabajo (botón "Generar factura").
   useEffect(() => {
@@ -263,13 +292,18 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
     if (err) { setError(err); return; }
     setError("");
     setSaving(true);
-    const doc = { ...form, items, subtotal, igv, total, origen, estado: form.estado || "Emitida" };
-    if (docId) doc.id = docId;
-    if (docKey) await firestoreSaveDocument(docKey, doc);
-    if (onSave) onSave(doc);
-    if (location.state?.fromOT) db.markRecepcionFacturada(location.state.fromOT);
-    navigate(backPath);
-    setSaving(false);
+    const doc = { ...form, id: docId, items, subtotal, igv, total, origen, estado: form.estado || "Emitida" };
+    try {
+      if (docKey) await firestoreSaveDocument(docKey, doc);
+      if (onSave) onSave(doc);
+      if (location.state?.fromOT) db.markRecepcionFacturada(location.state.fromOT);
+      navigate(backPath);
+    } catch (saveErr) {
+      console.error(saveErr);
+      setError("Error al guardar el documento");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const inputMono = `${inputCls} w-full`;
@@ -405,9 +439,6 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
         <h1 className="gmp-display text-xl font-bold">{isEdit ? `Editar ${title}` : `Nuev${title.toLowerCase().startsWith("o") ? "a" : "o"} ${title}`}</h1>
       </div>
       <form onSubmit={handleSubmit}>
-        {error && (
-          <div className="mb-4 rounded-lg border border-[var(--danger)] bg-[var(--danger-dim)] px-4 py-3 text-sm text-[var(--danger)]">{error}</div>
-        )}
         <div className="bg-[var(--panel)] rounded-lg p-6 border border-[var(--line-soft)] mb-6">
           <h2 className="text-sm font-semibold text-[var(--text)] mb-4 uppercase tracking-wide">Datos del documento</h2>
           <div className="grid grid-cols-3 gap-4">
