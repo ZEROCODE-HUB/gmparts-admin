@@ -45,13 +45,19 @@ export const CATALOG_NAME_FIELD = {
 };
 
 // Valores semilla locales como fallback (se mezclan con lo vivo de Firestore)
+// Nota: subgrupos y modelos incluyen su relación (grupo/marca) para visualización
 export const CATALOG_SEED = {
   "cat-marca": marcasSeed.map((m) => m.nombre),
   "cat-grupo": gruposSeed.map((g) => g.nombre),
-  "cat-subgrupo": subgruposSeed.map((s) => s.nombre),
+  "cat-subgrupo": subgruposSeed.map((s) => ({
+    name: s.nombre,
+    grupo: gruposSeed.find((g) => g.id === s.grupo)?.nombre || "",
+  })),
   "cat-unidad": unidadesSeed.map((u) => u.nombre),
   "cat-vehmarca": marcasVehiculosSeed,
-  "cat-vehmodelo": Object.values(modelosSeed).flat(),
+  "cat-vehmodelo": Object.entries(modelosSeed).flatMap(([marca, modelos]) =>
+    modelos.map((m) => ({ name: m, marca }))
+  ),
   "cat-encargado": [],
 };
 
@@ -99,6 +105,12 @@ export async function addCatalogEntry(docKey, name, extra = {}) {
   const field = CATALOG_NAME_FIELD[docKey] || "name";
   const ref = await addDoc(collection(db, mapDocKeyToCollection(docKey)), { [field]: name, ...extra });
   return ref.id;
+}
+
+export async function editCatalogEntry(docKey, id, name, extra = {}) {
+  const field = CATALOG_NAME_FIELD[docKey] || "name";
+  await setDoc(doc(db, mapDocKeyToCollection(docKey), id), { [field]: name, ...extra }, { merge: true });
+  return id;
 }
 
 export async function deleteCatalogEntry(docKey, id) {
