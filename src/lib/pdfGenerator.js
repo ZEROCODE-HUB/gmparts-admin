@@ -1055,7 +1055,80 @@ async function buildDocDefOrden(opts) {
   };
 }
 
+async function buildDocDefGuia(opts) {
+  const {
+    items = [], cliente = "PROVEEDOR GENÉRICO", clienteDoc = "00000000000",
+    direccion = "SIN DIRECCIÓN", fecha = "", formaPago = "CONTADO",
+    serie = "001", numero = "000000", titulo = "GUÍA DE REMISIÓN",
+    logoUrl,
+  } = opts;
+
+  const numDoc = `${serie}-${numero}`;
+  const fechaFormatted = formatDateToDDMMYYYY(fecha);
+  const logoData = await urlToDataUrl(logoUrl || LOGO_URL);
+  const rep = (s) => (s || '').replace(/Ñ/g, 'N');
+
+  const content = [];
+  content.push(buildUnifiedHeader(logoData, titulo, numDoc));
+
+  const extraRows = [
+    { columns: [
+      { width: '*', text: fieldRow('FECHA EMISIÓN', fechaFormatted, { fontSize: 8 }) },
+      { width: '*', text: '' },
+    ]},
+  ];
+  content.push(buildUnifiedCliente(rep(cliente), clienteDoc, rep(direccion), 'PROVEEDOR', extraRows));
+
+  const tblBody = [
+    [
+      { text: 'ITEM', fontSize: 8, bold: true, alignment: 'center', margin: [3, 3, 3, 3] },
+      { text: 'CÓDIGO', fontSize: 8, bold: true, alignment: 'center', margin: [3, 3, 3, 3] },
+      { text: 'DESCRIPCIÓN', fontSize: 8, bold: true, alignment: 'center', margin: [3, 3, 3, 3] },
+      { text: 'CANT', fontSize: 8, bold: true, alignment: 'center', margin: [3, 3, 3, 3] },
+    ],
+  ];
+  let idx = 1;
+  for (const it of items) {
+    const c = it.cant ?? it.cantidad ?? 1;
+    tblBody.push([
+      { text: String(idx++), fontSize: 8, alignment: 'center' },
+      { text: it.codigo || '', fontSize: 8, alignment: 'center' },
+      { text: (it.descripcion || '').toUpperCase(), fontSize: 8 },
+      { text: String(c), fontSize: 8, alignment: 'center' },
+    ]);
+  }
+  while (tblBody.length < 11) {
+    tblBody.push([{ text: '', fontSize: 8 }, { text: '', fontSize: 8 }, { text: '', fontSize: 8 }, { text: '', fontSize: 8 }]);
+  }
+
+  content.push({
+    table: { widths: [25, 60, '*', 40], headerRows: 1, body: tblBody },
+    layout: {
+      hLineWidth: () => 0.75, vLineWidth: () => 0.75,
+      hLineColor: () => '#000000', vLineColor: () => '#000000',
+      fillColor: (ri) => ri === 0 ? '#eeeeee' : null,
+      paddingLeft: () => 3, paddingRight: () => 3,
+      paddingTop: () => 2, paddingBottom: () => 2,
+    },
+    margin: [0, 0, 0, 8],
+  });
+
+  content.push({
+    columns: [
+      { width: 'auto', text: `Total artículos: ${items.reduce((s, it) => s + (it.cant ?? it.cantidad ?? 1), 0)} und.`, fontSize: 8, bold: true },
+      { width: '*', text: '' },
+    ],
+    margin: [0, 0, 0, 8],
+  });
+
+  content.push(buildUnifiedBankInfo());
+
+  return { pageSize: 'A4', pageMargins: [20, 20, 20, 20], content, defaultStyle: { fontName: 'Roboto', fontSize: 8 } };
+}
+
 async function buildDocDef(opts) {
+  const tf = (opts.tipofactura || '').toLowerCase();
+  if (tf === 'guia') return buildDocDefGuia(opts);
   switch (opts.tipo) {
     case 'compra': return buildDocDefCompra(opts);
     case 'cotizacion': return buildDocDefCotizacion(opts);
@@ -1184,6 +1257,7 @@ export function docToOpts(data, title) {
     marca: data.marca || '',
     modelo: data.modelo || '',
     km: data.km_ingreso || data.kilometraje || '',
+    tipofactura,
     observaciones: data.observacion || data.motivo || data.observaciones || '',
     titulo: effectiveTitle,
     vendedor: data.vendedor || data.Vendedor || 'VENDEDOR 1',
