@@ -195,6 +195,194 @@ function buildAmountRow(label, value, style) {
   };
 }
 
+// ---- Shared unified layout helpers (todos los documentos) ----
+
+function thinBorder() {
+  return {
+    hLineWidth: () => 0.75, vLineWidth: () => 0.75,
+    hLineColor: () => '#000000', vLineColor: () => '#000000',
+    paddingLeft: () => 4, paddingRight: () => 4,
+    paddingTop: () => 2, paddingBottom: () => 2,
+  };
+}
+
+function fieldRow(label, value, opts2 = {}) {
+  const fs = opts2.fontSize || 8;
+  return { text: [{ text: `${label} : `, bold: true, fontSize: fs }, { text: value || '', fontSize: fs }], ...(opts2.extra || {}) };
+}
+
+function sectionWithTitle(title, contentStack) {
+  return {
+    table: {
+      widths: ['*'],
+      body: [
+        [{ text: title, fontSize: 8, bold: true, alignment: 'center', margin: [4, 4, 4, 4], fillColor: '#eeeeee' }],
+        [{ stack: contentStack, margin: [4, 4, 4, 4] }],
+      ],
+    },
+    layout: {
+      hLineWidth: (i) => i === 1 ? 0 : 0.75,
+      vLineWidth: () => 0.75,
+      hLineColor: () => '#000000', vLineColor: () => '#000000',
+      fillColor: (ri) => ri === 0 ? '#eeeeee' : null,
+      paddingLeft: () => 0, paddingRight: () => 0,
+      paddingTop: () => 0, paddingBottom: () => 0,
+    },
+    margin: [0, 0, 0, 8],
+  };
+}
+
+function buildUnifiedHeader(logoData, titulo, numDoc, fecha) {
+  return {
+    columns: [
+      {
+        width: '*',
+        columns: [
+          ...(logoData ? [{ image: logoData, width: 100, height: 70 }] : [{ text: '', width: 100 }]),
+          { width: 8, text: '' },
+          {
+            width: '*',
+            stack: [
+              { text: 'GEAR MOTOR PARTS S.A.C.', fontSize: 16, bold: true },
+              { text: 'Dirección fiscal: Av. Nicolás Ayllón 3270, Ate, Lima', fontSize: 7.5, margin: [0, 3, 0, 0] },
+              { text: 'Tel.: 01 362 8667 - 924 483 844', fontSize: 7.5 },
+              { text: 'gearmparts@gmail.com', fontSize: 7.5 },
+            ],
+          },
+        ],
+      },
+      {
+        width: 180,
+        table: {
+          widths: ['*'],
+          body: [
+            [{ text: 'R.U.C. 20601720621', fontSize: 11, bold: true, alignment: 'center', margin: [8, 6, 8, 6] }],
+            [{ text: titulo, fontSize: 13, bold: true, alignment: 'center', margin: [8, 6, 8, 6] }],
+            [{ text: numDoc ? `Nº ${numDoc}` : '', fontSize: 11, bold: true, alignment: 'center', margin: [8, 6, 8, 6] }],
+            [{ text: fecha || '', fontSize: 9, alignment: 'center', margin: [8, 4, 8, 6] }],
+          ],
+        },
+        layout: {
+          hLineWidth: (i, node) => i === 0 || i === node.table.body.length ? 0.75 : 0.5,
+          vLineWidth: () => 0.75,
+          hLineColor: () => '#000000', vLineColor: () => '#000000',
+          paddingLeft: () => 0, paddingRight: () => 0,
+          paddingTop: () => 0, paddingBottom: () => 0,
+        },
+      },
+    ],
+    margin: [0, 0, 0, 8],
+  };
+}
+
+function buildUnifiedCliente(cliente, clienteDoc, direccion, labelCliente, extraRows) {
+  const rows = [
+    { columns: [
+      { width: '*', text: fieldRow(labelCliente || 'CLIENTE', cliente, { fontSize: 8 }) },
+      { width: '*', text: fieldRow('FECHA EMISIÓN', '', { fontSize: 8 }) },
+    ], margin: [0, 0, 0, 2] },
+    { columns: [
+      { width: '*', text: fieldRow('RUC / DNI', clienteDoc, { fontSize: 8 }) },
+      { width: '*', text: fieldRow('DIRECCIÓN', direccion, { fontSize: 8 }) },
+    ], margin: [0, 0, 0, 2] },
+  ];
+  if (extraRows) {
+    for (const r of extraRows) { rows.push({ ...r, margin: [0, 0, 0, 2] }); }
+  }
+  return {
+    table: { widths: ['*', '*'], body: rows.map((r) => [
+      { text: r.columns[0], alignment: 'left' },
+      { text: r.columns[1], alignment: 'left' },
+    ])},
+    layout: thinBorder(),
+    margin: [0, 0, 0, 8],
+  };
+}
+
+function buildUnifiedTable(items) {
+  const body = [
+    [
+      { text: 'ITEM', fontSize: 8, bold: true, alignment: 'center', margin: [3, 3, 3, 3] },
+      { text: 'DESCRIPCIÓN', fontSize: 8, bold: true, alignment: 'center', margin: [3, 3, 3, 3] },
+      { text: 'UNIDAD', fontSize: 8, bold: true, alignment: 'center', margin: [3, 3, 3, 3] },
+      { text: 'CANT', fontSize: 8, bold: true, alignment: 'center', margin: [3, 3, 3, 3] },
+      { text: 'PRECIO', fontSize: 8, bold: true, alignment: 'center', margin: [3, 3, 3, 3] },
+      { text: 'TOTAL', fontSize: 8, bold: true, alignment: 'center', margin: [3, 3, 3, 3] },
+    ],
+  ];
+  let idx = 1;
+  for (const it of items) {
+    const c = it.cant ?? it.cantidad ?? 1;
+    const p = it.pu ?? it.precio ?? it.precioVenta ?? 0;
+    const t = it.total ?? c * p;
+    const u = it.unidad || (it.tipo === 'servicio' || it.tipo === 'mano_obra' ? 'HRS' : 'UND');
+    body.push([
+      { text: String(idx++), fontSize: 8, alignment: 'center' },
+      { text: (it.descripcion || it.articulo || '').toUpperCase(), fontSize: 8 },
+      { text: u, fontSize: 8, alignment: 'center' },
+      { text: String(c), fontSize: 8, alignment: 'center' },
+      { text: `S/ ${Number(p).toFixed(2)}`, fontSize: 8, alignment: 'right' },
+      { text: `S/ ${Number(t).toFixed(2)}`, fontSize: 8, alignment: 'right' },
+    ]);
+  }
+  while (body.length < 11) {
+    body.push([
+      { text: '', fontSize: 8 }, { text: '', fontSize: 8 },
+      { text: '', fontSize: 8 }, { text: '', fontSize: 8 },
+      { text: '', fontSize: 8 }, { text: '', fontSize: 8 },
+    ]);
+  }
+  return {
+    table: { widths: [25, '*', 45, 30, 55, 55], headerRows: 1, body },
+    layout: {
+      hLineWidth: () => 0.75, vLineWidth: () => 0.75,
+      hLineColor: () => '#000000', vLineColor: () => '#000000',
+      fillColor: (ri) => ri === 0 ? '#eeeeee' : null,
+      paddingLeft: () => 3, paddingRight: () => 3,
+      paddingTop: () => 2, paddingBottom: () => 2,
+    },
+    margin: [0, 0, 0, 8],
+  };
+}
+
+function buildUnifiedTotales(subtotal, igv, total) {
+  return {
+    width: 180,
+    stack: [
+      buildAmountRow('SUB TOTAL', subtotal, 'totalLine'),
+      buildAmountRow('I.G.V. (18%)', igv, 'totalLine'),
+      { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 0.5 }], margin: [0, 4, 0, 4] },
+      buildAmountRow('IMP. TOTAL', total, 'totalBold'),
+    ],
+  };
+}
+
+function buildUnifiedBankInfo() {
+  return {
+    width: 180,
+    table: { widths: ['*'], body: [[
+      { stack: [
+        { text: 'CUENTAS BANCARIAS:', bold: true, fontSize: 8, margin: [0, 0, 0, 4] },
+        { text: 'BCP CTA. CTE. SOLES  : 191-2390862-0-19', fontSize: 8, margin: [0, 0, 0, 1] },
+        { text: 'BCP CTA. CCI. SOLES  : 002-19100239086201950', fontSize: 8, margin: [0, 0, 0, 1] },
+        { text: 'BN DETRACCIÓN SOLES  : 00-066-104419', fontSize: 8 },
+      ], margin: [4, 4, 4, 4] },
+    ]]},
+    layout: thinBorder(),
+  };
+}
+
+function buildUnifiedSunatText(tipo) {
+  const label = tipo === 'boleta' ? 'BOLETA ELECTRÓNICA' : 'FACTURA ELECTRÓNICA';
+  return {
+    stack: [
+      { text: `Representación impresa de la ${label}`, fontSize: 6, alignment: 'left', width: 150 },
+      { text: 'CONSULTE SU DOCUMENTO EN WWW.SUNAT.GOB.PE CON SU CLAVE SOL', fontSize: 6, alignment: 'left', width: 150 },
+      { text: 'gearmparts@gmail.com', fontSize: 6, alignment: 'left', width: 150 },
+    ],
+  };
+}
+
 async function buildDocDefFactura(opts) {
 
   const {
@@ -207,71 +395,67 @@ async function buildDocDefFactura(opts) {
     logoUrl,
   } = opts;
 
+  const tipofactura = (opts.tipofactura || titulo || '').toLowerCase();
   const numDoc = `${serie}-${numero}`;
   const totalEnLetrasVal = ttl || totalEnLetras(total);
   const fechaFormatted = formatDateToDDMMYYYY(fecha);
   const fechaVencimientoStr = getNextMonthDueDate();
-  const detraccion = total > 700 ? total * 0.12 : null;
+  const detraccion = (tipofactura === 'factura' && total > 700) ? total * 0.12 : null;
   const montoNeto = detraccion ? total - detraccion : null;
   const logoData = await urlToDataUrl(logoUrl || LOGO_URL);
 
   const content = [];
 
-  content.push(buildHeader(logoData, titulo, numDoc));
+  content.push(buildUnifiedHeader(logoData, titulo, numDoc, fechaFormatted));
 
-  const custRows = [
+  const extraRows = [
     { columns: [
-      { width: '50%', text: [{ text: 'CLIENTE : ', bold: true, fontSize: 9 }, { text: cliente.toUpperCase(), fontSize: 9 }] },
-      { width: '50%', text: [{ text: 'FECHA EMISIÓN : ', bold: true, fontSize: 9 }, { text: fechaFormatted, fontSize: 9 }] },
-    ], margin: [0, 0, 0, 4] },
-    { columns: [
-      { width: '50%', text: [{ text: 'DIRECCIÓN : ', bold: true, fontSize: 9 }, { text: direccion.toUpperCase(), fontSize: 9 }] },
-      { width: '50%', text: [{ text: 'VENDEDOR : ', bold: true, fontSize: 9 }, { text: vendedor.toUpperCase(), fontSize: 9 }] },
-    ], margin: [0, 0, 0, 4] },
-    { columns: [
-      { width: '50%', text: [{ text: 'RUC : ', bold: true, fontSize: 9 }, { text: clienteDoc, fontSize: 9 }] },
-      { width: '50%', text: [{ text: 'ORD. DE COMPRA : ', bold: true, fontSize: 9 }, { text: ordenCompra, fontSize: 9 }] },
-    ], margin: [0, 0, 0, 4] },
-    { columns: [
-      { width: '50%', text: [{ text: 'NRO COT : ', bold: true, fontSize: 9 }, { text: nroCot, fontSize: 9 }] },
-      { width: '50%', text: [{ text: 'COND. DE PAGO : ', bold: true, fontSize: 9 }, { text: formaPago.toUpperCase(), fontSize: 9 }] },
-    ], margin: [0, 0, 0, 4] },
-    { columns: [
-      { width: 'auto', text: [{ text: 'OBSERVACIONES : ', bold: true, fontSize: 9 }] },
-      { width: '*', text: (observaciones || '').toUpperCase(), fontSize: 9 },
-    ], margin: [0, 0, 0, 4] },
+      { width: '*', text: fieldRow('VENDEDOR', vendedor, { fontSize: 8 }) },
+      { width: '*', text: fieldRow('COND. DE PAGO', formaPago, { fontSize: 8 }) },
+    ]},
   ];
-  const hasVehicle = placa || marca || modelo || km;
-  if (hasVehicle) {
-    custRows.push({ canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 0.5 }], margin: [0, 4, 0, 4] });
-    custRows.push({ columns: [
-      { width: '25%', text: [{ text: 'PLACA : ', bold: true, fontSize: 9 }, { text: placa.toUpperCase(), fontSize: 9 }] },
-      { width: '25%', text: [{ text: 'MARCA : ', bold: true, fontSize: 9 }, { text: marca.toUpperCase(), fontSize: 9 }] },
-      { width: '25%', text: [{ text: 'MODELO : ', bold: true, fontSize: 9 }, { text: modelo.toUpperCase(), fontSize: 9 }] },
-      { width: '25%', text: [{ text: 'KM : ', bold: true, fontSize: 9 }, { text: km, fontSize: 9 }] },
+  if (observaciones) {
+    extraRows.push({ columns: [
+      { width: '*', text: fieldRow('OBSERVACIONES', observaciones.toUpperCase(), { fontSize: 8 }) },
+      { width: '*', text: '' },
     ]});
   }
+  content.push(buildUnifiedCliente(cliente, clienteDoc, direccion, 'CLIENTE', extraRows));
 
-  content.push(buildCustomerBlock(custRows));
-  content.push(buildItemsTable(items));
+  const hasVehicle = placa || marca || modelo || km;
+  if (hasVehicle) {
+    content.push(sectionWithTitle('DATOS DEL VEHÍCULO', [
+      { columns: [
+        { width: '*', text: fieldRow('PLACA', placa, { fontSize: 8 }) },
+        { width: '*', text: fieldRow('MARCA', marca, { fontSize: 8 }) },
+        { width: '*', text: fieldRow('MODELO', modelo, { fontSize: 8 }) },
+      ], margin: [0, 0, 0, 2] },
+    ]));
+  }
+
+  content.push(buildUnifiedTable(items));
+
+  content.push({ text: `SON: ${totalEnLetrasVal.toUpperCase()}`, fontSize: 8, margin: [0, 0, 0, 6] });
+
+  const isBoleta = tipofactura === 'boleta';
 
   content.push({
     columns: [
-      { width: 'auto', text: 'SON: ', style: 'label' },
-      { width: '*', text: totalEnLetrasVal.toUpperCase(), style: 'value' },
+      isBoleta ? { width: 'auto', text: '' } : buildUnifiedSunatText(tipofactura),
+      { width: '*', stack: [
+        buildUnifiedBankInfo(),
+        ...(tipofactura === 'factura' && !isBoleta ? [
+          { text: 'FECHA DE VENCIMIENTO:', bold: true, fontSize: 8, margin: [4, 8, 0, 0] },
+          { text: fechaVencimientoStr, fontSize: 10, bold: true, color: '#CC0000', margin: [4, 0, 0, 0] },
+        ] : []),
+      ], margin: [0, 0, 10, 0] },
+      buildUnifiedTotales(subtotal, igv, total),
     ],
-    margin: [5, 0, 5, 10],
+    margin: [0, 0, 0, 10],
   });
 
-  const totalsStack = [
-    buildAmountRow('OP. GRAVADA', subtotal, 'totalLine'),
-    buildAmountRow('I.G.V. (18%)', igv, 'totalLine'),
-    { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 0.5 }], margin: [0, 4, 0, 4] },
-    buildAmountRow('IMPORTE TOTAL', total, 'totalBold'),
-  ];
   if (detraccion != null) {
-    totalsStack.push({ canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 0.5 }], margin: [0, 4, 0, 4] });
-    totalsStack.push({
+    content.push({
       background: '#F5F5F5',
       stack: [
         { text: 'DETRACCIÓN 12%', style: 'detraccion' },
@@ -285,39 +469,6 @@ async function buildDocDefFactura(opts) {
     });
   }
 
-  content.push({
-    columns: [
-      {
-        width: 'auto',
-        stack: [
-          { text: 'Representación impresa de la FACTURA ELECTRÓNICA', fontSize: 6, alignment: 'left', width: 150 },
-          { text: 'CONSULTE SU DOCUMENTO EN WWW.SUNAT.GOB.PE CON SU CLAVE SOL', fontSize: 6, alignment: 'left', width: 150 },
-          { text: 'gearmparts@gmail.com', fontSize: 6, alignment: 'left', width: 150 },
-        ],
-      },
-      {
-        width: '*',
-        stack: [
-          {
-            table: { widths: ['*'], body: [[
-              { stack: [
-                { text: 'BCP CTA. CTE. SOLES  : 191-2390862-0-19', fontSize: 8 },
-                { text: 'BCP CTA. CCI. SOLES  : 002-19100239086201950', fontSize: 8 },
-                { text: 'BN DETRACCIÓN SOLES  : 00-066-104419', fontSize: 8 },
-              ], margin: [6, 6, 6, 6] },
-            ]]},
-            layout: borderLayout(0.5, 0.5),
-          },
-          { text: 'FECHA DE VENCIMIENTO:', style: 'label', margin: [4, 8, 0, 0] },
-          { text: fechaVencimientoStr, fontSize: 10, bold: true, color: '#CC0000', margin: [4, 0, 0, 0] },
-        ],
-        margin: [0, 0, 10, 0],
-      },
-      { width: 180, stack: totalsStack },
-    ],
-    margin: [0, 0, 0, 10],
-  });
-
   return { pageSize: 'A4', pageMargins: [20, 20, 20, 20], content, styles: S, defaultStyle: { fontName: 'Roboto' } };
 }
 
@@ -327,8 +478,8 @@ async function buildDocDefCompra(opts) {
     direccion = "SIN DIRECCIÓN", fecha = "", formaPago = "CONTADO",
     serie = "001", numero = "000000", subtotal = 0, igv = 0, total = 0,
     observaciones = "", titulo = "FACTURA ELECTRÓNICA", vendedor = "SIN ESPECIFICAR",
-    nroCot = "", ordenCompra = "", totalEnLetras: ttl, qrData: qr,
-    logoUrl, erpLogoUrl,
+    nroCot = "", ordenCompra = "", totalEnLetras: ttl,
+    logoUrl,
   } = opts;
 
   const numDoc = `${serie}-${numero}`;
@@ -340,72 +491,31 @@ async function buildDocDefCompra(opts) {
 
   const content = [];
 
-  content.push(buildHeader(logoData, rep(titulo), numDoc));
+  content.push(buildUnifiedHeader(logoData, rep(titulo), numDoc, fechaFormatted));
 
-  const custRows = [
+  const extraRows = [
     { columns: [
-      { width: '50%', text: [{ text: 'PROVEEDOR : ', bold: true, fontSize: 9 }, { text: rep(cliente.toUpperCase()), fontSize: 9 }] },
-      { width: '50%', text: [{ text: 'FECHA EMISIÓN : ', bold: true, fontSize: 9 }, { text: fechaFormatted, fontSize: 9 }] },
-    ], margin: [0, 0, 0, 4] },
-    { columns: [
-      { width: '50%', text: [{ text: 'DIRECCIÓN : ', bold: true, fontSize: 9 }, { text: rep(direccion.toUpperCase()), fontSize: 9 }] },
-      { width: '50%', text: [{ text: 'VENDEDOR : ', bold: true, fontSize: 9 }, { text: rep(vendedor.toUpperCase()), fontSize: 9 }] },
-    ], margin: [0, 0, 0, 4] },
-    { columns: [
-      { width: '50%', text: [{ text: 'RUC : ', bold: true, fontSize: 9 }, { text: clienteDoc, fontSize: 9 }] },
-      { width: '50%', text: [{ text: 'ORD. DE COMPRA : ', bold: true, fontSize: 9 }, { text: ordenCompra, fontSize: 9 }] },
-    ], margin: [0, 0, 0, 4] },
-    { columns: [
-      { width: '50%', text: [{ text: 'NRO COT : ', bold: true, fontSize: 9 }, { text: nroCot, fontSize: 9 }] },
-      { width: '50%', text: [{ text: 'COND. DE PAGO : ', bold: true, fontSize: 9 }, { text: rep(formaPago.toUpperCase()), fontSize: 9 }] },
-    ], margin: [0, 0, 0, 4] },
-    { columns: [
-      { width: 'auto', text: [{ text: 'OBSERVACIONES : ', bold: true, fontSize: 9 }] },
-      { width: '*', text: rep((observaciones || '').toUpperCase()), fontSize: 9 },
-    ], margin: [0, 0, 0, 4] },
+      { width: '*', text: fieldRow('VENDEDOR', rep(vendedor), { fontSize: 8 }) },
+      { width: '*', text: fieldRow('COND. DE PAGO', rep(formaPago), { fontSize: 8 }) },
+    ]},
   ];
+  if (observaciones) {
+    extraRows.push({ columns: [
+      { width: '*', text: fieldRow('OBSERVACIONES', rep(observaciones.toUpperCase()), { fontSize: 8 }) },
+      { width: '*', text: '' },
+    ]});
+  }
+  content.push(buildUnifiedCliente(rep(cliente), clienteDoc, rep(direccion), 'PROVEEDOR', extraRows));
 
-  content.push(buildCustomerBlock(custRows));
-  content.push(buildItemsTable(items));
+  content.push(buildUnifiedTable(items));
+
+  content.push({ text: `SON: ${rep(totalEnLetrasVal.toUpperCase())}`, fontSize: 8, margin: [0, 0, 0, 6] });
 
   content.push({
     columns: [
-      { width: 'auto', text: 'SON: ', style: 'label' },
-      { width: '*', text: rep(totalEnLetrasVal.toUpperCase()), style: 'value' },
-    ],
-    margin: [5, 0, 5, 10],
-  });
-
-  const totalsStack = [
-    buildAmountRow('OP. GRAVADA', subtotal, 'totalLine'),
-    buildAmountRow('I.G.V. (18%)', igv, 'totalLine'),
-    { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 0.5 }], margin: [0, 4, 0, 4] },
-    buildAmountRow('IMPORTE TOTAL', total, 'totalBold'),
-  ];
-
-  content.push({
-    columns: [
-      {
-        width: 'auto',
-        stack: [
-          { text: 'Representación impresa de la FACTURA ELECTRÓNICA', fontSize: 6, alignment: 'left', width: 150 },
-          { text: 'CONSULTE SU DOCUMENTO EN WWW.SUNAT.GOB.PE CON SU CLAVE SOL', fontSize: 6, alignment: 'left', width: 150 },
-          { text: 'gearmparts@gmail.com', fontSize: 6, alignment: 'left', width: 150 },
-        ],
-      },
-      {
-        width: '*',
-        table: { widths: ['*'], body: [[
-          { stack: [
-            { text: 'BCP CTA. CTE. SOLES  : 191-2390862-0-19', fontSize: 8 },
-            { text: 'BCP CTA. CCI. SOLES  : 002-19100239086201950', fontSize: 8 },
-            { text: 'BN DETRACCIÓN SOLES  : 00-066-104419', fontSize: 8 },
-          ], margin: [6, 6, 6, 6] },
-        ]]},
-        layout: borderLayout(0.5, 0.5),
-        margin: [0, 0, 10, 0],
-      },
-      { width: 180, stack: totalsStack },
+      buildUnifiedSunatText('factura'),
+      { width: '*', stack: [buildUnifiedBankInfo()], margin: [0, 0, 10, 0] },
+      buildUnifiedTotales(subtotal, igv, total),
     ],
     margin: [0, 0, 0, 10],
   });
@@ -474,52 +584,6 @@ async function buildDocDefCotizacion(opts) {
         paddingLeft: () => 0, paddingRight: () => 0,
         paddingTop: () => 0, paddingBottom: () => 0,
       },
-      margin: [0, 0, 0, 8],
-    };
-  }
-
-  // ── HEADER ──
-  function buildHeader() {
-    return {
-      columns: [
-        {
-          width: '*',
-          columns: [
-            logoData ? { image: logoData, width: 100, height: 70, fit: [100, 70] } : { text: '', width: 100 },
-            { width: 8, text: '' },
-            {
-              width: '*',
-              stack: [
-                { text: 'GEAR MOTOR PARTS S.A.C.', fontSize: 18, bold: true, italics: true },
-                { text: 'Dirección fiscal: Av. Colectora Industrial Mza. A Lote. 6', fontSize: 7, margin: [0, 2, 0, 0] },
-                { text: 'Asc. Santa Cruz de Vista Alegre - Santa Anita', fontSize: 7 },
-                { text: 'Sucursal: Av. Nicolás Ayllón Nro. 3270 Coo. Veintisiete de abril - Ate', fontSize: 7 },
-                { text: 'Tel.: 01 362 8667 - 924 483 844', fontSize: 7 },
-                { text: 'gearmparts@gmail.com', fontSize: 7 },
-              ],
-            },
-          ],
-        },
-        {
-          width: 'auto',
-          table: {
-            widths: ['*'],
-            body: [
-              [{ text: 'R.U.C. 20601720621', fontSize: 9, bold: true, alignment: 'center', margin: [8, 6, 8, 6] }],
-              [{ text: `COTIZACIÓN ${codCot}`, fontSize: 12, bold: true, alignment: 'center', margin: [8, 6, 8, 6] }],
-              [{ text: `FECHA: ${fechaFormatted}`, fontSize: 9, bold: true, alignment: 'center', margin: [8, 6, 8, 6] }],
-            ],
-          },
-          layout: {
-            hLineWidth: (i, node) => i === 0 || i === node.table.body.length ? 0.75 : 0.5,
-            vLineWidth: () => 0.75,
-            hLineColor: () => '#000000',
-            vLineColor: () => '#000000',
-            paddingLeft: () => 0, paddingRight: () => 0,
-            paddingTop: () => 0, paddingBottom: () => 0,
-          },
-        },
-      ],
       margin: [0, 0, 0, 8],
     };
   }
@@ -686,7 +750,7 @@ async function buildDocDefCotizacion(opts) {
   }
 
   const content = [
-    buildHeader(),
+    buildUnifiedHeader(logoData, titulo, codCot, fechaFormatted),
     buildClienteSection(),
     buildVehiculoSection(),
     buildCondicionesSection(),
@@ -980,10 +1044,15 @@ export function docToOpts(data, title) {
   const hasProveedor = data.proveedor || data.proveedorDoc;
   const hasDiagOrServiceItems = data.diagnosticos || data.items?.some?.((it) => it.tipo === 'servicio' || it.tipo === 'mano_obra');
 
-  if (hasProveedor) {
-    tipo = 'compra';
-  } else if (tipofactura === 'cotizacion') {
+  // Detectar tipo por tipofactura primero
+  if (tipofactura === 'cotizacion') {
     tipo = 'cotizacion';
+  } else if (tipofactura === 'boleta') {
+    tipo = 'factura';
+  } else if (tipofactura === 'factura') {
+    tipo = hasProveedor ? 'compra' : 'factura';
+  } else if (hasProveedor) {
+    tipo = 'compra';
   } else if (code.startsWith('OT')) {
     tipo = 'orden';
   } else if (code.startsWith('CT') || code.startsWith('SC') || data.tipo_servicio) {
@@ -999,6 +1068,13 @@ export function docToOpts(data, title) {
       tipo = 'cotizacion';
     }
   }
+
+  // Determinar título según tipofactura
+  const effectiveTitle = tipofactura === 'boleta' ? 'BOLETA ELECTRÓNICA'
+    : tipofactura === 'factura' ? (hasProveedor ? 'FACTURA ELECTRÓNICA' : 'FACTURA ELECTRÓNICA')
+    : tipofactura === 'cotizacion' ? 'COTIZACIÓN'
+    : (title && title !== "Comprobante") ? title
+    : undefined;
 
   // Expand diagnosticos into flat line items
   let items = data.items;
@@ -1060,7 +1136,7 @@ export function docToOpts(data, title) {
     modelo: data.modelo || '',
     km: data.km_ingreso || data.kilometraje || '',
     observaciones: data.observacion || data.motivo || data.observaciones || '',
-    titulo: (title && title !== "Comprobante") ? title : undefined,
+    titulo: effectiveTitle,
     vendedor: data.vendedor || data.Vendedor || 'VENDEDOR 1',
     nroCot: data.nroCot || data.NroCot || data.NumCotizacion || '',
     ordenCompra: data.ordenCompra || data.orden_compra || '',
