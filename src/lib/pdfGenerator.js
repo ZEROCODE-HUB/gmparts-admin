@@ -232,7 +232,7 @@ function sectionWithTitle(title, contentStack) {
   };
 }
 
-function buildUnifiedHeader(logoData, titulo, numDoc, fecha) {
+function buildUnifiedHeader(logoData, titulo, numDoc) {
   return {
     columns: [
       {
@@ -256,19 +256,12 @@ function buildUnifiedHeader(logoData, titulo, numDoc, fecha) {
         table: {
           widths: ['*'],
           body: [
-            [{ text: 'R.U.C. 20601720621', fontSize: 11, bold: true, alignment: 'center', margin: [8, 6, 8, 6] }],
-            [{ text: titulo, fontSize: 13, bold: true, alignment: 'center', margin: [8, 6, 8, 6] }],
-            [{ text: numDoc ? `Nº ${numDoc}` : '', fontSize: 11, bold: true, alignment: 'center', margin: [8, 6, 8, 6] }],
-            [{ text: fecha || '', fontSize: 9, alignment: 'center', margin: [8, 4, 8, 6] }],
+            [{ text: 'R.U.C. 20601720621', fontSize: 11, bold: true, alignment: 'center', margin: [10, 8, 10, 8] }],
+            [{ text: titulo, fontSize: 13, bold: true, alignment: 'center', margin: [10, 8, 10, 8] }],
+            [{ text: numDoc ? `Nº ${numDoc}` : '', fontSize: 11, bold: true, alignment: 'center', margin: [10, 8, 10, 8] }],
           ],
         },
-        layout: {
-          hLineWidth: (i, node) => i === 0 || i === node.table.body.length ? 0.75 : 0.5,
-          vLineWidth: () => 0.75,
-          hLineColor: () => '#000000', vLineColor: () => '#000000',
-          paddingLeft: () => 0, paddingRight: () => 0,
-          paddingTop: () => 0, paddingBottom: () => 0,
-        },
+        layout: borderLayout(1.5, 1.5),
       },
     ],
     margin: [0, 0, 0, 8],
@@ -406,7 +399,7 @@ async function buildDocDefFactura(opts) {
 
   const content = [];
 
-  content.push(buildUnifiedHeader(logoData, titulo, numDoc, fechaFormatted));
+  content.push(buildUnifiedHeader(logoData, titulo, numDoc));
 
   const extraRows = [
     { columns: [
@@ -491,7 +484,7 @@ async function buildDocDefCompra(opts) {
 
   const content = [];
 
-  content.push(buildUnifiedHeader(logoData, rep(titulo), numDoc, fechaFormatted));
+  content.push(buildUnifiedHeader(logoData, rep(titulo), numDoc));
 
   const extraRows = [
     { columns: [
@@ -750,7 +743,7 @@ async function buildDocDefCotizacion(opts) {
   }
 
   const content = [
-    buildUnifiedHeader(logoData, titulo, codCot, fechaFormatted),
+    buildUnifiedHeader(logoData, titulo, codCot),
     buildClienteSection(),
     buildVehiculoSection(),
     buildCondicionesSection(),
