@@ -6,18 +6,29 @@ import Table, { Td } from "../../components/ui/Table";
 import Modal from "../../components/ui/Modal";
 import Btn from "../../components/ui/Btn";
 import Field, { inputCls } from "../../components/ui/Field";
-import { useStoreCollection } from "../../store/useStoreCollection";
-import { useFirestoreDocuments, useFirestoreCollection } from "../../store/firestoreDb";
+
+import { db } from "../../lib/firebase";
+import { collection, getDocs, addDoc } from "firebase/firestore";
 const ALMACENES = [
   { id: "w1", Nombre: "Almacén Principal" },
   { id: "w2", Nombre: "Almacén Secundario" },
   { id: "w3", Nombre: "Depósito Taller" },
 ];
-import * as db from "../../store/db";
 import { searchArticles } from "../../store/firestoreStock";
+import { showToast } from "../../components/ui/Toast";
 
 export default function ValeInsumos() {
-  const [vales, { refresh }] = useStoreCollection("al-vale");
+  const [vales, setVales] = useState([]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const col = collection(db, "ValeInsumos");
+        const snap = await getDocs(col);
+        setVales(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      } catch (e) { console.error(e); }
+    })();
+  }, []);
   const [otsFactura] = useFirestoreDocuments("vs-orden");
   const otsRecepcion = useFirestoreCollection("recepciones");
   const ots = useMemo(() => {
@@ -58,14 +69,25 @@ export default function ValeInsumos() {
     setSearch("");
   };
 
-  const submit = () => {
+  const submit = async () => {
     if (repuestos.length === 0) { setError("Agregue al menos un repuesto"); return; }
-    db.saveVale({ ...form, repuestos, id: db.nextDocId("al-vale"), usuario: "GM Parts Admin" });
-    setForm({ fecha: new Date().toISOString().split("T")[0], almacen: "w1", recepcionRef: "", observacion: "" });
-    setRepuestos([]);
-    setError("");
-    setOpen(false);
-    refresh();
+    setSaving(true);
+    try {
+      await addDoc(collection(db, "ValeInsumos"), {
+        ...form, repuestos, usuario: "GM Parts Admin", fechaCreacion: new Date().toISOString(),
+      });
+      setForm({ fecha: new Date().toISOString().split("T")[0], almacen: "w1", recepcionRef: "", observacion: "" });
+      setRepuestos([]);
+      setError("");
+      setOpen(false);
+      showToast("Vale creado");
+      const snap = await getDocs(collection(db, "ValeInsumos"));
+      setVales(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    } catch (e) {
+      showToast("Error al crear vale", "error");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
