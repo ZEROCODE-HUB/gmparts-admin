@@ -55,6 +55,7 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
     direccion: d.direccion || "",
   }));
   const allClients = fireClients;
+  const allVehicles = useFirestoreCollection("Vehiculos");
 
   useEffect(() => {
     if (!id || id === "nuevo" || !(isEdit || isView)) return;
@@ -450,7 +451,12 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
               </select>
             </Field>
             <Field label="Documento"><input className={inputMono} value={form.clienteDoc} readOnly /></Field>
-            <Field label="Placa"><input className={inputMono} value={form.placa} onChange={(e) => set("placa", e.target.value)} placeholder="ABC-123" /></Field>
+            <Field label="Placa">
+              <select className={inputMono} value={form.placa} onChange={(e) => set("placa", e.target.value)}>
+                <option value="">Selecciona</option>
+                {allVehicles.filter((v) => v.Propietario_name === form.cliente).map((v) => <option key={v.id} value={v.Placa}>{v.Placa} - {v.Marca} {v.Modelo}</option>)}
+              </select>
+            </Field>
             <Field label="Tipo IGV">
               <select className={inputMono} value={form.tipoIgv} onChange={(e) => set("tipoIgv", e.target.value)}>
                 <option value="INCLUIDO">INCLUIDO IGV</option>

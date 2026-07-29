@@ -107,7 +107,6 @@ export default function VehiculoForm() {
                   value={form.Propietario_name}
                   onChange={(e) => {
                     const selected = e.target.value;
-                    if (selected === "__new__") { navigate("/administracion/clientes"); return; }
                     const c = clientesOpts.find((cl) => cl.nombre === selected);
                     set("Propietario_name", selected);
                     set("Propietario_Document", c?.documento || "");
@@ -115,7 +114,6 @@ export default function VehiculoForm() {
                 >
                   <option value="">Selecciona cliente</option>
                   {clientesOpts.map((c) => <option key={c.id} value={c.nombre}>{c.nombre}</option>)}
-                  <option value="__new__" className="text-[var(--accent)]">+ Nuevo</option>
                 </select>
               </div>
             </Field>

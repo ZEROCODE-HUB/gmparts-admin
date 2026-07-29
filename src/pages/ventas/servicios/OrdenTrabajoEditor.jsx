@@ -20,6 +20,7 @@ export default function OrdenTrabajoEditor({ backPath, mode = "create" }) {
     nombre: d.display_name || d.nombre || "",
     documento: d.IdentityDocument || d.documento || "",
   }));
+  const allVehicles = useFirestoreCollection("Vehiculos");
   const [docId, setDocId] = useState(id && id !== "nuevo" ? id : null);
 
   const [form, setForm] = useState({
@@ -128,7 +129,12 @@ export default function OrdenTrabajoEditor({ backPath, mode = "create" }) {
             </select>
           </Field>
           <Field label="Documento"><input className={inputMono} value={form.clienteDoc} readOnly /></Field>
-          <Field label="Placa"><input className={inputMono} value={form.placa} onChange={(e) => set("placa", e.target.value)} placeholder="ABC-123" /></Field>
+          <Field label="Placa">
+            <select className={inputMono} value={form.placa} onChange={(e) => { const v = allVehicles.find((x) => x.Placa === e.target.value); set("placa", e.target.value); if (v) { set("marca", v.Marca || ""); set("modelo", v.Modelo || ""); } }}>
+              <option value="">Selecciona</option>
+              {allVehicles.filter((v) => v.Propietario_name === form.cliente).map((v) => <option key={v.id} value={v.Placa}>{v.Placa} - {v.Marca} {v.Modelo}</option>)}
+            </select>
+          </Field>
           <Field label="Marca">
             <select className={inputMono} value={form.marca} onChange={(e) => set("marca", e.target.value)}>
               <option value="">Selecciona</option>
