@@ -1112,11 +1112,18 @@ export function docToOpts(data, title) {
   }
 
   // Determinar título según tipofactura
-  const effectiveTitle = tipofactura === 'boleta' ? 'BOLETA ELECTRÓNICA'
-    : tipofactura === 'factura' ? (hasProveedor ? 'FACTURA ELECTRÓNICA' : 'FACTURA ELECTRÓNICA')
-    : tipofactura === 'cotizacion' ? 'COTIZACIÓN'
-    : (title && title !== "Comprobante") ? title
-    : undefined;
+  const TITLE_MAP = {
+    boleta: 'BOLETA ELECTRÓNICA',
+    factura: 'FACTURA ELECTRÓNICA',
+    cotizacion: 'COTIZACIÓN',
+    guia: 'GUÍA DE REMISIÓN',
+    notapedido: 'NOTA DE PEDIDO',
+    ordenpago: 'ORDEN DE PAGO',
+    notacredito: 'NOTA DE CRÉDITO',
+    'nota de venta': 'NOTA DE VENTA',
+    ordentrabajo: 'ORDEN DE TRABAJO',
+  };
+  const effectiveTitle = TITLE_MAP[tipofactura] || (title && title !== "Comprobante" ? title : undefined);
 
   // Expand diagnosticos into flat line items
   let items = data.items;
