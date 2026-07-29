@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Plus, Trash2, Wrench, Package } from "lucide-react";
 import { where } from "firebase/firestore";
@@ -32,6 +32,13 @@ export default function OrdenTrabajoEditor({ backPath, mode = "create" }) {
   const [saving, setSaving] = useState(false);
   const vehMarcaOpts = useCatalog("cat-vehmarca");
   const vehModeloOpts = useCatalog("cat-vehmodelo");
+  const filteredModelos = useMemo(() => {
+    if (!form.marca) return [];
+    return vehModeloOpts.filter((m) => {
+      const marca = m.seed ? m.marca : m.raw?.marca;
+      return marca === form.marca;
+    });
+  }, [form.marca, vehModeloOpts]);
   const encargadoOpts = useCatalog("cat-encargado");
 
   useEffect(() => {
@@ -131,7 +138,7 @@ export default function OrdenTrabajoEditor({ backPath, mode = "create" }) {
           <Field label="Modelo">
             <select className={inputMono} value={form.modelo} onChange={(e) => set("modelo", e.target.value)}>
               <option value="">Selecciona</option>
-              {vehModeloOpts.map((m) => <option key={m.id} value={m.name}>{m.name}</option>)}
+              {filteredModelos.map((m) => <option key={m.id} value={m.name}>{m.name}</option>)}
             </select>
           </Field>
           <Field label="KM ingreso"><input type="number" className={inputMono} value={form.km_ingreso} onChange={(e) => set("km_ingreso", e.target.value)} /></Field>
