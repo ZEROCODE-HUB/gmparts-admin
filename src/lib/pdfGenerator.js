@@ -367,13 +367,35 @@ function buildUnifiedBankInfo() {
 
 function buildUnifiedSunatText(tipo) {
   const label = tipo === 'boleta' ? 'BOLETA ELECTRÓNICA' : 'FACTURA ELECTRÓNICA';
-  return {
-    stack: [
-      { text: `Representación impresa de la ${label}`, fontSize: 6, alignment: 'left', width: 150 },
-      { text: 'CONSULTE SU DOCUMENTO EN WWW.SUNAT.GOB.PE CON SU CLAVE SOL', fontSize: 6, alignment: 'left', width: 150 },
-      { text: 'gearmparts@gmail.com', fontSize: 6, alignment: 'left', width: 150 },
-    ],
-  };
+  return [
+    { text: `Representación impresa de la ${label}`, fontSize: 6, alignment: 'left', width: 150 },
+    { text: 'CONSULTE SU DOCUMENTO EN WWW.SUNAT.GOB.PE CON SU CLAVE SOL', fontSize: 6, alignment: 'left', width: 150 },
+    { text: 'gearmparts@gmail.com', fontSize: 6, alignment: 'left', width: 150 },
+  ];
+}
+
+function buildUnifiedFooter(totalEnLetrasVal, subtotal, igv, total, bankInfo, sunatLines, extraStack) {
+  const stack = [
+    { text: `SON: ${totalEnLetrasVal}`, bold: true, fontSize: 8, margin: [0, 0, 0, 6] },
+    {
+      columns: [
+        { width: '*', stack: sunatLines || [] },
+        {
+          width: 'auto',
+          stack: [
+            { text: `SUB TOTAL    S/ ${Number(subtotal).toFixed(2)}`, fontSize: 8, margin: [0, 0, 0, 1] },
+            { text: `I.G.V. (18%) S/ ${Number(igv).toFixed(2)}`, fontSize: 8, margin: [0, 0, 0, 1] },
+            { text: `IMP. TOTAL   S/ ${Number(total).toFixed(2)}`, fontSize: 8, bold: true },
+          ],
+          alignment: 'right',
+        },
+      ],
+      margin: [0, 0, 0, 6],
+    },
+    ...(extraStack || []),
+    bankInfo,
+  ];
+  return stack;
 }
 
 async function buildDocDefFactura(opts) {
@@ -434,27 +456,15 @@ async function buildDocDefFactura(opts) {
 
   content.push(buildUnifiedTable(items));
 
-  content.push({ text: `SON: ${totalEnLetrasVal.toUpperCase()}`, fontSize: 8, margin: [0, 0, 0, 6] });
-
-  const isBoleta = tipofactura === 'boleta';
-
-  content.push({
-    columns: [
-      isBoleta ? { width: 'auto', text: '' } : buildUnifiedSunatText(tipofactura),
-      { width: '*', stack: [
-        buildUnifiedBankInfo(),
-        ...(tipofactura === 'factura' && !isBoleta ? [
-          { text: 'FECHA DE VENCIMIENTO:', bold: true, fontSize: 8, margin: [4, 8, 0, 0] },
-          { text: fechaVencimientoStr, fontSize: 10, bold: true, color: '#CC0000', margin: [4, 0, 0, 0] },
-        ] : []),
-      ], margin: [0, 0, 10, 0] },
-      buildUnifiedTotales(subtotal, igv, total),
-    ],
-    margin: [0, 0, 0, 10],
-  });
-
+  const extraStack = [];
+  if (tipofactura === 'factura' && !(tipofactura === 'boleta')) {
+    extraStack.push(
+      { text: 'FECHA DE VENCIMIENTO:', bold: true, fontSize: 8, margin: [0, 8, 0, 0] },
+      { text: fechaVencimientoStr, fontSize: 10, bold: true, color: '#CC0000', margin: [0, 0, 0, 0] },
+    );
+  }
   if (detraccion != null) {
-    content.push({
+    extraStack.push({
       background: '#F5F5F5',
       stack: [
         { text: 'DETRACCIÓN 12%', style: 'detraccion' },
@@ -467,6 +477,12 @@ async function buildDocDefFactura(opts) {
       margin: [4, 4, 4, 4],
     });
   }
+  const sunatLines = (tipofactura === 'boleta') ? [] : buildUnifiedSunatText(tipofactura);
+
+  content.push(...buildUnifiedFooter(
+    totalEnLetrasVal.toUpperCase(), subtotal, igv, total,
+    buildUnifiedBankInfo(), sunatLines, extraStack,
+  ));
 
   return { pageSize: 'A4', pageMargins: [20, 20, 20, 20], content, styles: S, defaultStyle: { fontName: 'Roboto' } };
 }
@@ -508,16 +524,10 @@ async function buildDocDefCompra(opts) {
 
   content.push(buildUnifiedTable(items));
 
-  content.push({ text: `SON: ${rep(totalEnLetrasVal.toUpperCase())}`, fontSize: 8, margin: [0, 0, 0, 6] });
-
-  content.push({
-    columns: [
-      buildUnifiedSunatText('factura'),
-      { width: '*', stack: [buildUnifiedBankInfo()], margin: [0, 0, 10, 0] },
-      buildUnifiedTotales(subtotal, igv, total),
-    ],
-    margin: [0, 0, 0, 10],
-  });
+  content.push(...buildUnifiedFooter(
+    rep(totalEnLetrasVal.toUpperCase()), subtotal, igv, total,
+    buildUnifiedBankInfo(), buildUnifiedSunatText('factura'), [],
+  ));
 
   return { pageSize: 'A4', pageMargins: [20, 20, 20, 20], content, styles: S, defaultStyle: { fontName: 'Roboto' } };
 }
@@ -748,6 +758,12 @@ async function buildDocDefCotizacion(opts) {
     };
   }
 
+  const cotClosure = [
+    { text: 'Esta cotización no incluye repuestos adicionales que se puedan presentar en el transcurso del servicio.', fontSize: 8, margin: [0, 0, 0, 2] },
+    { text: 'Sin otro particular y a la espera de su orden de servicio nos despedimos.', fontSize: 8, margin: [0, 0, 0, 6] },
+    { text: 'Atentamente,', fontSize: 8, margin: [0, 0, 0, 8] },
+  ];
+
   const content = [
     buildUnifiedHeader(logoData, titulo, codCot),
     buildClienteSection(),
@@ -755,12 +771,7 @@ async function buildDocDefCotizacion(opts) {
     buildCondicionesSection(),
     buildServiceBlock(),
     buildItemsTable(),
-    { text: `SON: ${totalEnLetrasVal}`, bold: true, fontSize: 8, margin: [0, 0, 0, 6] },
-    buildTotales(),
-    { text: 'Esta cotización no incluye repuestos adicionales que se puedan presentar en el transcurso del servicio.', fontSize: 8, margin: [0, 0, 0, 2] },
-    { text: 'Sin otro particular y a la espera de su orden de servicio nos despedimos.', fontSize: 8, margin: [0, 0, 0, 6] },
-    { text: 'Atentamente,', fontSize: 8, margin: [0, 0, 0, 8] },
-    buildCuentasBancarias(),
+    ...buildUnifiedFooter(totalEnLetrasVal, subtotal, igv, total, buildCuentasBancarias(), [], cotClosure),
   ];
 
   return {
