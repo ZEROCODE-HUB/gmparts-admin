@@ -24,9 +24,8 @@ const empty = {
 export default function ServiciosList() {
   const [items, setItems] = useState([]);
   const [loadError, setLoadError] = useState("");
-  const marcaRaw = useCatalog("cat-vehmarca");
+  const marcaOpts = useCatalog("cat-vehmarca");
   const modeloOpts = useCatalog("cat-vehmodelo");
-  const marcaOpts = marcaRaw.filter((m, i, a) => a.findIndex((x) => x.name === m.name) === i);
 
   useEffect(() => {
     (async () => {
