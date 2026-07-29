@@ -9,6 +9,7 @@ import Field, { inputCls } from "../../components/ui/Field";
 
 import { db } from "../../lib/firebase";
 import { collection, getDocs, addDoc } from "firebase/firestore";
+import { useFirestoreDocuments, useFirestoreCollection } from "../../store/firestoreDb";
 const ALMACENES = [
   { id: "w1", Nombre: "Almacén Principal" },
   { id: "w2", Nombre: "Almacén Secundario" },
