@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+﻿import { useState, useMemo } from "react";
 import Pagination from "../../components/ui/Pagination";
 import { exportToExcel } from "../../lib/exportExcel";
 import { Pencil, Trash2 } from "lucide-react";
@@ -23,6 +23,13 @@ export default function ServiciosList() {
   const items = useFirestoreCollection(COL);
   const marcaOpts = useCatalog("cat-vehmarca");
   const modeloOpts = useCatalog("cat-vehmodelo");
+  const filteredModelos = useMemo(() => {
+    if (!form.marcabrand) return [];
+    return modeloOpts.filter((m) => {
+      const marca = m.seed ? m.marca : m.raw?.marca;
+      return marca === form.marcabrand;
+    });
+  }, [form.marcabrand, modeloOpts]);
 
   const [q, setQ] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
@@ -116,7 +123,7 @@ export default function ServiciosList() {
             <Field label="Modelo">
               <select className={inputCls} value={form.model} onChange={(e) => set("model", e.target.value)}>
                 <option value="">Selecciona</option>
-                {modeloOpts.map((m) => <option key={m.id} value={m.name}>{m.name}</option>)}
+                {filteredModelos.map((m) => <option key={m.id} value={m.name}>{m.name}</option>)}
               </select>
             </Field>
             <Field label="Año"><input className={inputCls} value={form.year} onChange={(e) => set("year", e.target.value)} /></Field>
