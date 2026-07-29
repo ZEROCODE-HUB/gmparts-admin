@@ -438,21 +438,19 @@ async function buildDocDefFactura(opts) {
   }
   content.push(buildUnifiedCliente(cliente, clienteDoc, direccion, 'CLIENTE', extraRows));
 
-  if (placa || marca || modelo || km || color || combustible || kilometraje || anioFabricacion) {
-    content.push(sectionWithTitle('DATOS DEL VEHÍCULO', [
-      { columns: [
-        { width: '*', text: fieldRow('PLACA', placa, { fontSize: 8 }) },
-        { width: '*', text: fieldRow('MARCA', marca, { fontSize: 8 }) },
-        { width: '*', text: fieldRow('MODELO', modelo, { fontSize: 8 }) },
-      ], margin: [0, 0, 0, 2] },
-      { columns: [
-        { width: '*', text: fieldRow('COLOR', color, { fontSize: 8 }) },
-        { width: '*', text: fieldRow('COMBUSTIBLE', combustible, { fontSize: 8 }) },
-        { width: '*', text: fieldRow('KILOMETRAJE', kilometraje, { fontSize: 8 }) },
-      ], margin: [0, 0, 0, 2] },
-      fieldRow('AÑO DE FABRICACIÓN', anioFabricacion, { fontSize: 8 }),
-    ]));
-  }
+  content.push(sectionWithTitle('DATOS DEL VEHÍCULO', [
+    { columns: [
+      { width: '*', text: fieldRow('PLACA', placa, { fontSize: 8 }) },
+      { width: '*', text: fieldRow('MARCA', marca, { fontSize: 8 }) },
+      { width: '*', text: fieldRow('MODELO', modelo, { fontSize: 8 }) },
+    ], margin: [0, 0, 0, 2] },
+    { columns: [
+      { width: '*', text: fieldRow('COLOR', color, { fontSize: 8 }) },
+      { width: '*', text: fieldRow('COMBUSTIBLE', combustible, { fontSize: 8 }) },
+      { width: '*', text: fieldRow('KILOMETRAJE', kilometraje, { fontSize: 8 }) },
+    ], margin: [0, 0, 0, 2] },
+    fieldRow('AÑO DE FABRICACIÓN', anioFabricacion, { fontSize: 8 }),
+  ]));
 
   content.push(buildUnifiedTable(items));
 
@@ -492,6 +490,8 @@ async function buildDocDefCompra(opts) {
     items = [], cliente = "PROVEEDOR GENÉRICO", clienteDoc = "00000000000",
     direccion = "SIN DIRECCIÓN", fecha = "", formaPago = "CONTADO",
     serie = "001", numero = "000000", subtotal = 0, igv = 0, total = 0,
+    placa = "", marca = "", modelo = "", km = "",
+    color = "", combustible = "", kilometraje = "", anioFabricacion = "",
     observaciones = "", titulo = "FACTURA ELECTRÓNICA", vendedor = "SIN ESPECIFICAR",
     nroCot = "", ordenCompra = "", totalEnLetras: ttl,
     logoUrl,
@@ -521,6 +521,20 @@ async function buildDocDefCompra(opts) {
     ]});
   }
   content.push(buildUnifiedCliente(rep(cliente), clienteDoc, rep(direccion), 'PROVEEDOR', extraRows));
+
+  content.push(sectionWithTitle('DATOS DEL VEHÍCULO', [
+    { columns: [
+      { width: '*', text: fieldRow('PLACA', placa, { fontSize: 8 }) },
+      { width: '*', text: fieldRow('MARCA', marca, { fontSize: 8 }) },
+      { width: '*', text: fieldRow('MODELO', modelo, { fontSize: 8 }) },
+    ], margin: [0, 0, 0, 2] },
+    { columns: [
+      { width: '*', text: fieldRow('COLOR', color, { fontSize: 8 }) },
+      { width: '*', text: fieldRow('COMBUSTIBLE', combustible, { fontSize: 8 }) },
+      { width: '*', text: fieldRow('KILOMETRAJE', kilometraje, { fontSize: 8 }) },
+    ], margin: [0, 0, 0, 2] },
+    fieldRow('AÑO DE FABRICACIÓN', anioFabricacion, { fontSize: 8 }),
+  ]));
 
   content.push(buildUnifiedTable(items));
 
@@ -734,11 +748,20 @@ async function buildDocDefCotizacion(opts) {
             { text: `SUB TOTAL    S/ ${Number(subtotal).toFixed(2)}`, fontSize: 8, margin: [0, 0, 0, 1] },
             { text: `I.G.V. (18%) S/ ${Number(igv).toFixed(2)}`, fontSize: 8, margin: [0, 0, 0, 1] },
             { text: `IMP. TOTAL   S/ ${Number(total).toFixed(2)}`, fontSize: 8, bold: true },
-          ],
-          alignment: 'right',
+        ],
+        layout: {
+          hLineWidth: (i, node) => i === 0 || i === node.table.body.length ? 1.5 : 0,
+          vLineWidth: (i, node) => i === 0 || i === node.table.widths.length ? 1.5 : 0,
+          hLineColor: () => '#000000',
+          vLineColor: () => '#000000',
+          paddingLeft: () => 0,
+          paddingRight: () => 0,
+          paddingTop: () => 0,
+          paddingBottom: () => 0,
         },
-      ],
-      margin: [0, 0, 0, 8],
+      },
+    ],
+    margin: [0, 0, 0, 8],
     };
   }
 
@@ -767,7 +790,7 @@ async function buildDocDefCotizacion(opts) {
   const content = [
     buildUnifiedHeader(logoData, titulo, codCot),
     buildClienteSection(),
-    ...(placa || marca || modelo || km || color || combustible || kilometraje || anioFabricacion ? [buildVehiculoSection()] : []),
+    buildVehiculoSection(),
     buildCondicionesSection(),
     buildServiceBlock(),
     buildItemsTable(),
