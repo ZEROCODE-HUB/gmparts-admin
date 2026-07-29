@@ -213,6 +213,16 @@ export const TIPO_OPERACION = {
   "al-notaventa": "venta",
 };
 
+function sortByDateDesc(arr, fields = ["fecha", "Fecha", "Date"]) {
+  return [...arr].sort((a, b) => {
+    for (const f of fields) {
+      const da = a[f], db = b[f];
+      if (da || db) return (da || "") > (db || "") ? -1 : (da || "") < (db || "") ? 1 : 0;
+    }
+    return 0;
+  });
+}
+
 export function useFirestoreDocuments(docKey) {
   const colName = mapDocKeyToCollection(docKey);
   const tipo = DOC_TYPE[docKey] || docKey;
@@ -221,10 +231,11 @@ export function useFirestoreDocuments(docKey) {
     constraints.push(where("TipoOperacion", "==", TIPO_OPERACION[docKey]));
   }
   const items = useFirestoreCollection(colName, constraints);
+  const sorted = sortByDateDesc(items, colName === "Facturas" ? ["Fecha", "fecha"] : ["fecha", "Fecha"]);
   const remove = useCallback(async (id) => {
     if (!id || String(id).startsWith("seed:")) return;
     await deleteDoc(doc(db, colName, id));
   }, [colName]);
-  return [items, { remove }];
+  return [sorted, { remove }];
 }
 

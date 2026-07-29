@@ -15,7 +15,7 @@ import { db } from "../../lib/firebase";
 export default function MovimientosList() {
   const navigate = useNavigate();
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const rows = useFirestoreCollection("Almacen_movement");
+  const rows = useFirestoreCollection("Almacen_movement").sort((a, b) => ((a.Date || a.fecha || "") > (b.Date || b.fecha || "") ? -1 : 1));
 
   const handleDelete = async () => {
     if (!deleteTarget?.id) return;

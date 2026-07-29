@@ -50,7 +50,7 @@ export default function OrdenTrabajoList() {
 
   const rows = items.filter((c) =>
     (`${c.nombre_cliente || c.Razon_social || ""} ${c.codeCT || ""} ${c.numeroorden || ""} ${c.placa || ""}`).toLowerCase().includes(q.toLowerCase())
-  );
+  ).sort((a, b) => ((a.fecha_creacion || "") > (b.fecha_creacion || "") ? -1 : 1));
   const [page, setPage] = useState(0);
   const totalPages = Math.ceil(rows.length / 20);
   const pageRows = rows.slice(page * 20, (page + 1) * 20);
