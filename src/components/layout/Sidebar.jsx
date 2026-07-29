@@ -52,7 +52,6 @@ const NAV = [
       { key: "al-articulos", label: "Maestro de artículos", path: "/al-articulos" },
       { key: "al-catalogos", label: "Catálogos", path: "/al-catalogos" },
       { key: "al-almacenes", label: "Almacenes", path: "/al-almacenes" },
-      { key: "al-warehouse", label: "Stock por Almacén", path: "/al-warehouse" },
       { key: "al-movimientos", label: "Movimientos de Almacén", path: "/al-movimientos" },
       { key: "al-kardex", label: "Kárdex de Almacén", path: "/al-kardex" },
       { key: "al-vehiculos", label: "Gestión de vehículos", path: "/al-vehiculos" },

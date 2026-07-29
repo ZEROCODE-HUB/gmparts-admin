@@ -16,7 +16,7 @@ import ArticulosList from "./pages/almacen/ArticulosList";
 import ArticuloForm from "./pages/almacen/ArticuloForm";
 import Catalogos from "./pages/almacen/Catalogos";
 import AlmacenesList from "./pages/almacen/AlmacenesList";
-import ArticulosWarehouseList from "./pages/almacen/ArticulosWarehouseList";
+
 import MovimientosList from "./pages/almacen/MovimientosList";
 import MovimientoForm from "./pages/almacen/MovimientoForm";
 import KardexList from "./pages/almacen/KardexList";
@@ -101,7 +101,6 @@ export default function App() {
         <Route path="/al-articulos/nuevo" element={<Layout><ArticuloForm /></Layout>} />
         <Route path="/al-articulos/:id" element={<Layout><ArticuloForm /></Layout>} />
         <Route path="/al-almacenes" element={<Layout><AlmacenesList /></Layout>} />
-        <Route path="/al-warehouse" element={<Layout><ArticulosWarehouseList /></Layout>} />
         <Route path="/al-movimientos" element={<Layout><MovimientosList /></Layout>} />
         <Route path="/al-movimientos/nuevo" element={<Layout><MovimientoForm /></Layout>} />
         <Route path="/al-movimientos/:id" element={<Layout><MovimientoForm /></Layout>} />
