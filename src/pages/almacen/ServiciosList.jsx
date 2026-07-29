@@ -8,25 +8,25 @@ import Table, { Td } from "../../components/ui/Table";
 import Modal from "../../components/ui/Modal";
 import Btn from "../../components/ui/Btn";
 import Field, { inputCls } from "../../components/ui/Field";
-import { useStoreCollection } from "../../store/useStoreCollection";
-import * as db from "../../store/db";
+import { useFirestoreCollection, saveMaestro, deleteMaestro } from "../../store/firestoreDb";
+import { showToast } from "../../components/ui/Toast";
 
 const COL = "service";
 
 const empty = {
   Codigo: "", Descripcion: "", Precio: "", Currency: "PEN", Note: "", Alert_in_days: "",
-  marcabrand: "", model: "", year: "", Sistema: "", Tipo_de_servicio: "", Categoria_MTC: "", Tipo_de_vehiculo: "",
+  marcabrand: "", model: "", year: "", Sistema: "", Tipo_de_servicio: "", Categoria_MTC: "", Tipo_de_vehiculo: "", Carroceria: "",
 };
 
 export default function ServiciosList() {
-  const [items, { remove }] = useStoreCollection(COL);
+  const items = useFirestoreCollection(COL);
 
   const [q, setQ] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(empty);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [toast, setToast] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   const rows = items.filter((s) =>
     (s.Codigo + s.Descripcion + s.marcabrand + s.model + s.Sistema + s.Tipo_de_servicio)
@@ -42,16 +42,24 @@ export default function ServiciosList() {
   const openEdit = (s) => { setEditing(s); setForm({ ...empty, ...s }); setModalOpen(true); };
 
   const handleSave = async () => {
-    db.saveDocument(COL, { ...form, id: editing ? form.id : undefined });
-    setModalOpen(false);
-    setToast("Servicio guardado");
-    setTimeout(() => setToast(null), 2000);
+    setSaving(true);
+    try {
+      await saveMaestro(COL, { ...form, id: editing?.id || form.id });
+      setModalOpen(false);
+      showToast("Servicio guardado");
+    } catch {
+      showToast("Error al guardar servicio", "error");
+    }
+    setSaving(false);
   };
   const confirmDelete = async () => {
-    remove(deleteTarget.id);
-    setDeleteTarget(null);
-    setToast("Servicio eliminado");
-    setTimeout(() => setToast(null), 2000);
+    try {
+      await deleteMaestro(COL, deleteTarget.id);
+      setDeleteTarget(null);
+      showToast("Servicio eliminado");
+    } catch {
+      showToast("Error al eliminar servicio", "error");
+    }
   };
 
   return (
@@ -105,8 +113,8 @@ export default function ServiciosList() {
             <Field label="Carrocería"><input className={inputCls} value={form.Tipo_de_vehiculo} onChange={(e) => set("Tipo_de_vehiculo", e.target.value)} /></Field>
           </div>
           <div className="flex justify-end gap-2 mt-6">
-            <Btn variant="ghost" onClick={() => setModalOpen(false)}>Cancelar</Btn>
-            <Btn onClick={handleSave}>{editing ? "Guardar cambios" : "Crear servicio"}</Btn>
+            <Btn variant="ghost" onClick={() => setModalOpen(false)} disabled={saving}>Cancelar</Btn>
+            <Btn onClick={handleSave} loading={saving}>{editing ? "Guardar cambios" : "Crear servicio"}</Btn>
           </div>
         </Modal>
       )}
@@ -121,10 +129,7 @@ export default function ServiciosList() {
         </Modal>
       )}
 
-      {toast && <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded shadow">{toast}</div>}
       <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 }
-
-
