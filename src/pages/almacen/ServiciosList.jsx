@@ -23,13 +23,6 @@ export default function ServiciosList() {
   const items = useFirestoreCollection(COL);
   const marcaOpts = useCatalog("cat-vehmarca");
   const modeloOpts = useCatalog("cat-vehmodelo");
-  const filteredModelos = useMemo(() => {
-    if (!form.marcabrand) return [];
-    return modeloOpts.filter((m) => {
-      const marca = m.seed ? m.marca : m.raw?.marca;
-      return marca === form.marcabrand;
-    });
-  }, [form.marcabrand, modeloOpts]);
 
   const [q, setQ] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
@@ -37,6 +30,13 @@ export default function ServiciosList() {
   const [form, setForm] = useState(empty);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [saving, setSaving] = useState(false);
+  const filteredModelos = useMemo(() => {
+    if (!form.marcabrand) return [];
+    return modeloOpts.filter((m) => {
+      const marca = m.seed ? m.marca : m.raw?.marca;
+      return marca === form.marcabrand;
+    });
+  }, [form.marcabrand, modeloOpts]);
 
   const rows = items.filter((s) =>
     (s.Codigo + s.Descripcion + s.marcabrand + s.model + s.Sistema + s.Tipo_de_servicio)
