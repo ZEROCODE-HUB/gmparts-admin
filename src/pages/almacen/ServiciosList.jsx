@@ -9,6 +9,7 @@ import Modal from "../../components/ui/Modal";
 import Btn from "../../components/ui/Btn";
 import Field, { inputCls } from "../../components/ui/Field";
 import { useFirestoreCollection, saveMaestro, deleteMaestro } from "../../store/firestoreDb";
+import { useCatalog } from "../../store/useCatalog";
 import { showToast } from "../../components/ui/Toast";
 
 const COL = "service";
@@ -20,6 +21,8 @@ const empty = {
 
 export default function ServiciosList() {
   const items = useFirestoreCollection(COL);
+  const marcaOpts = useCatalog("cat-vehmarca");
+  const modeloOpts = useCatalog("cat-vehmodelo");
 
   const [q, setQ] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
@@ -104,8 +107,18 @@ export default function ServiciosList() {
             </Field>
             <Field label="Nota"><input className={inputCls} value={form.Note} onChange={(e) => set("Note", e.target.value)} /></Field>
             <Field label="Alerta (días)"><input className={inputCls} value={form.Alert_in_days} onChange={(e) => set("Alert_in_days", e.target.value)} /></Field>
-            <Field label="Marca"><input className={inputCls} value={form.marcabrand} onChange={(e) => set("marcabrand", e.target.value)} /></Field>
-            <Field label="Modelo"><input className={inputCls} value={form.model} onChange={(e) => set("model", e.target.value)} /></Field>
+            <Field label="Marca">
+              <select className={inputCls} value={form.marcabrand} onChange={(e) => set("marcabrand", e.target.value)}>
+                <option value="">Selecciona</option>
+                {marcaOpts.map((m) => <option key={m.id} value={m.name}>{m.name}</option>)}
+              </select>
+            </Field>
+            <Field label="Modelo">
+              <select className={inputCls} value={form.model} onChange={(e) => set("model", e.target.value)}>
+                <option value="">Selecciona</option>
+                {modeloOpts.map((m) => <option key={m.id} value={m.name}>{m.name}</option>)}
+              </select>
+            </Field>
             <Field label="Año"><input className={inputCls} value={form.year} onChange={(e) => set("year", e.target.value)} /></Field>
             <Field label="Sistema"><input className={inputCls} value={form.Sistema} onChange={(e) => set("Sistema", e.target.value)} /></Field>
             <Field label="Tipo de servicio"><input className={inputCls} value={form.Tipo_de_servicio} onChange={(e) => set("Tipo_de_servicio", e.target.value)} /></Field>
