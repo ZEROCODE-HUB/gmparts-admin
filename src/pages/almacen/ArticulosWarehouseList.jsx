@@ -8,14 +8,18 @@ import Table, { Td } from "../../components/ui/Table";
 import Modal from "../../components/ui/Modal";
 import Btn from "../../components/ui/Btn";
 import Field, { inputCls } from "../../components/ui/Field";
-import { useFirestoreCollection, saveMaestro, deleteMaestro } from "../../store/firestoreDb";
+import { useFirestoreCollection } from "../../store/firestoreDb";
+import { updateArticleStockByCode } from "../../store/firestoreStock";
+import { db } from "../../lib/firebase";
+import { collection, addDoc, deleteDoc, doc } from "firebase/firestore";
+import { showToast } from "../../components/ui/Toast";
 const ALMACENES = [
   { id: "w1", Nombre: "Almacén Principal" },
   { id: "w2", Nombre: "Almacén Secundario" },
   { id: "w3", Nombre: "Depósito Taller" },
 ];
 
-const COL = "Articles_Warehouse";
+const COL = "Almacen_movement";
 const DOC_TYPES = ["Ingreso", "Salida", "Ajuste", "Transferencia"];
 
 const emptyLine = () => ({ Code: "", Quantity: 1, PricePerUnit: 0, TotalPrice: 0 });
@@ -39,7 +43,7 @@ export default function ArticulosWarehouseList() {
   const [toast, setToast] = useState(null);
 
   const rows = items.filter((a) =>
-    (a.Document_Type + a.Serial_Number + a.Warehouse + a.Observation)
+    (a.Movement_type + a.Document_Number + a.Warehouse + (a.Description || ""))
       .toLowerCase().includes(q.toLowerCase())
   );
   const [page, setPage] = useState(0);
@@ -68,17 +72,42 @@ export default function ArticulosWarehouseList() {
   };
 
   const handleSave = async () => {
-    await saveMaestro(COL, { ...form, id: editing ? form.id : undefined });
-    setModalOpen(false);
-    setToast("Movimiento de almacén guardado");
-    setTimeout(() => setToast(null), 2000);
+    try {
+      const isIngreso = form.Document_Type === "Ingreso";
+      for (const li of form.Articale_List || []) {
+        await addDoc(collection(db, COL), {
+          Movement_type: form.Document_Type,
+          Document_Number: form.Serial_Number,
+          Date: form.Register_date,
+          Warehouse: form.Warehouse,
+          Description: `[${form.Document_Type}] ${form.Observation}`,
+          Code_Id: li.Code,
+          Article_name: li.Code,
+          Quantity: isIngreso ? li.Quantity : -li.Quantity,
+          PricePerUnit: li.PricePerUnit,
+          Total_Price: li.TotalPrice,
+        });
+        if (li.Code) await updateArticleStockByCode(li.Code, isIngreso ? li.Quantity : -li.Quantity);
+      }
+      setModalOpen(false);
+      showToast("Movimiento guardado");
+    } catch (e) {
+      showToast("Error al guardar movimiento", "error");
+    }
   };
 
   const confirmDelete = async () => {
-    if (deleteTarget) await deleteMaestro(COL, deleteTarget.id);
-    setDeleteTarget(null);
-    setToast("Movimiento eliminado");
-    setTimeout(() => setToast(null), 2000);
+    if (!deleteTarget?.id) return;
+    try {
+      const qty = Number(deleteTarget.Quantity) || 0;
+      const code = deleteTarget.Code_Id || "";
+      if (code) await updateArticleStockByCode(code, -qty);
+      await deleteDoc(doc(db, COL, deleteTarget.id));
+      setDeleteTarget(null);
+      showToast("Movimiento eliminado");
+    } catch (e) {
+      showToast("Error al eliminar movimiento", "error");
+    }
   };
 
   const addLine = () => {
@@ -103,21 +132,21 @@ export default function ArticulosWarehouseList() {
 
   return (
     <div>
-      <Toolbar title="Movimientos por Almacén (Stock)" count={rows.length} onNew={openNew} onExport={() => exportToExcel(rows, "ArticulosWarehouse")} />
-      <SearchBox value={q} onChange={setQ} placeholder="Buscar tipo, serie, almacén..." />
-      <Table columns={["Tipo", "Serie", "Fecha", "Almacén", "Artículos", "Observación", "Acción"]}
+      <Toolbar title="Stock por Almacén" count={rows.length} onNew={openNew} onExport={() => exportToExcel(rows, "StockAlmacen")} />
+      <SearchBox value={q} onChange={setQ} placeholder="Buscar tipo, documento, almacén..." />
+      <Table columns={["Tipo", "Documento", "Fecha", "Almacén", "Artículo", "Descripción", "Acción"]}
         rows={pageRows}
         renderRow={(a) => (
           <>
-            <Td><span className="font-medium">{a.Document_Type}</span></Td>
-            <Td className="gmp-mono text-[var(--muted)]">{a.Serial_Number}</Td>
-            <Td className="text-[var(--muted)]">{a.Register_date || "-"}</Td>
+            <Td><span className="font-medium">{a.Movement_type}</span></Td>
+            <Td className="gmp-mono text-[var(--muted)]">{a.Document_Number}</Td>
+            <Td className="text-[var(--muted)]">{a.Date || "-"}</Td>
             <Td className="text-[var(--muted)]">{a.Warehouse}</Td>
-            <Td className="text-[var(--muted)]">{(a.Articale_List || []).length} ítem(s)</Td>
-            <Td className="text-[var(--muted)] max-w-[200px] truncate">{a.Observation}</Td>
+            <Td className="text-[var(--muted)]">{a.Article_name || a.Code_Id || "—"}</Td>
+            <Td className="text-[var(--muted)] max-w-[200px] truncate">{a.Description}</Td>
             <Td>
               <div className="flex gap-1">
-                <button onClick={() => openEdit(a)} className="p-1.5 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]"><Pencil size={15} /></button>
+                <button onClick={() => { setEditing(a); setForm({ Document_Type: a.Movement_type || "Ingreso", Serial_Number: a.Document_Number || "", Register_date: a.Date || "", Warehouse: a.Warehouse || "", Observation: a.Description || "", Articale_List: [{ Code: a.Code_Id || "", Quantity: Math.abs(Number(a.Quantity) || 1), PricePerUnit: Number(a.PricePerUnit) || 0, TotalPrice: Number(a.Total_Price) || 0 }] }); setModalOpen(true); }} className="p-1.5 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]"><Pencil size={15} /></button>
                 <button onClick={() => setDeleteTarget(a)} className="p-1.5 rounded-md text-[var(--danger)] hover:bg-[var(--danger-dim)]"><Trash2 size={15} /></button>
               </div>
             </Td>
