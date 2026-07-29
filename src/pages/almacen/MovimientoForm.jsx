@@ -11,7 +11,7 @@ const ALMACENES = [
 import * as db from "../../store/db";
 import { searchArticles, updateArticleStockByCode } from "../../store/firestoreStock";
 import { db as firestore } from "../../lib/firebase";
-import { collection, addDoc, setDoc, doc as fDoc } from "firebase/firestore";
+import { collection, addDoc, setDoc, getDoc, doc as fDoc } from "firebase/firestore";
 import { useCatalog } from "../../store/useCatalog";
 
 const docTypes = ["Ingreso", "Salida", "Ajuste", "Transferencia"];
@@ -34,30 +34,44 @@ export default function MovimientoForm() {
   const set = (k, v) => setForm((prev) => ({ ...prev, [k]: v }));
 
   useEffect(() => {
-    if (!isEdit) return;
-    const k = db.getKardex().find((x) => x.id === id);
-    if (!k) return;
-    const tipo = k.Document_Type === "Ingreso" ? "Ingreso" : k.Document_Type === "Salida" ? "Salida" : "Ajuste";
-    const cant = Math.abs(Number(k.Quantity) || 0);
-    setForm((prev) => ({
-      ...prev,
-      document_type: tipo,
-      serialnumber: k.Code_Id || String(k.Document_Number ?? ""),
-      date: k.Date || prev.date,
-      warehouse: k.Warehouse || "",
-      comment: k.Description || "",
-      vendedor: "",
-    }));
-    setLineItems([
-      {
-        id: k.Article,
-        Codigo: k.Code_Id || "",
-        Nombre_name: k.Article_name || "",
-        Precio_compra_Purchase_price: Number(k.PricePerUnit) || 0,
-        lineaCant: cant,
-        lineaTotal: cant * (Number(k.PricePerUnit) || 0),
-      },
-    ]);
+    if (!id || id === "nuevo" || !isEdit) return;
+    (async () => {
+      try {
+        const docRef = fDoc(firestore, "Almacen_movement", id);
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+          const k = snap.data();
+          const tipo = k.Movement_type === "Ingreso" ? "Ingreso" : "Salida";
+          const cant = Math.abs(Number(k.Quantity) || 0);
+          setForm((prev) => ({
+            ...prev,
+            document_type: tipo,
+            serialnumber: k.Document_Number || k.Code_Id || "",
+            date: k.Date || prev.date,
+            warehouse: k.Warehouse || "",
+            comment: k.Description || "",
+            vendedor: "",
+          }));
+          setLineItems([{
+            id: snap.id,
+            Codigo: k.Code_Id || "",
+            Nombre_name: k.Article_name || "",
+            Precio_compra_Purchase_price: Number(k.PricePerUnit) || 0,
+            lineaCant: cant,
+            lineaTotal: cant * (Number(k.PricePerUnit) || 0),
+          }]);
+          return;
+        }
+      } catch (e) { /* fallback */ }
+      // Fallback legacy
+      const k = db.getKardex().find((x) => x.id === id);
+      if (k) {
+        const tipo = k.Document_Type === "Ingreso" ? "Ingreso" : "Salida";
+        const cant = Math.abs(Number(k.Quantity) || 0);
+        setForm((prev) => ({ ...prev, document_type: tipo, serialnumber: k.Code_Id || "", date: k.Date || prev.date, warehouse: k.Warehouse || "", comment: k.Description || "", vendedor: "" }));
+        setLineItems([{ id: k.Article, Codigo: k.Code_Id || "", Nombre_name: k.Article_name || "", Precio_compra_Purchase_price: Number(k.PricePerUnit) || 0, lineaCant: cant, lineaTotal: cant * (Number(k.PricePerUnit) || 0) }]);
+      }
+    })();
   }, [id, isEdit]);
 
   useEffect(() => {

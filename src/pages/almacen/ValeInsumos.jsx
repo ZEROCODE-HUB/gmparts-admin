@@ -15,7 +15,7 @@ const ALMACENES = [
   { id: "w2", Nombre: "Almacén Secundario" },
   { id: "w3", Nombre: "Depósito Taller" },
 ];
-import { searchArticles } from "../../store/firestoreStock";
+import { searchArticles, updateArticleStockByCode } from "../../store/firestoreStock";
 import { showToast } from "../../components/ui/Toast";
 
 export default function ValeInsumos() {
@@ -74,8 +74,22 @@ export default function ValeInsumos() {
     if (repuestos.length === 0) { setError("Agregue al menos un repuesto"); return; }
     setSaving(true);
     try {
-      await addDoc(collection(db, "ValeInsumos"), {
+      const valeRef = await addDoc(collection(db, "ValeInsumos"), {
         ...form, repuestos, usuario: "GM Parts Admin", fechaCreacion: new Date().toISOString(),
+      });
+      for (const r of repuestos) {
+        if (r.codigo) await updateArticleStockByCode(r.codigo, -r.cantidad, r.articleId);
+      }
+      await addDoc(collection(db, "Almacen_movement"), {
+        Movement_type: "Salida",
+        Article_name: repuestos.map((r) => r.descripcion).join(", "),
+        Code_Id: repuestos.map((r) => r.codigo).join(", "),
+        Quantity: -repuestos.reduce((s, r) => s + r.cantidad, 0),
+        Total_Price: repuestos.reduce((s, r) => s + (r.precioCompra || 0) * r.cantidad, 0),
+        Date: form.fecha,
+        Warehouse: form.almacen,
+        Description: form.observacion || "Vale de insumos",
+        Document_Number: valeRef.id,
       });
       setForm({ fecha: new Date().toISOString().split("T")[0], almacen: "w1", recepcionRef: "", observacion: "" });
       setRepuestos([]);
