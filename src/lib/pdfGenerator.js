@@ -383,6 +383,7 @@ async function buildDocDefFactura(opts) {
     direccion = "SIN DIRECCIÓN", fecha = "", formaPago = "CONTADO",
     serie = "001", numero = "000000", subtotal = 0, igv = 0, total = 0,
     placa = "", marca = "", modelo = "", km = "", observaciones = "",
+    color = "", combustible = "", kilometraje = "", anioFabricacion = "",
     titulo = "FACTURA ELECTRÓNICA", vendedor = "SIN ESPECIFICAR",
     nroCot = "", ordenCompra = "", totalEnLetras: ttl,
     logoUrl,
@@ -415,14 +416,19 @@ async function buildDocDefFactura(opts) {
   }
   content.push(buildUnifiedCliente(cliente, clienteDoc, direccion, 'CLIENTE', extraRows));
 
-  const hasVehicle = placa || marca || modelo || km;
-  if (hasVehicle) {
+  if (placa || marca || modelo || km || color || combustible || kilometraje || anioFabricacion) {
     content.push(sectionWithTitle('DATOS DEL VEHÍCULO', [
       { columns: [
         { width: '*', text: fieldRow('PLACA', placa, { fontSize: 8 }) },
         { width: '*', text: fieldRow('MARCA', marca, { fontSize: 8 }) },
         { width: '*', text: fieldRow('MODELO', modelo, { fontSize: 8 }) },
       ], margin: [0, 0, 0, 2] },
+      { columns: [
+        { width: '*', text: fieldRow('COLOR', color, { fontSize: 8 }) },
+        { width: '*', text: fieldRow('COMBUSTIBLE', combustible, { fontSize: 8 }) },
+        { width: '*', text: fieldRow('KILOMETRAJE', kilometraje, { fontSize: 8 }) },
+      ], margin: [0, 0, 0, 2] },
+      fieldRow('AÑO DE FABRICACIÓN', anioFabricacion, { fontSize: 8 }),
     ]));
   }
 
@@ -745,7 +751,7 @@ async function buildDocDefCotizacion(opts) {
   const content = [
     buildUnifiedHeader(logoData, titulo, codCot),
     buildClienteSection(),
-    buildVehiculoSection(),
+    ...(placa || marca || modelo || km || color || combustible || kilometraje || anioFabricacion ? [buildVehiculoSection()] : []),
     buildCondicionesSection(),
     buildServiceBlock(),
     buildItemsTable(),
