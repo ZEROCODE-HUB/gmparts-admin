@@ -1,4 +1,4 @@
-﻿import { useState, useMemo } from "react";
+﻿import { useState, useMemo, useEffect } from "react";
 import Pagination from "../../components/ui/Pagination";
 import { exportToExcel } from "../../lib/exportExcel";
 import { Pencil, Trash2 } from "lucide-react";
@@ -8,9 +8,11 @@ import Table, { Td } from "../../components/ui/Table";
 import Modal from "../../components/ui/Modal";
 import Btn from "../../components/ui/Btn";
 import Field, { inputCls } from "../../components/ui/Field";
-import { useFirestoreCollection, saveMaestro, deleteMaestro } from "../../store/firestoreDb";
+import { saveMaestro, deleteMaestro } from "../../store/firestoreDb";
 import { useCatalog } from "../../store/useCatalog";
 import { showToast } from "../../components/ui/Toast";
+import { db } from "../../lib/firebase";
+import { collection, getDocs } from "firebase/firestore";
 
 const COL = "service";
 
@@ -20,9 +22,20 @@ const empty = {
 };
 
 export default function ServiciosList() {
-  const items = useFirestoreCollection(COL);
+  const [items, setItems] = useState([]);
   const marcaOpts = useCatalog("cat-vehmarca");
   const modeloOpts = useCatalog("cat-vehmodelo");
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const snap = await getDocs(collection(db, COL));
+        setItems(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      } catch (e) {
+        console.error("Error loading services:", e);
+      }
+    })();
+  }, []);
 
   const [q, setQ] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
@@ -54,9 +67,12 @@ export default function ServiciosList() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await saveMaestro(COL, { ...form, id: editing?.id || form.id });
+      const saved = await saveMaestro(COL, { ...form, id: editing?.id || form.id });
+      setForm((p) => ({ ...p, id: saved }));
       setModalOpen(false);
       showToast("Servicio guardado");
+      const snap = await getDocs(collection(db, COL));
+      setItems(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     } catch {
       showToast("Error al guardar servicio", "error");
     }
@@ -67,6 +83,8 @@ export default function ServiciosList() {
       await deleteMaestro(COL, deleteTarget.id);
       setDeleteTarget(null);
       showToast("Servicio eliminado");
+      const snap = await getDocs(collection(db, COL));
+      setItems(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     } catch {
       showToast("Error al eliminar servicio", "error");
     }
