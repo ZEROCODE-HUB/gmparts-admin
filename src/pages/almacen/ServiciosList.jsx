@@ -23,6 +23,7 @@ const empty = {
 
 export default function ServiciosList() {
   const [items, setItems] = useState([]);
+  const [loadError, setLoadError] = useState("");
   const marcaOpts = useCatalog("cat-vehmarca");
   const modeloOpts = useCatalog("cat-vehmodelo");
 
@@ -31,7 +32,9 @@ export default function ServiciosList() {
       try {
         const snap = await getDocs(collection(db, COL));
         setItems(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+        if (snap.empty) setLoadError("No hay documentos en la colección 'service'");
       } catch (e) {
+        setLoadError(`Error Firebase: ${e.message || e}`);
         console.error("Error loading services:", e);
       }
     })();
@@ -94,6 +97,7 @@ export default function ServiciosList() {
     <div>
       <Toolbar title="Servicios" count={rows.length} onNew={openNew} onExport={() => exportToExcel(rows, "Servicios")} />
       <SearchBox value={q} onChange={setQ} placeholder="Buscar código, descripción, marca..." />
+      {loadError && <div className="mb-4 rounded-lg border border-[var(--danger)] bg-[var(--danger-dim)] px-4 py-3 text-sm text-[var(--danger)]">{loadError}</div>}
       <Table columns={["Código", "Descripción", "Precio", "Moneda", "Marca", "Modelo", "Año", "Sistema", "Tipo", "Cat. MTC", "Carrocería", "Acción"]}
         rows={pageRows}
         renderRow={(s) => (
