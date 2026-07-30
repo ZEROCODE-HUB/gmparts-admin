@@ -78,7 +78,10 @@ export default function VehiculoForm() {
     e.preventDefault();
     setSaving(true);
     try {
-      await saveMaestro(COL, { ...form, id });
+      const formData = { ...form, id };
+      const clienteSel = clientesOpts.find(c => c.nombre === form.Propietario_name);
+      if (clienteSel?.id) formData.Propietario = doc(db, "users", clienteSel.id);
+      await saveMaestro(COL, formData);
       navigate("/al-vehiculos");
     } catch {
       setSaving(false);
