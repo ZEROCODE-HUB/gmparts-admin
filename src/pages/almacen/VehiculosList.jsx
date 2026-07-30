@@ -4,7 +4,6 @@ import { exportToExcel } from "../../lib/exportExcel";
 import { useNavigate } from "react-router-dom";
 import { Pencil, Trash2 } from "lucide-react";
 import Toolbar from "../../components/ui/Toolbar";
-import SearchBox from "../../components/ui/SearchBox";
 import Table, { Td } from "../../components/ui/Table";
 import Modal from "../../components/ui/Modal";
 import Btn from "../../components/ui/Btn";
@@ -18,18 +17,27 @@ export default function VehiculosList() {
   const navigate = useNavigate();
 
   const [q, setQ] = useState("");
+  const [sortField, setSortField] = useState("Placa");
+  const [sortDir, setSortDir] = useState("asc");
   const [idSearch, setIdSearch] = useState("");
   const [estadoFilter, setEstadoFilter] = useState("Todos");
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [toast, setToast] = useState(null);
 
-  const rows = items.filter((v) => {
-    const matchId = !idSearch || (v.Placa || "").toLowerCase().includes(idSearch.toLowerCase());
-    const matchQ = !q || (v.Placa + v.Propietario_name + v.Marca + v.Modelo + v.Estado)
-      .toLowerCase().includes(q.toLowerCase());
-    const matchEst = estadoFilter === "Todos" || v.Estado === estadoFilter;
-    return matchId && matchQ && matchEst;
-  });
+  const rows = items
+    .filter((v) => {
+      const matchId = !idSearch || (v.Placa || "").toLowerCase().includes(idSearch.toLowerCase());
+      const matchQ = !q || (v.Placa + v.Propietario_name + v.Marca + v.Modelo + v.Estado).toLowerCase().includes(q.toLowerCase());
+      const matchEst = estadoFilter === "Todos" || v.Estado === estadoFilter;
+      return matchId && matchQ && matchEst;
+    })
+    .sort((a, b) => {
+      if (!sortField) return 0;
+      const va = a[sortField] ?? "", vb = b[sortField] ?? "";
+      const cmp = typeof va === "number" ? va - vb : String(va).localeCompare(String(vb));
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  const handleSort = (k, d) => { setSortField(k); setSortDir(d); };
 
   const confirmDelete = async () => {
     if (deleteTarget) await deleteMaestro(COL, deleteTarget.id);
@@ -46,7 +54,10 @@ export default function VehiculosList() {
     <div>
       <Toolbar title="Vehículos" count={rows.length} onNew={() => navigate("/al-vehiculos/nuevo")} onExport={() => exportToExcel(rows, "Vehiculos")} />
       <div className="flex flex-wrap items-end gap-3 mb-3">
-        <SearchBox value={q} onChange={setQ} placeholder="Buscar placa, propietario, marca..." />
+        <div>
+          <label className="text-[11px] text-[var(--muted)] block mb-1">Buscar</label>
+          <input className={`${inputCls} pl-9`} placeholder="Placa, propietario, marca..." value={q} onChange={(e) => setQ(e.target.value)} />
+        </div>
         <div>
           <label className="text-[11px] text-[var(--muted)] block mb-1">Placa</label>
           <input className={inputCls} placeholder="Filtrar por placa" value={idSearch} onChange={(e) => setIdSearch(e.target.value)} />
@@ -59,6 +70,8 @@ export default function VehiculosList() {
         </div>
       </div>
       <Table columns={["Placa", "Propietario", "Marca", "Modelo", "Año", "Estado", "Acción"]}
+        sortable={[{key:"Placa",label:"Placa"},{key:"Propietario_name",label:"Propietario"},{key:"Marca",label:"Marca"},{key:"Modelo",label:"Modelo"},{key:"anio_de_fabricion",label:"Año"},{key:"Estado",label:"Estado"}]}
+        sortField={sortField} sortDir={sortDir} onSort={handleSort}
         rows={pageRows}
         renderRow={(v) => (
           <>
