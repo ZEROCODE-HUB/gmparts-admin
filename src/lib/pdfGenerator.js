@@ -897,7 +897,7 @@ async function buildDocDefOrden(opts) {
             ],
           },
           layout: {
-            hLineWidth: (i, node) => i === 0 || i === node.table.body.length ? 0.75 : 0.5,
+            hLineWidth: () => 0.75,
             vLineWidth: () => 0.75,
             hLineColor: () => '#000000', vLineColor: () => '#000000',
             paddingLeft: () => 0, paddingRight: () => 0,
@@ -1175,11 +1175,7 @@ export function docToOpts(data, title) {
       tipo = 'orden';
     }
   } else if (code.startsWith('CT') || code.startsWith('SC') || data.tipo_servicio) {
-    if (status === 'reparación' || status === 'finalizado') {
-      tipo = 'orden';
-    } else {
-      tipo = 'cotizacion';
-    }
+    tipo = 'cotizacion';
   } else if (hasDiagOrServiceItems) {
     if (!data.total && data.items?.length > 0) {
       tipo = 'orden';
