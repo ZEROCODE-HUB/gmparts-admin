@@ -19,6 +19,7 @@ const COL = "service";
 const empty = {
   Codigo: "", Descripcion: "", Precio: "", Currency: "PEN", Note: "", Alert_in_days: "",
   marcabrand: "", model: "", year: "", Sistema: "", Tipo_de_servicio: "", Categoria_MTC: "", Tipo_de_vehiculo: "", Carroceria: "",
+  Tiempo_estimado_horas: "",
 };
 
 export default function ServiciosList() {
@@ -41,6 +42,8 @@ export default function ServiciosList() {
   }, []);
 
   const [q, setQ] = useState("");
+  const [sortField, setSortField] = useState("Descripcion");
+  const [sortDir, setSortDir] = useState("asc");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(empty);
@@ -54,11 +57,17 @@ export default function ServiciosList() {
     });
   }, [form.marcabrand, modeloOpts]);
 
-  const rows = items.filter((s) =>
-    (s.Codigo + s.Descripcion + s.marcabrand + s.model + s.Sistema + s.Tipo_de_servicio)
-      .toLowerCase()
-      .includes(q.toLowerCase())
-  );
+  const rows = items
+    .filter((s) =>
+      (s.Codigo + s.Descripcion + s.marcabrand + s.model + s.Sistema + s.Tipo_de_servicio).toLowerCase().includes(q.toLowerCase())
+    )
+    .sort((a, b) => {
+      if (!sortField) return 0;
+      const va = a[sortField] ?? "", vb = b[sortField] ?? "";
+      const cmp = typeof va === "number" ? va - vb : String(va).localeCompare(String(vb));
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  const handleSort = (k, d) => { setSortField(k); setSortDir(d); };
   const [page, setPage] = useState(0);
   const totalPages = Math.ceil(rows.length / 20);
   const pageRows = rows.slice(page * 20, (page + 1) * 20);
@@ -98,7 +107,9 @@ export default function ServiciosList() {
       <Toolbar title="Servicios" count={rows.length} onNew={openNew} onExport={() => exportToExcel(rows, "Servicios")} />
       <SearchBox value={q} onChange={setQ} placeholder="Buscar código, descripción, marca..." />
       {loadError && <div className="mb-4 rounded-lg border border-[var(--danger)] bg-[var(--danger-dim)] px-4 py-3 text-sm text-[var(--danger)]">{loadError}</div>}
-      <Table columns={["Código", "Descripción", "Precio", "Moneda", "Marca", "Modelo", "Año", "Sistema", "Tipo", "Cat. MTC", "Carrocería", "Acción"]}
+      <Table columns={["Código", "Descripción", "Precio", "Moneda", "Horas", "Marca", "Modelo", "Año", "Sistema", "Tipo", "Cat. MTC", "Acción"]}
+        sortable={[{key:"Codigo",label:"Código"},{key:"Descripcion",label:"Descripción"},{key:"Precio",label:"Precio"},{key:"marcabrand",label:"Marca"},{key:"Sistema",label:"Sistema"},{key:"Tipo_de_servicio",label:"Tipo"}]}
+        sortField={sortField} sortDir={sortDir} onSort={handleSort}
         rows={pageRows}
         renderRow={(s) => (
           <>
@@ -106,13 +117,13 @@ export default function ServiciosList() {
             <Td className="font-medium">{s.Descripcion}</Td>
             <Td className="gmp-mono">{s.Precio}</Td>
             <Td className="text-[var(--muted)]">{s.Currency}</Td>
+            <Td className="gmp-mono">{s.Tiempo_estimado_horas || "-"} h</Td>
             <Td className="text-[var(--muted)]">{s.marcabrand}</Td>
             <Td className="text-[var(--muted)]">{s.model}</Td>
             <Td className="gmp-mono">{s.year}</Td>
             <Td className="text-[var(--muted)]">{s.Sistema}</Td>
             <Td className="text-[var(--muted)]">{s.Tipo_de_servicio}</Td>
             <Td className="text-[var(--muted)]">{s.Categoria_MTC}</Td>
-            <Td className="text-[var(--muted)]">{s.Tipo_de_vehiculo}</Td>
             <Td>
               <div className="flex gap-1">
                 <button onClick={() => openEdit(s)} className="p-1.5 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]"><Pencil size={15} /></button>
@@ -134,6 +145,7 @@ export default function ServiciosList() {
                 {["PEN", "USD"].map((o) => <option key={o} value={o}>{o}</option>)}
               </select>
             </Field>
+            <Field label="Tiempo estimado (horas)"><input type="number" className={inputCls} value={form.Tiempo_estimado_horas} onChange={(e) => set("Tiempo_estimado_horas", e.target.value)} min="0" step="0.5" /></Field>
             <Field label="Nota"><input className={inputCls} value={form.Note} onChange={(e) => set("Note", e.target.value)} /></Field>
             <Field label="Alerta (días)"><input className={inputCls} value={form.Alert_in_days} onChange={(e) => set("Alert_in_days", e.target.value)} /></Field>
             <Field label="Marca">
