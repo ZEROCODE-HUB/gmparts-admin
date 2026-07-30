@@ -49,7 +49,14 @@ export default function VehiculoForm() {
     setLoading(true);
     getDoc(doc(db, COL, id)).then((snap) => {
       if (!active) return;
-      if (snap.exists()) setForm({ ...defaultForm, ...snap.data(), id });
+      if (snap.exists()) {
+        const data = snap.data();
+        setForm({ ...defaultForm, ...data, id,
+          SOAT_Expiration: toDateStr(data.SOAT_Expiration),
+          ITV_Expiration: toDateStr(data.ITV_Expiration),
+          GNV_Expiration: toDateStr(data.GNV_Expiration),
+        });
+      }
       setLoading(false);
     });
     return () => { active = false; };
@@ -58,10 +65,24 @@ export default function VehiculoForm() {
   const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
   const isDelete = window.location.pathname.includes("/delete/");
 
+  const [saving, setSaving] = useState(false);
+
+  function toDateStr(val) {
+    if (!val) return "";
+    if (typeof val === "string") return val.includes("/") ? val.split("/").reverse().join("-") : val.slice(0, 10);
+    if (val.seconds) return new Date(val.seconds * 1000).toISOString().slice(0, 10);
+    return "";
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await saveMaestro(COL, { ...form, id });
-    navigate("/al-vehiculos");
+    setSaving(true);
+    try {
+      await saveMaestro(COL, { ...form, id });
+      navigate("/al-vehiculos");
+    } catch {
+      setSaving(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -143,9 +164,9 @@ export default function VehiculoForm() {
             <Field label="Carrocería"><input className={inputCls} value={form.Carroceria} onChange={(e) => set("Carroceria", e.target.value)} /></Field>
             <Field label="Form. rodante"><input className={inputCls} value={form.FormRodante} onChange={(e) => set("FormRodante", e.target.value)} /></Field>
             <Field label="Descripción" span><textarea className={`${inputCls} resize-none`} rows={3} value={form.Descripcion} onChange={(e) => set("Descripcion", e.target.value)} /></Field>
-            <Field label="SOAT exp."><input className={inputCls} value={form.SOAT_Expiration} onChange={(e) => set("SOAT_Expiration", e.target.value)} /></Field>
-            <Field label="ITV exp."><input className={inputCls} value={form.ITV_Expiration} onChange={(e) => set("ITV_Expiration", e.target.value)} /></Field>
-            <Field label="GNV exp."><input className={inputCls} value={form.GNV_Expiration} onChange={(e) => set("GNV_Expiration", e.target.value)} /></Field>
+            <Field label="SOAT exp."><input type="date" className={inputCls} value={form.SOAT_Expiration || ''} onChange={(e) => set("SOAT_Expiration", e.target.value)} /></Field>
+            <Field label="ITV exp."><input type="date" className={inputCls} value={form.ITV_Expiration || ''} onChange={(e) => set("ITV_Expiration", e.target.value)} /></Field>
+            <Field label="GNV exp."><input type="date" className={inputCls} value={form.GNV_Expiration || ''} onChange={(e) => set("GNV_Expiration", e.target.value)} /></Field>
             <Field label="Estado">
               <select className={inputCls} value={form.Estado} onChange={(e) => set("Estado", e.target.value)}>
                 {["Activo", "Inactivo", "En Taller"].map((o) => <option key={o} value={o}>{o}</option>)}
@@ -155,7 +176,7 @@ export default function VehiculoForm() {
         </div>
         <div className="flex justify-end gap-2 mt-6">
           <Btn variant="ghost" onClick={() => navigate("/al-vehiculos")}>Cancelar</Btn>
-          <Btn type="submit">{isEdit ? "Guardar cambios" : "Crear vehículo"}</Btn>
+          <Btn type="submit" loading={saving}>{isEdit ? "Guardar cambios" : "Crear vehículo"}</Btn>
         </div>
       </form>
     </div>

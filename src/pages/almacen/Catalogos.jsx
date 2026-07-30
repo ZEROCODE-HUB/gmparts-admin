@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Tags, Edit2, Search } from "lucide-react";
 import Btn from "../../components/ui/Btn";
 import Field, { inputCls } from "../../components/ui/Field";
@@ -46,9 +46,14 @@ function CatalogPanel({ catalog }) {
   const [adding, setAdding] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
 
+  const filteredByParent = useMemo(() => {
+    if (!catalog.parentField || !newParent) return items;
+    return items.filter((o) => resolveParent(o, catalog.parentField) === newParent);
+  }, [items, newParent, catalog.parentField]);
+
   const filtered = search.trim()
-    ? items.filter((o) => displayLabel(o, catalog).toLowerCase().includes(search.toLowerCase()))
-    : items;
+    ? (catalog.parentField ? filteredByParent : items).filter((o) => displayLabel(o, catalog).toLowerCase().includes(search.toLowerCase()))
+    : (catalog.parentField ? filteredByParent : items);
 
   const handleAdd = async () => {
     const v = newName.trim();
