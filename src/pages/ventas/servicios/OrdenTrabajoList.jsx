@@ -45,13 +45,16 @@ export default function OrdenTrabajoList() {
   const [preview, setPreview] = useState(null);
   const [printTarget, setPrintTarget] = useState(null);
 
-  const openPreview = async (c) => {
+  const fetchDiags = async (c) => {
     try {
       const snap = await getDocs(collection(fbDb, "recepciones", c.id, "diagnosticos"));
       const diags = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setPreview({ ...c, diagnosticos: diags });
-    } catch { setPreview(c); }
+      return { ...c, diagnosticos: diags };
+    } catch { return c; }
   };
+
+  const openPreview = async (c) => setPreview(await fetchDiags(c));
+  const openPrint = async (c) => setPrintTarget(await fetchDiags(c));
 
   const remove = useCallback(async (id) => {
     if (id) await deleteDoc(doc(fbDb, "recepciones", id));
@@ -86,7 +89,7 @@ export default function OrdenTrabajoList() {
               <div className="flex gap-1">
                 <button onClick={() => openPreview(c)} className="p-1.5 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]" title="Ver detalle"><Eye size={15} /></button>
                 <button onClick={() => navigate(`/vs-orden/${c.id}`)} className="p-1.5 rounded-md text-[var(--accent)] hover:bg-[var(--accent-dim)]" title="Editar"><Pencil size={15} /></button>
-                <button onClick={() => setPrintTarget(c)} className="p-1.5 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]" title="Imprimir"><Printer size={15} /></button>
+                <button onClick={() => openPrint(c)} className="p-1.5 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]" title="Imprimir"><Printer size={15} /></button>
                 {!c.facturado && <button onClick={() => facturar(c)} className="p-1.5 rounded-md text-[var(--accent)] hover:bg-[var(--accent-dim)]" title="Generar factura"><FileText size={15} /></button>}
                 <button onClick={() => setDeleteTarget(c)} className="p-1.5 rounded-md text-[var(--danger)] hover:bg-[var(--danger-dim)]" title="Anular"><Trash2 size={15} /></button>
               </div>
