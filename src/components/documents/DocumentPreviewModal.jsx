@@ -1,34 +1,42 @@
 import { X } from "lucide-react";
 import DownloadPdfButton from "./DownloadPdfButton";
 
+function getVal(obj, ...keys) {
+  for (const k of keys) { const v = obj[k]; if (v != null && v !== "") return v; }
+  return "";
+}
+
 function flattenItems(data) {
   if (data.items && data.items.length > 0) return data.items;
-  if (!data.diagnosticos || data.diagnosticos.length === 0) return [];
+  const diagnosticos = data.diagnosticos || data.Diagnosticos || [];
+  if (diagnosticos.length === 0) return [];
   const items = [];
-  for (const diag of data.diagnosticos) {
-    const mo = Number(diag.manoDeObra) || 0;
+  for (const diag of diagnosticos) {
+    const mo = Number(getVal(diag, "manoDeObra", "Mano_de_obra", "mano_de_obra")) || 0;
     if (mo > 0) {
+      const sol = getVal(diag, "solucion", "Solucion");
       items.push({
         tipo: "mano_obra",
-        descripcion: diag.solucion ? `Mano de obra: ${diag.solucion}` : "Mano de obra",
-        cantidad: Number(diag.horasTrabajo) || 1,
+        descripcion: sol ? `Mano de obra: ${sol}` : "Mano de obra",
+        cantidad: Number(getVal(diag, "horasTrabajo", "Horas_trabajo", "horas_trabajo")) || 1,
         pu: mo,
         total: mo,
       });
     }
-    for (const rp of diag.repuestos || []) {
+    const repuestos = diag.Repuestos || diag.repuestos || [];
+    for (const rp of repuestos) {
       const cant = Number(rp.cantidad) || 0;
-      const pu = Number(rp.precio) || Number(rp.pu) || 0;
-      if (cant > 0) {
-        items.push({
-          tipo: "repuesto",
-          codigo: rp.codigo || "",
-          descripcion: rp.descripcion || "",
-          cantidad: cant,
-          pu,
-          total: cant * pu,
-        });
-      }
+      if (cant <= 0) continue;
+      const pu = Number(rp.precio) || Number(rp.pu) || Number(rp.Precio) || 0;
+      const tot = Number(rp.total) || cant * pu;
+      items.push({
+        tipo: rp.tipo || "repuesto",
+        codigo: rp.codigo || "",
+        descripcion: rp.descripcion || rp.nombre || "",
+        cantidad: cant,
+        pu,
+        total: tot,
+      });
     }
   }
   return items;

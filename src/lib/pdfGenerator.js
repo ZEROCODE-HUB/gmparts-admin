@@ -1200,32 +1200,34 @@ export function docToOpts(data, title) {
 
   // Expand diagnosticos into flat line items
   let items = data.items;
-  if (!items && data.diagnosticos) {
+  const diagnosticos = data.diagnosticos || data.Diagnosticos || [];
+  if (!items && diagnosticos.length > 0) {
     items = [];
-    for (const diag of data.diagnosticos) {
-      const mo = Number(diag.manoDeObra) || 0;
-      const horas = Number(diag.horasTrabajo) || 0;
+    for (const diag of diagnosticos) {
+      const mo = Number(diag.manoDeObra ?? diag.Mano_de_obra ?? diag.mano_de_obra ?? 0);
+      const horas = Number(diag.horasTrabajo ?? diag.Horas_trabajo ?? diag.horas_trabajo ?? 0);
       if (mo > 0) {
+        const sol = diag.solucion ?? diag.Solucion ?? '';
         items.push({
           codigo: 'MO',
-          descripcion: diag.solucion ? `Mano de obra: ${diag.solucion}` : 'Mano de obra',
+          descripcion: sol ? `Mano de obra: ${sol}` : 'Mano de obra',
           cantidad: horas || 1,
           pu: horas ? +(mo / horas).toFixed(2) : mo,
           total: mo,
         });
       }
-      for (const rp of diag.repuestos || []) {
+      const repuestos = diag.Repuestos ?? diag.repuestos ?? [];
+      for (const rp of repuestos) {
         const cant = Number(rp.cantidad) || 0;
+        if (cant <= 0) continue;
         const pu = Number(rp.precio) || Number(rp.pu) || 0;
-        if (cant > 0) {
-          items.push({
-            codigo: rp.codigo || '',
-            descripcion: rp.descripcion || '',
-            cantidad: cant,
-            pu,
-            total: cant * pu,
-          });
-        }
+        items.push({
+          codigo: rp.codigo || '',
+          descripcion: rp.descripcion || rp.nombre || '',
+          cantidad: cant,
+          pu,
+          total: Number(rp.total) || cant * pu,
+        });
       }
     }
   }
