@@ -161,6 +161,8 @@ export default function PersonalList() {
       <Toolbar title="Personal" count={rows.length} onNew={openNew} onExport={() => exportToExcel(rows, "Personal")} />
       <SearchBox value={q} onChange={setQ} placeholder="Buscar nombre, correo, DNI..." />
       <Table columns={["Nombre", "Correo", "Teléfono", "WSP", "DNI", "Dirección", "Distrito", "Cargo", "Rol", "Acción"]}
+        sortable={[{key:"displayName",label:"Nombre"},{key:"email",label:"Correo"},{key:"telefono",label:"Teléfono"},{key:"DNI",label:"DNI"},{key:"direccion",label:"Dirección"},{key:"cargoEmpleado",label:"Cargo"},{key:"userRole",label:"Rol"}]}
+        sortField={sortField} sortDir={sortDir} onSort={handleSort}
         rows={pageRows}
         renderRow={(p) => (
           <>

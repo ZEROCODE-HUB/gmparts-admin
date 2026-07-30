@@ -55,6 +55,8 @@ export default function ProveedoresList() {
   const items = useFirestoreCollection(COL).map(fromFirestore);
 
   const [q, setQ] = useState("");
+  const [sortField, setSortField] = useState(null);
+  const [sortDir, setSortDir] = useState("asc");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(empty);
@@ -62,11 +64,16 @@ export default function ProveedoresList() {
   const [toast, setToast] = useState(null);
   const [saving, setSaving] = useState(false);
 
-  const rows = items.filter((p) =>
-    (p.nombre + p.documento + p.razonSocial + p.correo + p.direccion + p.distrito)
-      .toLowerCase()
-      .includes(q.toLowerCase())
-  );
+  const rows = items
+    .filter((p) =>
+      (p.nombre + p.documento + p.razonSocial + p.correo + p.direccion + p.distrito).toLowerCase().includes(q.toLowerCase())
+    )
+    .sort((a, b) => {
+      if (!sortField) return 0;
+      const va = a[sortField] ?? "", vb = b[sortField] ?? "";
+      return String(va).localeCompare(String(vb)) * (sortDir === "asc" ? 1 : -1);
+    });
+  const handleSort = (k, d) => { setSortField(k); setSortDir(d); };
   const [page, setPage] = useState(0);
   const totalPages = Math.ceil(rows.length / 20);
   const pageRows = rows.slice(page * 20, (page + 1) * 20);
@@ -108,6 +115,9 @@ export default function ProveedoresList() {
       <Toolbar title="Proveedores" count={rows.length} onNew={openNew} onExport={() => exportToExcel(rows, "Proveedores")} />
       <SearchBox value={q} onChange={setQ} placeholder="Buscar nombre, documento, RUC..." />
       <Table columns={["Nombre", "Documento", "Razón Social", "Correo", "Celular", "Dirección", "Distrito", "Acción"]}
+        sortable={[{key:"nombre",label:"Nombre"},{key:"documento",label:"Documento"},{key:"razonSocial",label:"Razón Social"},{key:"correo",label:"Correo"},{key:"celular",label:"Celular"},{key:"direccion",label:"Dirección"},{key:"distrito",label:"Distrito"}]}
+        sortField={sortField} sortDir={sortDir} onSort={handleSort}
+        
         rows={pageRows}
         renderRow={(p) => (
           <>
