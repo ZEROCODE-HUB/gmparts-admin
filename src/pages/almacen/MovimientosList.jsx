@@ -15,8 +15,8 @@ import { db } from "../../lib/firebase";
 
 export default function MovimientosList() {
   const navigate = useNavigate();
-  const [sortField, setSortField] = useState(null);
-  const [sortDir, setSortDir] = useState("asc");
+  const [sortField, setSortField] = useState("Date");
+  const [sortDir, setSortDir] = useState("desc");
   const [fechaDesde, setFechaDesde] = useState("");
   const [fechaHasta, setFechaHasta] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);

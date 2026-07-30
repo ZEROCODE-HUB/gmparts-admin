@@ -60,6 +60,7 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
   useEffect(() => {
     if (!id || id === "nuevo" || !(isEdit || isView)) return;
     (async () => {
+      // Try Firestore collection first (Facturas or FacturasVentasCompras)
       try {
         const colName = mapDocKeyToCollection(docKey);
         const ref = doc(fbDb, colName, id);
@@ -83,6 +84,26 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
           }));
           if (data.items) setItems(data.items.map((li) => ({ ...li })));
           if (data.origen) setOrigen(data.origen);
+          return;
+        }
+      } catch (e) { /* fallback below */ }
+      // Try recepciones collection (Flutter-created cotizaciones/OTs)
+      try {
+        const ref = doc(fbDb, "recepciones", id);
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          const data = snap.data();
+          setDocId(id);
+          setForm((prev) => ({
+            ...prev,
+            fecha: data.fecha_creacion || data.fecha || "",
+            cliente: data.nombre_cliente || data.Razon_social || "",
+            placa: data.placa || "",
+            clienteDoc: data.RUCempresa || data.DNI || "",
+            observacion: data.Observaciones_adicionales || data.motivo_ingreso || "",
+            formaPago: "Contado",
+            moneda: "PEN",
+          }));
           return;
         }
       } catch (e) { /* fallback below */ }

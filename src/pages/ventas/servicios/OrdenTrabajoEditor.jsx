@@ -46,6 +46,7 @@ export default function OrdenTrabajoEditor({ backPath, mode = "create" }) {
   useEffect(() => {
     if (!id || id === "nuevo" || !isEdit) return;
     (async () => {
+      // Try Facturas first (web-created)
       try {
         const colName = mapDocKeyToCollection("vs-orden");
         const ref = doc(fbDb, colName, id);
@@ -70,6 +71,32 @@ export default function OrdenTrabajoEditor({ backPath, mode = "create" }) {
             fecha_creacion: data.fecha_creacion || prev.fecha_creacion,
           }));
           if (data.diagnosticos) setDiagnosticos(data.diagnosticos.map((d) => ({ ...d, repuestos: d.repuestos ? d.repuestos.map((r) => ({ ...r })) : [] })));
+          return;
+        }
+      } catch (e) { /* fallback below */ }
+      // Try recepciones (Flutter-created)
+      try {
+        const ref = doc(fbDb, "recepciones", id);
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          const data = snap.data();
+          setDocId(id);
+          setForm((prev) => ({
+            ...prev,
+            numeroorden: data.codeCT || data.numeroorden || "",
+            cliente: data.nombre_cliente || data.Razon_social || "",
+            clienteDoc: data.RUCempresa || data.DNI || "",
+            placa: data.placa || "",
+            marca: data.marca || "",
+            modelo: data.modelo || "",
+            km_ingreso: data.kilometraje || "",
+            tecnico_servicio: data.tecnico_servicio ?? data.tecnico ?? "",
+            tipoServicio: data.tipo_servicio || "",
+            motivo_ingreso: data.motivo_ingreso || "",
+            observaciones: data.Observaciones_adicionales ?? data.observaciones ?? "",
+            estado: data.status || data.estado || "Recepción",
+            fecha_creacion: data.fecha_creacion || prev.fecha_creacion,
+          }));
           return;
         }
       } catch (e) { /* fallback below */ }

@@ -38,6 +38,7 @@ function fromFirestore(d) {
     cargoEmpleado: d.cargo_empleado,
     userRole: d.user_role,
     password: d.password_plain || '',
+    created_time: d.created_time || "",
   };
 }
 
@@ -71,8 +72,8 @@ export default function PersonalList() {
   const items = raw.map(fromFirestore);
 
   const [q, setQ] = useState("");
-  const [sortField, setSortField] = useState(null);
-  const [sortDir, setSortDir] = useState("asc");
+  const [sortField, setSortField] = useState("created_time");
+  const [sortDir, setSortDir] = useState("desc");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(empty);

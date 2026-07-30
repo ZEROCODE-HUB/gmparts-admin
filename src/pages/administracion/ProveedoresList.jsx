@@ -55,7 +55,7 @@ export default function ProveedoresList() {
   const items = useFirestoreCollection(COL).map(fromFirestore);
 
   const [q, setQ] = useState("");
-  const [sortField, setSortField] = useState(null);
+  const [sortField, setSortField] = useState("nombre");
   const [sortDir, setSortDir] = useState("asc");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);

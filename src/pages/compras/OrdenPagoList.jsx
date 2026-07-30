@@ -25,8 +25,8 @@ export default function OrdenPagoList() {
   const navigate = useNavigate();
   const [items, { remove }] = useFirestoreDocuments("c-orden");
   const [q, setQ] = useState("");
-  const [sortField, setSortField] = useState(null);
-  const [sortDir, setSortDir] = useState("asc");
+  const [sortField, setSortField] = useState("fecha");
+  const [sortDir, setSortDir] = useState("desc");
   const [fechaDesde, setFechaDesde] = useState("");
   const [fechaHasta, setFechaHasta] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);

@@ -36,6 +36,7 @@ function fromFirestore(d) {
     departamento: d.departamento,
     encargado: d.encargado,
     password: d.password_plain || '',
+    created_time: d.created_time || "",
   };
 }
 function toFirestore(f) {
@@ -67,8 +68,8 @@ export default function ClientesList() {
   const items = raw.map(fromFirestore);
 
   const [q, setQ] = useState("");
-  const [sortField, setSortField] = useState(null);
-  const [sortDir, setSortDir] = useState("asc");
+  const [sortField, setSortField] = useState("created_time");
+  const [sortDir, setSortDir] = useState("desc");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(empty);
