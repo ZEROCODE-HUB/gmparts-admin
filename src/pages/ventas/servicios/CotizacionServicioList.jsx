@@ -2,8 +2,8 @@
 import Pagination from "../../../components/ui/Pagination";
 import { exportToExcel } from "../../../lib/exportExcel";
 import { useNavigate } from "react-router-dom";
-import { Eye, Pencil,Trash2 } from "lucide-react";
-import PrintButton from "../../../components/documents/PrintButton";
+import { Eye, Pencil, Printer, Trash2 } from "lucide-react";
+import PrintDocument from "../../../components/documents/PrintDocument";
 import Toolbar from "../../../components/ui/Toolbar";
 import SearchBox from "../../../components/ui/SearchBox";
 import Table, { Td } from "../../../components/ui/Table";
@@ -42,6 +42,7 @@ export default function CotizacionServicioList() {
   const [q, setQ] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [preview, setPreview] = useState(null);
+  const [printTarget, setPrintTarget] = useState(null);
 
   const remove = useCallback(async (id) => {
     if (id) await deleteDoc(doc(fbDb, "recepciones", id));
@@ -73,7 +74,7 @@ export default function CotizacionServicioList() {
               <div className="flex gap-1">
                 <button onClick={() => setPreview(c)} className="p-1.5 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]" title="Ver detalle"><Eye size={15} /></button>
                 <button onClick={() => navigate(`/vs-cotizacion/${c.id}`)} className="p-1.5 rounded-md text-[var(--accent)] hover:bg-[var(--accent-dim)]" title="Editar"><Pencil size={15} /></button>
-                <PrintButton title="Comprobante" data={c} />
+                <button onClick={() => setPrintTarget(c)} className="p-1.5 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]" title="Imprimir"><Printer size={15} /></button>
                 <button onClick={() => setDeleteTarget(c)} className="p-1.5 rounded-md text-[var(--danger)] hover:bg-[var(--danger-dim)]" title="Anular"><Trash2 size={15} /></button>
               </div>
             </Td>
@@ -92,6 +93,7 @@ export default function CotizacionServicioList() {
         </Modal>
       )}
 
+      {printTarget && <PrintDocument title="Comprobante" data={printTarget} onClose={() => setPrintTarget(null)} />}
       {preview && <DocumentPreviewModal title="Vista previa - Cotizaci�n de Servicio" data={preview} fields={previewFields} collection="recepciones" onClose={() => setPreview(null)} />}
       <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
