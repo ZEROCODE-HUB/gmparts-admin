@@ -12,7 +12,7 @@ import Btn from "../../../components/ui/Btn";
 import DocumentPreviewModal from "../../../components/documents/DocumentPreviewModal";
 import { useFirestoreCollection } from "../../../store/firestoreDb";
 import { db as fbDb } from "../../../lib/firebase";
-import { deleteDoc, doc, where } from "firebase/firestore";
+import { deleteDoc, doc, collection, getDocs, where } from "firebase/firestore";
 
 const previewFields = [
   { key: "codeCT", label: "Documento" }, { key: "numeroorden", label: "N� OT" },
@@ -44,6 +44,14 @@ export default function CotizacionServicioList() {
   const [preview, setPreview] = useState(null);
   const [printTarget, setPrintTarget] = useState(null);
 
+  const openPreview = async (c) => {
+    try {
+      const snap = await getDocs(collection(fbDb, "recepciones", c.id, "diagnosticos"));
+      const diags = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setPreview({ ...c, diagnosticos: diags });
+    } catch { setPreview(c); }
+  };
+
   const remove = useCallback(async (id) => {
     if (id) await deleteDoc(doc(fbDb, "recepciones", id));
   }, []);
@@ -72,7 +80,7 @@ export default function CotizacionServicioList() {
             <Td><span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${estadoColor(c.status)}`}>{c.status || ""}</span></Td>
             <Td>
               <div className="flex gap-1">
-                <button onClick={() => setPreview(c)} className="p-1.5 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]" title="Ver detalle"><Eye size={15} /></button>
+                <button onClick={() => openPreview(c)} className="p-1.5 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]" title="Ver detalle"><Eye size={15} /></button>
                 <button onClick={() => navigate(`/vs-cotizacion/${c.id}`)} className="p-1.5 rounded-md text-[var(--accent)] hover:bg-[var(--accent-dim)]" title="Editar"><Pencil size={15} /></button>
                 <button onClick={() => setPrintTarget(c)} className="p-1.5 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]" title="Imprimir"><Printer size={15} /></button>
                 <button onClick={() => setDeleteTarget(c)} className="p-1.5 rounded-md text-[var(--danger)] hover:bg-[var(--danger-dim)]" title="Anular"><Trash2 size={15} /></button>

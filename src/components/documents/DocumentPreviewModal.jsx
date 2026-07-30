@@ -1,8 +1,41 @@
 import { X } from "lucide-react";
 import DownloadPdfButton from "./DownloadPdfButton";
 
+function flattenItems(data) {
+  if (data.items && data.items.length > 0) return data.items;
+  if (!data.diagnosticos || data.diagnosticos.length === 0) return [];
+  const items = [];
+  for (const diag of data.diagnosticos) {
+    const mo = Number(diag.manoDeObra) || 0;
+    if (mo > 0) {
+      items.push({
+        tipo: "mano_obra",
+        descripcion: diag.solucion ? `Mano de obra: ${diag.solucion}` : "Mano de obra",
+        cantidad: Number(diag.horasTrabajo) || 1,
+        pu: mo,
+        total: mo,
+      });
+    }
+    for (const rp of diag.repuestos || []) {
+      const cant = Number(rp.cantidad) || 0;
+      const pu = Number(rp.precio) || Number(rp.pu) || 0;
+      if (cant > 0) {
+        items.push({
+          tipo: "repuesto",
+          codigo: rp.codigo || "",
+          descripcion: rp.descripcion || "",
+          cantidad: cant,
+          pu,
+          total: cant * pu,
+        });
+      }
+    }
+  }
+  return items;
+}
+
 export default function DocumentPreviewModal({ title, data, fields, onClose, collection }) {
-  console.log("[PDF-DIAG] modal abierto, collection:", collection, "dataId:", data?.id, "pdfUrl:", data?.pdfUrl);
+  const items = flattenItems(data);
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto gmp-scroll bg-black/60 p-6">
       <div className="gmp-fade-in bg-[var(--surface-3)] rounded-lg w-full max-w-2xl mt-8 border border-[var(--line-soft)]">
@@ -26,7 +59,7 @@ export default function DocumentPreviewModal({ title, data, fields, onClose, col
               ))}
             </tbody>
           </table>
-          {data.items && data.items.length > 0 && (
+          {items.length > 0 && (
             <div className="mt-6">
               <h4 className="text-sm font-semibold text-[var(--text)] mb-3 uppercase tracking-wide">Detalle</h4>
               <div className="bg-[var(--surface-2)] rounded-lg overflow-hidden">
@@ -41,7 +74,7 @@ export default function DocumentPreviewModal({ title, data, fields, onClose, col
                     </tr>
                   </thead>
                   <tbody>
-                    {data.items.map((li, i) => {
+                    {items.map((li, i) => {
                       const desc = li.articulo || li.art || li.descripcion || li.servicio || "-";
                       const cant = li.cant ?? li.cantidad ?? 1;
                       const pu = li.pu ?? li.precioVenta ?? 0;

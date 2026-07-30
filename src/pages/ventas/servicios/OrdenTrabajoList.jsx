@@ -12,7 +12,7 @@ import DocumentPreviewModal from "../../../components/documents/DocumentPreviewM
 import PrintDocument from "../../../components/documents/PrintDocument";
 import { useFirestoreCollection } from "../../../store/firestoreDb";
 import { db as fbDb } from "../../../lib/firebase";
-import { deleteDoc, doc } from "firebase/firestore";
+import { deleteDoc, doc, collection, getDocs } from "firebase/firestore";
 import * as db from "../../../store/db";
 
 const previewFields = [
@@ -45,6 +45,14 @@ export default function OrdenTrabajoList() {
   const [preview, setPreview] = useState(null);
   const [printTarget, setPrintTarget] = useState(null);
 
+  const openPreview = async (c) => {
+    try {
+      const snap = await getDocs(collection(fbDb, "recepciones", c.id, "diagnosticos"));
+      const diags = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setPreview({ ...c, diagnosticos: diags });
+    } catch { setPreview(c); }
+  };
+
   const remove = useCallback(async (id) => {
     if (id) await deleteDoc(doc(fbDb, "recepciones", id));
   }, []);
@@ -76,7 +84,7 @@ export default function OrdenTrabajoList() {
             <Td>{c.facturado ? <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700">S�</span> : <span className="text-[11px] text-[var(--muted)]">No</span>}</Td>
             <Td>
               <div className="flex gap-1">
-                <button onClick={() => setPreview(c)} className="p-1.5 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]" title="Ver detalle"><Eye size={15} /></button>
+                <button onClick={() => openPreview(c)} className="p-1.5 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]" title="Ver detalle"><Eye size={15} /></button>
                 <button onClick={() => navigate(`/vs-orden/${c.id}`)} className="p-1.5 rounded-md text-[var(--accent)] hover:bg-[var(--accent-dim)]" title="Editar"><Pencil size={15} /></button>
                 <button onClick={() => setPrintTarget(c)} className="p-1.5 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]" title="Imprimir"><Printer size={15} /></button>
                 {!c.facturado && <button onClick={() => facturar(c)} className="p-1.5 rounded-md text-[var(--accent)] hover:bg-[var(--accent-dim)]" title="Generar factura"><FileText size={15} /></button>}
