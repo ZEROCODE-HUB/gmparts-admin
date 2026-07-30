@@ -10,6 +10,7 @@ import Modal from "../../../components/ui/Modal";
 import Btn from "../../../components/ui/Btn";
 import DocumentPreviewModal from "../../../components/documents/DocumentPreviewModal";
 import PrintDocument from "../../../components/documents/PrintDocument";
+import DateRangeFilter from "../../../components/ui/DateRangeFilter";
 import { useFirestoreCollection } from "../../../store/firestoreDb";
 import { db as fbDb } from "../../../lib/firebase";
 import { deleteDoc, doc, collection, getDocs } from "firebase/firestore";
@@ -41,6 +42,10 @@ export default function OrdenTrabajoList() {
   const navigate = useNavigate();
   const items = useFirestoreCollection("recepciones");
   const [q, setQ] = useState("");
+  const [sortField, setSortField] = useState("fecha_creacion");
+  const [sortDir, setSortDir] = useState("desc");
+  const [fechaDesde, setFechaDesde] = useState("");
+  const [fechaHasta, setFechaHasta] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [preview, setPreview] = useState(null);
   const [printTarget, setPrintTarget] = useState(null);
@@ -60,9 +65,19 @@ export default function OrdenTrabajoList() {
     if (id) await deleteDoc(doc(fbDb, "recepciones", id));
   }, []);
 
-  const rows = items.filter((c) =>
-    (`${c.nombre_cliente || c.Razon_social || ""} ${c.codeCT || ""} ${c.numeroorden || ""} ${c.placa || ""}`).toLowerCase().includes(q.toLowerCase())
-  ).sort((a, b) => ((a.fecha_creacion || "") > (b.fecha_creacion || "") ? -1 : 1));
+  const rows = items
+    .filter((c) => {
+      if (fechaDesde && (c.fecha_creacion || "") < fechaDesde) return false;
+      if (fechaHasta && (c.fecha_creacion || "") > fechaHasta) return false;
+      return (`${c.nombre_cliente || c.Razon_social || ""} ${c.codeCT || ""} ${c.numeroorden || ""} ${c.placa || ""}`).toLowerCase().includes(q.toLowerCase());
+    })
+    .sort((a, b) => {
+      if (!sortField) { const fa = a.fecha_creacion || "", fb = b.fecha_creacion || ""; return fa > fb ? -1 : fa < fb ? 1 : 0; }
+      const va = a[sortField] ?? "", vb = b[sortField] ?? "";
+      const cmp = typeof va === "number" ? va - vb : String(va).localeCompare(String(vb));
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  const handleSort = (k, d) => { setSortField(k); setSortDir(d); };
   const [page, setPage] = useState(0);
   const totalPages = Math.ceil(rows.length / 20);
   const pageRows = rows.slice(page * 20, (page + 1) * 20);
@@ -76,7 +91,10 @@ export default function OrdenTrabajoList() {
     <div>
       <Toolbar title="Orden de Trabajo" count={rows.length} onNew={() => navigate("/vs-orden/nuevo")} onExport={() => exportToExcel(rows, "OrdenesTrabajo")} />
       <SearchBox value={q} onChange={setQ} />
-      <Table columns={["Documento", "Cliente", "Placa", "Estado", "Facturado", "Acci�n"]}
+      <DateRangeFilter fechaDesde={fechaDesde} fechaHasta={fechaHasta} onChange={(d, h) => { setFechaDesde(d); setFechaHasta(h); }} />
+      <Table columns={["Documento", "Cliente", "Placa", "Estado", "Facturado", "Acci\u00f3n"]}
+        sortable={[{key:"codeCT",label:"Documento"},{key:"fecha_creacion",label:"Fecha"},{key:"nombre_cliente",label:"Cliente"},{key:"placa",label:"Placa"},{key:"status",label:"Estado"}]}
+        sortField={sortField} sortDir={sortDir} onSort={handleSort}
         rows={pageRows}
         renderRow={(c) => (
           <>

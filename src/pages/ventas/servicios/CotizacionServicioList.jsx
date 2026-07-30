@@ -4,6 +4,7 @@ import { exportToExcel } from "../../../lib/exportExcel";
 import { useNavigate } from "react-router-dom";
 import { Eye, Pencil, Printer, Trash2 } from "lucide-react";
 import PrintDocument from "../../../components/documents/PrintDocument";
+import DateRangeFilter from "../../../components/ui/DateRangeFilter";
 import Toolbar from "../../../components/ui/Toolbar";
 import SearchBox from "../../../components/ui/SearchBox";
 import Table, { Td } from "../../../components/ui/Table";
@@ -40,6 +41,10 @@ export default function CotizacionServicioList() {
   const navigate = useNavigate();
   const items = useFirestoreCollection("recepciones", [where("status", "in", ["Reparaci\u00f3n", "Finalizado", "Cotizaci\u00f3n", "Recepci\u00f3n"])]);
   const [q, setQ] = useState("");
+  const [sortField, setSortField] = useState("fecha_creacion");
+  const [sortDir, setSortDir] = useState("desc");
+  const [fechaDesde, setFechaDesde] = useState("");
+  const [fechaHasta, setFechaHasta] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [preview, setPreview] = useState(null);
   const [printTarget, setPrintTarget] = useState(null);
@@ -59,9 +64,19 @@ export default function CotizacionServicioList() {
     if (id) await deleteDoc(doc(fbDb, "recepciones", id));
   }, []);
 
-  const rows = items.filter((c) =>
-    ((c.nombre_cliente || c.Razon_social || "") + (c.codeCT || "") + (c.placa || "")).toLowerCase().includes(q.toLowerCase())
-  );
+  const rows = items
+    .filter((c) => {
+      if (fechaDesde && (c.fecha_creacion || "") < fechaDesde) return false;
+      if (fechaHasta && (c.fecha_creacion || "") > fechaHasta) return false;
+      return ((c.nombre_cliente || c.Razon_social || "") + (c.codeCT || "") + (c.placa || "")).toLowerCase().includes(q.toLowerCase());
+    })
+    .sort((a, b) => {
+      if (!sortField) return 0;
+      const va = a[sortField] ?? "", vb = b[sortField] ?? "";
+      const cmp = typeof va === "number" ? va - vb : String(va).localeCompare(String(vb));
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  const handleSort = (k, d) => { setSortField(k); setSortDir(d); };
   const [page, setPage] = useState(0);
   const totalPages = Math.ceil(rows.length / 20);
   const pageRows = rows.slice(page * 20, (page + 1) * 20);
@@ -70,7 +85,10 @@ export default function CotizacionServicioList() {
     <div>
       <Toolbar title="Cotizaci?n de Servicio" count={rows.length} onNew={() => navigate("/vs-cotizacion/nuevo")} onExport={() => exportToExcel(rows, "CotizacionesServicio")} />
       <SearchBox value={q} onChange={setQ} />
-      <Table columns={["Documento", "N� OT", "Fecha", "Cliente", "Placa", "Servicio", "Estado", "Acci�n"]}
+      <DateRangeFilter fechaDesde={fechaDesde} fechaHasta={fechaHasta} onChange={(d, h) => { setFechaDesde(d); setFechaHasta(h); }} />
+      <Table columns={["Documento", "N\u00ba OT", "Fecha", "Cliente", "Placa", "Servicio", "Estado", "Acci\u00f3n"]}
+        sortable={[{key:"codeCT",label:"Documento"},{key:"fecha_creacion",label:"Fecha"},{key:"nombre_cliente",label:"Cliente"},{key:"placa",label:"Placa"},{key:"status",label:"Estado"}]}
+        sortField={sortField} sortDir={sortDir} onSort={handleSort}
         rows={pageRows}
         renderRow={(c) => (
           <>
