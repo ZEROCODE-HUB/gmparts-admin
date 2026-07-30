@@ -1168,8 +1168,12 @@ export function docToOpts(data, title) {
     tipo = hasProveedor ? 'compra' : 'factura';
   } else if (hasProveedor) {
     tipo = 'compra';
-  } else if (code.startsWith('OT')) {
-    tipo = 'orden';
+  } else if (code.startsWith('OT') || code.startsWith('REC')) {
+    if (status === 'cotizaci\u00f3n') {
+      tipo = 'cotizacion';
+    } else {
+      tipo = 'orden';
+    }
   } else if (code.startsWith('CT') || code.startsWith('SC') || data.tipo_servicio) {
     if (status === 'reparación' || status === 'finalizado') {
       tipo = 'orden';
