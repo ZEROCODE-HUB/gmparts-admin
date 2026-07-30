@@ -172,9 +172,9 @@ export function useFirestoreCollection(collectionName, constraints = []) {
   return items;
 }
 
-// Convierte campos con nombre de fecha (fecha, date, nacimiento, creacion, registro) a Timestamp
+// Convierte campos con nombre de fecha (fecha, date, nacimiento, creacion, registro, expiration) a Timestamp
 function prepareDateFields(data) {
-  const DATE_KEYS = /^(fecha|date|nacimiento|creacion|registro|ingreso)/i;
+  const DATE_KEYS = /^(fecha|date|nacimiento|creacion|registro|ingreso|SOAT_Expiration|ITV_Expiration|GNV_Expiration)/i;
   const out = { ...data };
   for (const key of Object.keys(out)) {
     const val = out[key];

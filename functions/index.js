@@ -329,3 +329,188 @@ exports.generateDocumentPdf = functions.https.onCall(async (data, context) => {
   console.log("PDF generado para", colName, docId, pdfUrl);
   return { url: pdfUrl };
 });
+
+// ═════════════════════════════════════════════════════════════════
+// sendToSunat — HTTP callable
+// Lee el documento de Firestore, construye payload, envía a Factiliza
+// y guarda el resultado (estadoSunat) en el documento.
+//
+// Llamada desde EnviarSunatButton en el frontend.
+// ═════════════════════════════════════════════════════════════════
+
+const FACTILIZA_API = "https://apife-qa.factiliza.com/api/v1";
+const RUC_EMPRESA = "10749283781";
+
+function round2(num) {
+  return Math.round(num * 100) / 100;
+}
+
+function buildDetail(items, igvIncluido) {
+  return (items || []).map((it) => {
+    const cantidad = Number(it.cant ?? it.cantidad ?? 1) || 1;
+    const precio = Number(it.pu ?? it.precioVenta ?? 0) || 0;
+    let valorUnitario, igv, valorVenta;
+    if (igvIncluido) {
+      valorUnitario = round2(precio / 1.18);
+      valorVenta = round2(valorUnitario * cantidad);
+      igv = round2(valorVenta * 0.18);
+    } else {
+      valorUnitario = round2(precio);
+      valorVenta = round2(valorUnitario * cantidad);
+      igv = round2(valorVenta * 0.18);
+    }
+    return {
+      unidad: "NIU",
+      cantidad,
+      cod_Producto: it.codigo || "",
+      descripcion: it.descripcion || "",
+      monto_Valor_Unitario: valorUnitario,
+      monto_Base_Igv: valorVenta,
+      porcentaje_Igv: 18,
+      igv,
+      tip_Afe_Igv: "10",
+      total_Impuestos: igv,
+      monto_Precio_Unitario: round2(valorUnitario * 1.18),
+      monto_Valor_Venta: valorVenta,
+      factor_Icbper: 0,
+    };
+  });
+}
+
+function buildFactilizaPayload(doc, docKey) {
+  const items = doc.items || [];
+  const igvIncluido = doc.tipoIgv === "INCLUIDO";
+  const detalle = buildDetail(items, igvIncluido);
+  const subTotal = detalle.reduce((s, it) => s + it.monto_Valor_Venta, 0);
+  const totalIgv = detalle.reduce((s, it) => s + it.igv, 0);
+  const montoTotal = subTotal + totalIgv;
+
+  const cliente = doc.cliente || doc.razonSNombre || doc.proveedor || "";
+  const clienteDocNum = doc.clienteDoc || doc.proveedorDoc || "";
+  const esFactura = docKey === "c-factura" || docKey === "va-factura" || docKey === "vs-factura";
+  const esBoleta = docKey === "c-boleta" || docKey === "va-boleta" || docKey === "vs-boleta";
+  const esNotaCredito = docKey === "va-notacredito";
+  const esGuia = docKey === "c-guia" || docKey === "va-guia";
+
+  let tipoDoc, endpoint;
+  if (esNotaCredito) {
+    tipoDoc = "07";
+    endpoint = FACTILIZA_API + "/note/send";
+  } else if (esGuia) {
+    tipoDoc = "09";
+    endpoint = FACTILIZA_API + "/despatch/send";
+  } else {
+    tipoDoc = esFactura ? "01" : esBoleta ? "03" : "01";
+    endpoint = FACTILIZA_API + "/invoice/send";
+  }
+
+  const payload = {
+    tipo_Operacion: "0101",
+    tipo_Doc: tipoDoc,
+    serie: doc.serie || doc.nserie || "",
+    correlativo: doc.numero || "",
+    tipo_Moneda: "PEN",
+    fecha_Emision: (doc.fecha || doc.Fecha || new Date().toISOString().split("T")[0]) + "T00:00:00-05:00",
+    empresa_Ruc: RUC_EMPRESA,
+    cliente_Tipo_Doc: esFactura ? "6" : "1",
+    cliente_Num_Doc: clienteDocNum,
+    cliente_Razon_Social: cliente,
+    cliente_Direccion: doc.direccion || doc.clienteDireccion || "",
+    monto_Oper_Gravadas: round2(subTotal),
+    monto_Igv: round2(totalIgv),
+    total_Impuestos: round2(totalIgv),
+    valor_Venta: round2(subTotal),
+    sub_Total: round2(montoTotal),
+    monto_Imp_Venta: round2(montoTotal),
+    monto_Oper_Exoneradas: 0,
+    estado_Documento: "0",
+    manual: false,
+    id_Base_Dato: "15265",
+    detalle,
+    forma_pago: [{ tipo: "Contado", monto: round2(montoTotal), cuota: 0, fecha_Pago: new Date().toISOString().split("T")[0] + "T00:00:00-05:00" }],
+    legend: [{ legend_Code: "1000", legend_Value: "GM PARTS TALLER" }],
+  };
+
+  if (esNotaCredito) {
+    payload.afectado_Tipo_Doc = "01";
+    payload.afectado_Num_Doc = doc.docRelacion || "";
+    payload.motivo_Cod = "09";
+    payload.motivo_Des = "Anulación";
+    delete payload.forma_pago;
+  }
+
+  return { payload, endpoint };
+}
+
+exports.sendToSunat = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError("unauthenticated", "Debe iniciar sesión.");
+  }
+
+  const { collection: colName, docId } = data;
+  if (!colName || !docId) {
+    throw new functions.https.HttpsError("invalid-argument", "Faltan collection y docId.");
+  }
+
+  const FACTILIZA_TOKEN = functions.config().factiliza?.token;
+  if (!FACTILIZA_TOKEN) {
+    throw new functions.https.HttpsError("failed-precondition", "Factiliza token no configurado. Ejecuta: firebase functions:config:set factiliza.token=\"...\" usando el token del proyecto Flutter (hardcodeado en api_calls.dart).");
+  }
+
+  try {
+    // 1. Leer documento de Firestore
+    const realCol = colName === "c-guia" || colName === "c-notas" || colName === "c-orden" || colName === "c-boleta" || colName === "c-factura" || colName === "va-factura" || colName === "va-boleta" || colName === "va-notacredito" || colName === "va-guia" || colName === "al-notaventa"
+      ? "FacturasVentasCompras"
+      : colName === "vs-factura" || colName === "vs-boleta" || colName === "vs-orden" || colName === "vs-notas"
+        ? "Facturas"
+        : colName;
+
+    const docRef = db.doc(realCol + "/" + docId);
+    const snap = await docRef.get();
+    if (!snap.exists) {
+      throw new functions.https.HttpsError("not-found", "Documento no encontrado en " + realCol);
+    }
+    const doc = snap.data();
+
+    // 2. Construir payload
+    const { payload, endpoint } = buildFactilizaPayload(doc, colName);
+
+    // 3. Enviar a Factiliza
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + FACTILIZA_TOKEN,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const result = await response.json();
+    const sunatOk = result?.data?.sunatResponse?.success === true;
+    const success = result?.success === true;
+    const cdrId = result?.data?.sunatResponse?.cdrResponse?.id ?? null;
+    const errorMsg = result?.data?.error?.message || result?.message || "";
+
+    // 4. Actualizar documento en Firestore
+    const estadoFactura = sunatOk ? "Registrado" : "Rechazado";
+    await docRef.update({
+      estadoSunat: sunatOk ? "Aceptado" : success ? "Rechazado" : "Error",
+      estadoFactura,
+      sunatCdrId: cdrId,
+      sunatError: errorMsg || null,
+      sunatEnviadoAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    return {
+      success: true,
+      sunatSuccess: sunatOk,
+      cdrId,
+      message: sunatOk
+        ? "Documento validado correctamente en SUNAT"
+        : errorMsg || "Error en la validación SUNAT",
+    };
+  } catch (err) {
+    console.error("sendToSunat ERROR:", err);
+    throw new functions.https.HttpsError("internal", "Error al enviar a SUNAT: " + err.message);
+  }
+});
