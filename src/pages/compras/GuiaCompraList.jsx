@@ -11,6 +11,7 @@ import Table, { Td } from "../../components/ui/Table";
 import Modal from "../../components/ui/Modal";
 import Btn from "../../components/ui/Btn";
 import DocumentPreviewModal from "../../components/documents/DocumentPreviewModal";
+import DateRangeFilter from "../../components/ui/DateRangeFilter";
 import { useFirestoreDocuments } from "../../store/firestoreDb";
 
 const previewFields = [
@@ -25,22 +26,40 @@ export default function GuiaCompraList() {
   const navigate = useNavigate();
   const [items, { remove }] = useFirestoreDocuments("c-guia");
   const [q, setQ] = useState("");
+  const [sortField, setSortField] = useState(null);
+  const [sortDir, setSortDir] = useState("asc");
+  const [fechaDesde, setFechaDesde] = useState("");
+  const [fechaHasta, setFechaHasta] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [preview, setPreview] = useState(null);
   const [printTarget, setPrintTarget] = useState(null);
 
-  const rows = items.filter((c) =>
-    ((c.proveedor || "") + (c.serie || "") + (c.numero || "")).toLowerCase().includes(q.toLowerCase())
-  );
+  const rows = items
+    .filter((c) => {
+      if (fechaDesde && (c.fecha || "") < fechaDesde) return false;
+      if (fechaHasta && (c.fecha || "") > fechaHasta) return false;
+      return ((c.proveedor || "") + (c.serie || "") + (c.numero || "")).toLowerCase().includes(q.toLowerCase());
+    })
+    .sort((a, b) => {
+      if (!sortField) return 0;
+      const va = a[sortField] ?? "", vb = b[sortField] ?? "";
+      const cmp = typeof va === "number" ? va - vb : String(va).localeCompare(String(vb));
+      return sortDir === "asc" ? cmp : -cmp;
+    });
   const [page, setPage] = useState(0);
   const totalPages = Math.ceil(rows.length / 20);
   const pageRows = rows.slice(page * 20, (page + 1) * 20);
+
+  const handleSort = (k, d) => { setSortField(k); setSortDir(d); };
 
   return (
     <div>
       <Toolbar title="Compra - Gu?a de Remisi?n" count={rows.length} onNew={() => navigate("/c-guia/nuevo")} onExport={() => exportToExcel(rows, "GuiasCompra")} />
       <SearchBox value={q} onChange={setQ} placeholder="Buscar proveedor, serie..." />
+      <DateRangeFilter fechaDesde={fechaDesde} fechaHasta={fechaHasta} onChange={(d, h) => { setFechaDesde(d); setFechaHasta(h); }} />
       <Table columns={["Serie", "N?mero", "Fecha", "Proveedor", "Documento", "Doc. Relaci?n", "Total", "Estado", "Acci?n"]}
+        sortable={[{key:"serie",label:"Serie"},{key:"numero",label:"N\u00famero"},{key:"fecha",label:"Fecha"},{key:"proveedor",label:"Proveedor"},{key:"total",label:"Total"},{key:"estado",label:"Estado"}]}
+        sortField={sortField} sortDir={sortDir} onSort={handleSort}
         rows={pageRows}
         renderRow={(c) => (
           <>

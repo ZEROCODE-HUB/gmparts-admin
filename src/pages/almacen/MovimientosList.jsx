@@ -9,13 +9,32 @@ import Table, { Td } from "../../components/ui/Table";
 import Modal from "../../components/ui/Modal";
 import Btn from "../../components/ui/Btn";
 import { useFirestoreCollection } from "../../store/firestoreDb";
+import DateRangeFilter from "../../components/ui/DateRangeFilter";
 import { deleteDoc, doc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 
 export default function MovimientosList() {
   const navigate = useNavigate();
+  const [sortField, setSortField] = useState(null);
+  const [sortDir, setSortDir] = useState("asc");
+  const [fechaDesde, setFechaDesde] = useState("");
+  const [fechaHasta, setFechaHasta] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const rows = useFirestoreCollection("Almacen_movement").sort((a, b) => ((a.Date || a.fecha || "") > (b.Date || b.fecha || "") ? -1 : 1));
+  const allItems = useFirestoreCollection("Almacen_movement");
+  const rows = allItems
+    .filter((c) => {
+      const f = c.Date || c.fecha || "";
+      if (fechaDesde && f < fechaDesde) return false;
+      if (fechaHasta && f > fechaHasta) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (!sortField) { const fa = a.Date || a.fecha || "", fb = b.Date || b.fecha || ""; return fa > fb ? -1 : fa < fb ? 1 : 0; }
+      const va = a[sortField] ?? "", vb = b[sortField] ?? "";
+      const cmp = typeof va === "number" ? va - vb : String(va).localeCompare(String(vb));
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  const handleSort = (k, d) => { setSortField(k); setSortDir(d); };
 
   const handleDelete = async () => {
     if (!deleteTarget?.id) return;
@@ -36,8 +55,11 @@ export default function MovimientosList() {
 
   return (
     <div>
-      <Toolbar title="Movimientos de almacén" count={rows.length} onNew={() => navigate("/al-movimientos/nuevo")} onExport={() => exportToExcel(rows, "Movimientos")} />
-      <Table columns={["Fecha", "Tipo", "Artículo", "Cantidad", "P. Unit.", "Total", "Documento", "Almacén", "Acción"]}
+      <Toolbar title="Movimientos de almac\u00e9n" count={rows.length} onNew={() => navigate("/al-movimientos/nuevo")} onExport={() => exportToExcel(rows, "Movimientos")} />
+      <DateRangeFilter fechaDesde={fechaDesde} fechaHasta={fechaHasta} onChange={(d, h) => { setFechaDesde(d); setFechaHasta(h); }} />
+      <Table columns={["Fecha", "Tipo", "Art\u00edculo", "Cantidad", "P. Unit.", "Total", "Documento", "Almac\u00e9n", "Acci\u00f3n"]}
+        sortable={[{key:"Date",label:"Fecha"},{key:"Movement_type",label:"Tipo"},{key:"Article_name",label:"Art\u00edculo"},{key:"Quantity",label:"Cantidad"},{key:"Total_Price",label:"Total"},{key:"Document_Number",label:"Documento"},{key:"Warehouse",label:"Almac\u00e9n"}]}
+        sortField={sortField} sortDir={sortDir} onSort={handleSort}
         rows={pageRows}
         renderRow={(m) => (
           <>

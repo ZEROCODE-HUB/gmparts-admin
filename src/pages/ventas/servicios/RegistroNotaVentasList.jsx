@@ -11,6 +11,7 @@ import Modal from "../../../components/ui/Modal";
 import Btn from "../../../components/ui/Btn";
 import Field, { inputCls } from "../../../components/ui/Field";
 import DocumentPreviewModal from "../../../components/documents/DocumentPreviewModal";
+import DateRangeFilter from "../../../components/ui/DateRangeFilter";
 import { useFirestoreDocuments } from "../../../store/firestoreDb";
 import { db } from "../../../lib/firebase";
 import { collection, addDoc } from "firebase/firestore";
@@ -27,6 +28,10 @@ export default function RegistroNotaVentasList() {
   const navigate = useNavigate();
   const [items, { remove }] = useFirestoreDocuments("vs-notas");
   const [q, setQ] = useState("");
+  const [sortField, setSortField] = useState(null);
+  const [sortDir, setSortDir] = useState("asc");
+  const [fechaDesde, setFechaDesde] = useState("");
+  const [fechaHasta, setFechaHasta] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [preview, setPreview] = useState(null);
   const [printTarget, setPrintTarget] = useState(null);
@@ -35,9 +40,19 @@ export default function RegistroNotaVentasList() {
   const [canjeItems, setCanjeItems] = useState([]);
   const [canjeando, setCanjeando] = useState(false);
 
-  const rows = items.filter((c) =>
-    ((c.RazonSNombre || c.razonSNombre || c.cliente || "") + (c.Nserie || c.nserie || c.serie || "") + (c.NumCotizacion || c.numero || "")).toLowerCase().includes(q.toLowerCase())
-  );
+  const rows = items
+    .filter((c) => {
+      const f = c.Fecha || c.fecha || "";
+      if (fechaDesde && f < fechaDesde) return false;
+      if (fechaHasta && f > fechaHasta) return false;
+      return ((c.RazonSNombre || c.razonSNombre || c.cliente || "") + (c.Nserie || c.nserie || c.serie || "") + (c.NumCotizacion || c.numero || "")).toLowerCase().includes(q.toLowerCase());
+    })
+    .sort((a, b) => {
+      if (!sortField) return 0;
+      const va = a[sortField] ?? "", vb = b[sortField] ?? "";
+      const cmp = typeof va === "number" ? va - vb : String(va).localeCompare(String(vb));
+      return sortDir === "asc" ? cmp : -cmp;
+    });
   const [page, setPage] = useState(0);
   const totalPages = Math.ceil(rows.length / 20);
   const pageRows = rows.slice(page * 20, (page + 1) * 20);
@@ -55,6 +70,8 @@ export default function RegistroNotaVentasList() {
   const removeCanjeItem = (i) => {
     setCanjeItems((prev) => prev.filter((_, idx) => idx !== i));
   };
+
+  const handleSort = (k, d) => { setSortField(k); setSortDir(d); };
 
   const subtotalCanje = canjeItems.reduce((s, it) => s + (Number(it.pu) || 0) * (Number(it.cant) || 0), 0);
   const totalCanje = subtotalCanje; // IGV incluido por defecto (INCLUIDO)
@@ -111,7 +128,10 @@ export default function RegistroNotaVentasList() {
     <div>
       <Toolbar title="Registro de Notas de Venta" count={rows.length} onNew={() => navigate("/vs-notas/nuevo")} onExport={() => exportToExcel(rows, "NotasVenta")} />
       <SearchBox value={q} onChange={setQ} />
+      <DateRangeFilter fechaDesde={fechaDesde} fechaHasta={fechaHasta} onChange={(d, h) => { setFechaDesde(d); setFechaHasta(h); }} />
       <Table columns={["Serie", "N\u00famero", "Fecha", "Cliente", "Documento", "Servicio", "Total", "Acci\u00f3n"]}
+        sortable={[{key:"nserie",label:"Serie"},{key:"numero",label:"N\u00famero"},{key:"Fecha",label:"Fecha"},{key:"cliente",label:"Cliente"},{key:"total",label:"Total"}]}
+        sortField={sortField} sortDir={sortDir} onSort={handleSort}
         rows={pageRows}
         renderRow={(c) => (
           <>

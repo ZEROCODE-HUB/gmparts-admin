@@ -71,6 +71,8 @@ export default function PersonalList() {
   const items = raw.map(fromFirestore);
 
   const [q, setQ] = useState("");
+  const [sortField, setSortField] = useState(null);
+  const [sortDir, setSortDir] = useState("asc");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(empty);
@@ -79,11 +81,16 @@ export default function PersonalList() {
   const [deleting, setDeleting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const rows = items.filter((p) =>
-    (p.displayName + p.email + p.DNI + p.direccion + p.cargoEmpleado + p.userRole)
-      .toLowerCase()
-      .includes(q.toLowerCase())
-  );
+  const rows = items
+    .filter((p) =>
+      (p.displayName + p.email + p.DNI + p.direccion + p.cargoEmpleado + p.userRole).toLowerCase().includes(q.toLowerCase())
+    )
+    .sort((a, b) => {
+      if (!sortField) return 0;
+      const va = a[sortField] ?? "", vb = b[sortField] ?? "";
+      return String(va).localeCompare(String(vb)) * (sortDir === "asc" ? 1 : -1);
+    });
+  const handleSort = (k, d) => { setSortField(k); setSortDir(d); };
   const [page, setPage] = useState(0);
   const totalPages = Math.ceil(rows.length / 20);
   const pageRows = rows.slice(page * 20, (page + 1) * 20);

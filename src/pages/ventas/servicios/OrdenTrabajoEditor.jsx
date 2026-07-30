@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Plus, Trash2, Wrench, Package } from "lucide-react";
-import { where } from "firebase/firestore";
+import { doc, getDoc, where } from "firebase/firestore";
+import { db as fbDb } from "../../../lib/firebase";
 import Btn from "../../../components/ui/Btn";
 import Field, { inputCls } from "../../../components/ui/Field";
-import { useFirestoreCollection } from "../../../store/firestoreDb";
+import { useFirestoreCollection, mapDocKeyToCollection } from "../../../store/firestoreDb";
 import * as db from "../../../store/db";
 import { searchArticles, firestoreSaveDocument } from "../../../store/firestoreStock";
 import { useCatalog } from "../../../store/useCatalog";
@@ -43,14 +44,42 @@ export default function OrdenTrabajoEditor({ backPath, mode = "create" }) {
   const encargadoOpts = useCatalog("cat-encargado");
 
   useEffect(() => {
-    if (id && id !== "nuevo" && isEdit) {
+    if (!id || id === "nuevo" || !isEdit) return;
+    (async () => {
+      try {
+        const colName = mapDocKeyToCollection("vs-orden");
+        const ref = doc(fbDb, colName, id);
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          const data = snap.data();
+          setDocId(id);
+          setForm((prev) => ({
+            ...prev,
+            numeroorden: data.numeroorden || "",
+            cliente: data.cliente || "",
+            clienteDoc: data.clienteDoc || "",
+            placa: data.placa || "",
+            marca: data.marca || "",
+            modelo: data.modelo || "",
+            km_ingreso: data.km_ingreso || "",
+            tecnico_servicio: data.tecnico_servicio ?? data.tecnico ?? "",
+            tipoServicio: data.tipoServicio || "",
+            motivo_ingreso: data.motivo_ingreso || "",
+            observaciones: data.Observaciones_adicionales ?? data.observaciones ?? "",
+            estado: data.estado || "Recepción",
+            fecha_creacion: data.fecha_creacion || prev.fecha_creacion,
+          }));
+          if (data.diagnosticos) setDiagnosticos(data.diagnosticos.map((d) => ({ ...d, repuestos: d.repuestos ? d.repuestos.map((r) => ({ ...r })) : [] })));
+          return;
+        }
+      } catch (e) { /* fallback below */ }
       const existing = db.getDocumentById("vs-orden", id);
       if (existing) {
         setDocId(existing.id);
-          setForm((prev) => ({ ...prev, ...existing, tecnico_servicio: existing.tecnico_servicio ?? existing.tecnico ?? prev.tecnico_servicio, observaciones: existing.Observaciones_adicionales ?? existing.observaciones ?? prev.observaciones, fecha_creacion: existing.fecha_creacion || prev.fecha_creacion }));
+        setForm((prev) => ({ ...prev, ...existing, tecnico_servicio: existing.tecnico_servicio ?? existing.tecnico ?? prev.tecnico_servicio, observaciones: existing.Observaciones_adicionales ?? existing.observaciones ?? prev.observaciones, fecha_creacion: existing.fecha_creacion || prev.fecha_creacion }));
         if (existing.diagnosticos) setDiagnosticos(existing.diagnosticos.map((d) => ({ ...d, repuestos: d.repuestos ? d.repuestos.map((r) => ({ ...r })) : [] })));
       }
-    }
+    })();
   }, [id, isEdit]);
 
   const set = (k, v) => setForm((prev) => ({ ...prev, [k]: v }));

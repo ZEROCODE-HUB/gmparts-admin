@@ -10,6 +10,7 @@ import Table, { Td } from "../../../components/ui/Table";
 import Modal from "../../../components/ui/Modal";
 import Btn from "../../../components/ui/Btn";
 import DocumentPreviewModal from "../../../components/documents/DocumentPreviewModal";
+import DateRangeFilter from "../../../components/ui/DateRangeFilter";
 import { useFirestoreDocuments } from "../../../store/firestoreDb";
 
 const previewFields = [
@@ -23,22 +24,41 @@ export default function EmisionFacturaTallerList() {
   const navigate = useNavigate();
   const [items, { remove }] = useFirestoreDocuments("vs-factura");
   const [q, setQ] = useState("");
+  const [sortField, setSortField] = useState(null);
+  const [sortDir, setSortDir] = useState("asc");
+  const [fechaDesde, setFechaDesde] = useState("");
+  const [fechaHasta, setFechaHasta] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [preview, setPreview] = useState(null);
   const [printTarget, setPrintTarget] = useState(null);
 
-  const rows = items.filter((c) =>
-    ((c.RazonSNombre || c.razonSNombre || c.cliente || "") + (c.Nserie || c.nserie || c.serie || "") + (c.NumCotizacion || c.numero || "")).toLowerCase().includes(q.toLowerCase())
-  );
+  const rows = items
+    .filter((c) => {
+      const f = c.Fecha || c.fecha || "";
+      if (fechaDesde && f < fechaDesde) return false;
+      if (fechaHasta && f > fechaHasta) return false;
+      return ((c.RazonSNombre || c.razonSNombre || c.cliente || "") + (c.Nserie || c.nserie || c.serie || "") + (c.NumCotizacion || c.numero || "")).toLowerCase().includes(q.toLowerCase());
+    })
+    .sort((a, b) => {
+      if (!sortField) return 0;
+      const va = a[sortField] ?? "", vb = b[sortField] ?? "";
+      const cmp = typeof va === "number" ? va - vb : String(va).localeCompare(String(vb));
+      return sortDir === "asc" ? cmp : -cmp;
+    });
   const [page, setPage] = useState(0);
   const totalPages = Math.ceil(rows.length / 20);
   const pageRows = rows.slice(page * 20, (page + 1) * 20);
 
+  const handleSort = (k, d) => { setSortField(k); setSortDir(d); };
+
   return (
     <div>
-      <Toolbar title="Emisi?n Factura Taller" count={rows.length} onNew={() => navigate("/vs-factura/nuevo")} onExport={() => exportToExcel(rows, "FacturasTaller")} />
+      <Toolbar title="Emisi\u00f3n Factura Taller" count={rows.length} onNew={() => navigate("/vs-factura/nuevo")} onExport={() => exportToExcel(rows, "FacturasTaller")} />
       <SearchBox value={q} onChange={setQ} />
+      <DateRangeFilter fechaDesde={fechaDesde} fechaHasta={fechaHasta} onChange={(d, h) => { setFechaDesde(d); setFechaHasta(h); }} />
       <Table columns={["Serie", "N?mero", "Fecha", "Cliente", "RUC", "Servicio", "Total", "Acci?n"]}
+        sortable={[{key:"Nserie",label:"Serie"},{key:"numero",label:"N\u00famero"},{key:"Fecha",label:"Fecha"},{key:"cliente",label:"Cliente"},{key:"total",label:"Total"}]}
+        sortField={sortField} sortDir={sortDir} onSort={handleSort}
         rows={pageRows}
         renderRow={(c) => (
           <>

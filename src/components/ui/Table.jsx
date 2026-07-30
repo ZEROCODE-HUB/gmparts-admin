@@ -1,13 +1,38 @@
-export default function Table({ columns, rows, renderRow, empty = "Sin datos" }) {
+import { ChevronUp, ChevronDown } from "lucide-react";
+
+export default function Table({ columns, rows, renderRow, empty = "Sin datos", sortable, sortField, sortDir, onSort }) {
+  const sortMap = {};
+  if (sortable) {
+    for (const s of sortable) {
+      sortMap[s.label] = s;
+    }
+  }
+
   return (
     <div className="bg-[var(--panel)] rounded-lg overflow-hidden">
       <div className="overflow-x-auto gmp-scroll">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-[var(--surface-2)] text-left text-[11px] uppercase tracking-wide text-[var(--text)] font-semibold">
-              {columns.map((c) => (
-                <th key={c} className="px-4 py-3 font-medium whitespace-nowrap">{c}</th>
-              ))}
+              {columns.map((c) => {
+                const s = sortMap[c];
+                const active = s && sortField === s.key;
+                return (
+                  <th
+                    key={c}
+                    className={`px-4 py-3 font-medium whitespace-nowrap ${s ? "cursor-pointer select-none hover:text-[var(--accent)]" : ""}`}
+                    onClick={s && onSort ? () => {
+                      const nextDir = active && sortDir === "asc" ? "desc" : "asc";
+                      onSort(s.key, nextDir);
+                    } : undefined}
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      {c}
+                      {s && active && (sortDir === "asc" ? <ChevronUp size={13} /> : <ChevronDown size={13} />)}
+                    </span>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
