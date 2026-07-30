@@ -24,7 +24,7 @@ function findSeedById(id, key) {
 }
 
 function normalizeClient(d) {
-  const tp = d.tipo_de_persona || d.tipoPersona || "";
+  const tp = d.tipo_de_persona || d.tipoPersona || "Natural";
   return {
     id: d.id,
     nombre: d.display_name || d.nombre || "",

@@ -32,6 +32,7 @@ const ffecha = (ts) => {
 const estadoColor = (e) => ({
   "Recepci�n": "bg-gray-100 text-gray-700",
   "Diagn�stico": "bg-blue-100 text-blue-700",
+  "Cotizaci�n": "bg-purple-100 text-purple-700",
   "Reparaci�n": "bg-amber-100 text-amber-700",
   "Finalizado": "bg-green-100 text-green-700",
 }[e] || "bg-gray-100 text-gray-700");

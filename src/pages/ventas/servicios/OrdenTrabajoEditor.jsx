@@ -25,7 +25,7 @@ export default function OrdenTrabajoEditor({ backPath, mode = "create" }) {
 
   const [form, setForm] = useState({
     numeroorden: "", cliente: "", clienteDoc: "", placa: "", marca: "", modelo: "",
-    km_ingreso: "", tecnico: "", tipoServicio: "", motivo_ingreso: "", observaciones: "",
+    km_ingreso: "", tecnico_servicio: "", tipoServicio: "", motivo_ingreso: "", observaciones: "",
     estado: "Recepción", fecha_creacion: new Date().toISOString().split("T")[0],
   });
   const [diagnosticos, setDiagnosticos] = useState([]);
@@ -47,7 +47,7 @@ export default function OrdenTrabajoEditor({ backPath, mode = "create" }) {
       const existing = db.getDocumentById("vs-orden", id);
       if (existing) {
         setDocId(existing.id);
-        setForm((prev) => ({ ...prev, ...existing, fecha_creacion: existing.fecha_creacion || prev.fecha_creacion }));
+          setForm((prev) => ({ ...prev, ...existing, tecnico_servicio: existing.tecnico_servicio ?? existing.tecnico ?? prev.tecnico_servicio, observaciones: existing.Observaciones_adicionales ?? existing.observaciones ?? prev.observaciones, fecha_creacion: existing.fecha_creacion || prev.fecha_creacion }));
         if (existing.diagnosticos) setDiagnosticos(existing.diagnosticos.map((d) => ({ ...d, repuestos: d.repuestos ? d.repuestos.map((r) => ({ ...r })) : [] })));
       }
     }
@@ -149,7 +149,7 @@ export default function OrdenTrabajoEditor({ backPath, mode = "create" }) {
           </Field>
           <Field label="KM ingreso"><input type="number" className={inputMono} value={form.km_ingreso} onChange={(e) => set("km_ingreso", e.target.value)} /></Field>
           <Field label="Técnico asignado">
-            <select className={inputMono} value={form.tecnico} onChange={(e) => set("tecnico", e.target.value)}>
+            <select className={inputMono} value={form.tecnico_servicio} onChange={(e) => set("tecnico_servicio", e.target.value)}>
               <option value="">Sin asignar</option>
               {encargadoOpts.map((p) => <option key={p.id} value={p.name}>{p.name}</option>)}
             </select>

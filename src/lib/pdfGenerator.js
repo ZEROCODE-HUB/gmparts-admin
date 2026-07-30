@@ -1171,7 +1171,7 @@ export function docToOpts(data, title) {
   } else if (code.startsWith('OT')) {
     tipo = 'orden';
   } else if (code.startsWith('CT') || code.startsWith('SC') || data.tipo_servicio) {
-    if (status === 'reparación' || status === 'finalizado' || status === 'completado' || status === 'aprobado') {
+    if (status === 'reparación' || status === 'finalizado') {
       tipo = 'orden';
     } else {
       tipo = 'cotizacion';
@@ -1258,7 +1258,7 @@ export function docToOpts(data, title) {
     modelo: data.modelo || '',
     km: data.km_ingreso || data.kilometraje || '',
     tipofactura,
-    observaciones: data.observacion || data.motivo || data.observaciones || '',
+    observaciones: data.Observaciones_adicionales || data.observacion || data.motivo || data.observaciones || '',
     titulo: effectiveTitle,
     vendedor: data.vendedor || data.Vendedor || 'VENDEDOR 1',
     nroCot: data.nroCot || data.NroCot || data.NumCotizacion || '',

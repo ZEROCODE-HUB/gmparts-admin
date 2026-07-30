@@ -26,7 +26,7 @@ function fromFirestore(d) {
     nombre: d.display_name,
     documento: d.IdentityDocument,
     tipoDocumento: d.tipo_de_documento,
-    tipoPersona: d.tipo_de_persona,
+    tipoPersona: d.tipo_de_persona === "Persona" ? "Natural" : d.tipo_de_persona === "Empresa" ? "Jurídica" : d.tipo_de_persona || "Natural",
     email: d.email,
     telefono: d.phone_number,
     wsp: d.wsp,
@@ -57,7 +57,7 @@ function toFirestore(f) {
   };
 }
 const empty = {
-  codigo: "", nombre: "", documento: "", tipoDocumento: "DNI", tipoPersona: "Persona",
+  codigo: "", nombre: "", documento: "", tipoDocumento: "DNI", tipoPersona: "Natural",
   email: "", telefono: "", wsp: "", direccion: "", distrito: "", provincia: "", departamento: "",
   encargado: "", password: "",
 };
@@ -184,7 +184,7 @@ export default function ClientesList() {
             </Field>
             <Field label="Tipo persona">
               <select className={inputCls} value={form.tipoPersona} onChange={(e) => set("tipoPersona", e.target.value)}>
-                {["Persona", "Empresa"].map((o) => <option key={o} value={o}>{o}</option>)}
+                {["Natural", "Jurídica"].map((o) => <option key={o} value={o}>{o}</option>)}
               </select>
             </Field>
             <Field label="Correo"><input className={inputCls} value={form.email} onChange={(e) => set("email", e.target.value)} /></Field>

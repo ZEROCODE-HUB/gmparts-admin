@@ -51,7 +51,7 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
     nombre: d.display_name || d.nombre || "",
     documento: d.IdentityDocument || d.documento || "",
     tipoDocumento: d.tipo_de_documento || d.tipoDocumento || "",
-    tipoPersona: (d.tipo_de_persona || d.tipoPersona || "") === "Persona" ? "Natural" : (d.tipo_de_persona || d.tipoPersona || "") === "Empresa" ? "Jurídica" : (d.tipo_de_persona || d.tipoPersona || ""),
+    tipoPersona: (d.tipo_de_persona || d.tipoPersona || "Natural") === "Persona" ? "Natural" : (d.tipo_de_persona || d.tipoPersona || "Natural") === "Empresa" ? "Jurídica" : (d.tipo_de_persona || d.tipoPersona || "Natural"),
     direccion: d.direccion || "",
   }));
   const allClients = fireClients;

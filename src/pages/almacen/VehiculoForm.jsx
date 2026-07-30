@@ -13,7 +13,7 @@ import { useCatalog } from "../../store/useCatalog";
 const COL = "Vehiculos";
 
 const defaultForm = {
-  Placa: "", Propietario_Type: "Persona", Propietario_name: "", Propietario_Document: "",
+  Placa: "", Propietario_Type: "Natural", Propietario_name: "", Propietario_Document: "",
   Marca: "", Modelo: "", Version: "", anio_de_fabricion: "", aniodemodelo: "",
   Color: "", TipoMotor: "", NroMotor: "", Transmision: "", VIN_Serie: "", TipoCombustible: "",
   Categoria: "", Carroceria: "", FormRodante: "", Descripcion: "",
@@ -118,7 +118,7 @@ export default function VehiculoForm() {
             <Field label="Placa"><input className={inputCls} value={form.Placa} onChange={(e) => set("Placa", e.target.value)} required /></Field>
             <Field label="Tipo propietario">
               <select className={inputCls} value={form.Propietario_Type} onChange={(e) => set("Propietario_Type", e.target.value)}>
-                {["Persona", "Empresa"].map((o) => <option key={o} value={o}>{o}</option>)}
+                {["Natural", "Jurídica"].map((o) => <option key={o} value={o}>{o}</option>)}
               </select>
             </Field>
             <Field label="Propietario" span>
