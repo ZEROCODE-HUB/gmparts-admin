@@ -54,6 +54,7 @@ export default function DocumentEditor({ title, backPath, onSave, mode = "create
   const [artSearch, setArtSearch] = useState("");
   const [artResults, setArtResults] = useState([]);
   const [artQty, setArtQty] = useState(1);
+  const [cotizaciones] = useFirestoreDocuments("va-cotizacion");
   const [cotModal, setCotModal] = useState(false);
   const [cotFilter, setCotFilter] = useState("");
   const [saving, setSaving] = useState(false);
@@ -512,7 +513,7 @@ export default function DocumentEditor({ title, backPath, onSave, mode = "create
               <input className={inputCls} value={cotFilter} onChange={(e) => setCotFilter(e.target.value)} placeholder="Filtrar por cliente..." />
             </div>
             <div className="overflow-y-auto max-h-[55vh] px-5 pb-5">
-              {db.getDocuments("va-cotizacion").filter((c) => (c.cliente || "").toLowerCase().includes(cotFilter.trim().toLowerCase())).map((c) => (
+              {cotizaciones.filter((c) => (c.cliente || "").toLowerCase().includes(cotFilter.trim().toLowerCase())).map((c) => (
                 <button key={c.id} type="button" onClick={() => loadFromCotizacion(c)} className="w-full text-left flex items-center justify-between gap-3 px-3 py-3 mb-2 rounded-lg border border-[var(--line-soft)] hover:bg-[var(--surface-2)]">
                   <div>
                     <div className="font-medium text-[var(--text)]">{c.serie}-{c.numero} · {c.cliente}</div>
@@ -521,7 +522,7 @@ export default function DocumentEditor({ title, backPath, onSave, mode = "create
                   <div className="gmp-mono text-sm">S/ {Number(c.total).toFixed(2)}</div>
                 </button>
               ))}
-              {db.getDocuments("va-cotizacion").filter((c) => (c.cliente || "").toLowerCase().includes(cotFilter.trim().toLowerCase())).length === 0 && (
+              {cotizaciones.filter((c) => (c.cliente || "").toLowerCase().includes(cotFilter.trim().toLowerCase())).length === 0 && (
                 <p className="text-sm text-[var(--muted)] py-4 text-center">Sin cotizaciones</p>
               )}
             </div>

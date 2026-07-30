@@ -10,7 +10,7 @@ import * as db from "../../../store/db";
 import { searchArticles, firestoreSaveDocument } from "../../../store/firestoreStock";
 import { useCatalog } from "../../../store/useCatalog";
 
-const ESTADOS = ["Recepción", "Diagnóstico", "Reparación", "Finalizado"];
+const ESTADOS = ["Recepción", "Diagnóstico", "Cotización", "Reparación", "Listo para entrega", "Entregado"];
 
 export default function OrdenTrabajoEditor({ backPath, mode = "create" }) {
   const navigate = useNavigate();
@@ -144,6 +144,10 @@ export default function OrdenTrabajoEditor({ backPath, mode = "create" }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.cliente) { setError("Seleccione un cliente"); return; }
+    if ((form.estado === "Cotización" || form.estado === "Listo para entrega" || form.estado === "Entregado") && (!form.cliente || !form.clienteDoc)) {
+      setError("Faltan los datos del cliente — no se puede avanzar sin nombre y documento completos");
+      return;
+    }
     setError("");
     setSaving(true);
     const doc = { ...form, diagnosticos, numeroorden: form.numeroorden || db.getDocuments("vs-orden").length + 1, facturado: false, stockConsumed: false };
@@ -172,6 +176,11 @@ export default function OrdenTrabajoEditor({ backPath, mode = "create" }) {
         )}
       </div>
       {error && <div className="mb-4 rounded-lg border border-[var(--danger)] bg-[var(--danger-dim)] px-4 py-3 text-sm text-[var(--danger)]">{error}</div>}
+      {isEdit && (form.estado === "Cotización" || form.estado === "Listo para entrega" || form.estado === "Entregado") && (!form.cliente || !form.clienteDoc) && (
+        <div className="mb-4 rounded-lg border border-[var(--danger)] bg-[var(--danger-dim)] px-4 py-3 text-sm text-[var(--danger)]">
+          ⚠ Faltan los datos del cliente — complete nombre y documento antes de aprobar
+        </div>
+      )}
 
       <form onSubmit={handleSubmit}>
 

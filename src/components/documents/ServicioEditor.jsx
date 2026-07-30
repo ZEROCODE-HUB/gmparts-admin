@@ -5,7 +5,7 @@ import { where } from "firebase/firestore";
 import Btn from "../ui/Btn";
 import Field, { inputCls } from "../ui/Field";
 import { useDebouncedCallback } from "../../lib/debounce";
-import { useFirestoreCollection, mapDocKeyToCollection } from "../../store/firestoreDb";
+import { useFirestoreCollection, useFirestoreDocuments, mapDocKeyToCollection } from "../../store/firestoreDb";
 import { doc, getDoc } from "firebase/firestore";
 import { db as fbDb } from "../../lib/firebase";
 import { showToast, dismissAll } from "../ui/Toast";
@@ -46,6 +46,7 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
   const [saving, setSaving] = useState(false);
   const [cotModal, setCotModal] = useState(false);
   const [cotFilter, setCotFilter] = useState("");
+  const [cotizaciones] = useFirestoreDocuments("vs-cotizacion");
   const fireClients = useFirestoreCollection("users", [where("user_role", "==", "Cliente")]).map((d) => ({
     id: d.id,
     nombre: d.display_name || d.nombre || "",
@@ -574,16 +575,16 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
               <input className={inputCls} value={cotFilter} onChange={(e) => setCotFilter(e.target.value)} placeholder="Filtrar por cliente..." />
             </div>
             <div className="overflow-y-auto max-h-[55vh] px-5 pb-5">
-              {db.getDocuments("vs-cotizacion").filter((c) => (c.cliente || "").toLowerCase().includes(cotFilter.trim().toLowerCase())).map((c) => (
+              {cotizaciones.filter((c) => (c.cliente || c.razonSNombre || "").toLowerCase().includes(cotFilter.trim().toLowerCase())).map((c) => (
                 <button key={c.id} type="button" onClick={() => loadFromCotizacion(c)} className="w-full text-left flex items-center justify-between gap-3 px-3 py-3 mb-2 rounded-lg border border-[var(--line-soft)] hover:bg-[var(--surface-2)]">
                   <div>
-                    <div className="font-medium text-[var(--text)]">{c.serie}-{c.numero} · {c.cliente}</div>
-                    <div className="text-xs text-[var(--muted)]">{c.fecha} · {(c.items || []).length} ítem(s)</div>
+                    <div className="font-medium text-[var(--text)]">{c.serie || c.nserie}-{c.numero} · {c.cliente || c.razonSNombre}</div>
+                    <div className="text-xs text-[var(--muted)]">{c.fecha || c.Fecha} · {(c.items || []).length} ítem(s)</div>
                   </div>
-                  <div className="gmp-mono text-sm">S/ {Number(c.total).toFixed(2)}</div>
+                  <div className="gmp-mono text-sm">S/ {Number(c.total || c.Total).toFixed(2)}</div>
                 </button>
               ))}
-              {db.getDocuments("vs-cotizacion").filter((c) => (c.cliente || "").toLowerCase().includes(cotFilter.trim().toLowerCase())).length === 0 && (
+              {cotizaciones.filter((c) => (c.cliente || c.razonSNombre || "").toLowerCase().includes(cotFilter.trim().toLowerCase())).length === 0 && (
                 <p className="text-sm text-[var(--muted)] py-4 text-center">Sin cotizaciones</p>
               )}
             </div>

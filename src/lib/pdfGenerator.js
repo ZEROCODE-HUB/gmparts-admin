@@ -1126,9 +1126,94 @@ async function buildDocDefGuia(opts) {
   return { pageSize: 'A4', pageMargins: [20, 20, 20, 20], content, defaultStyle: { fontName: 'Roboto', fontSize: 8 } };
 }
 
+async function buildDocDefRecepcion(opts) {
+  const {
+    cliente = "", clienteDoc = "", placa = "", marca = "", modelo = "",
+    km = "", fecha = "", observaciones = "", titulo = "RECEPCIÓN DE VEHÍCULO",
+    numero = "", color = "", combustible = "", kilometraje = "", anioFabricacion = "",
+    razonSocial = "", telefono = "",
+    logoUrl,
+  } = opts;
+
+  const logoData = await urlToDataUrl(logoUrl || LOGO_URL);
+  const numDoc = numero || '';
+  const fechaFormatted = formatDateToDDMMYYYY(fecha);
+
+  function fieldRow(label, value, opts2 = {}) {
+    const fs = opts2.fontSize || 8;
+    return { text: [{ text: `${label}: `, bold: true, fontSize: fs }, { text: value || '', fontSize: fs }], ...(opts2.extra || {}) };
+  }
+
+  const content = [];
+  content.push(buildUnifiedHeader(logoData, titulo, numDoc));
+
+  // Cliente
+  content.push(buildUnifiedCliente(razonSocial || cliente, clienteDoc, '', 'CLIENTE', [
+    { columns: [
+      { width: '*', text: fieldRow('TELÉFONO', telefono, { fontSize: 8 }) },
+      { width: '*', text: '' },
+    ]},
+  ]));
+
+  // Vehículo
+  content.push({
+    table: { widths: ['*'], body: [
+      [{ text: 'DATOS DEL VEHÍCULO', fontSize: 8, bold: true, alignment: 'center', margin: [4, 4, 4, 4], fillColor: '#eeeeee' }],
+      [{ stack: [
+        { columns: [
+          { width: '*', text: fieldRow('PLACA', placa, { fontSize: 8 }) },
+          { width: '*', text: fieldRow('MARCA', marca, { fontSize: 8 }) },
+          { width: '*', text: fieldRow('MODELO', modelo, { fontSize: 8 }) },
+        ], margin: [0, 0, 0, 2] },
+        { columns: [
+          { width: '*', text: fieldRow('COLOR', color, { fontSize: 8 }) },
+          { width: '*', text: fieldRow('COMBUSTIBLE', combustible, { fontSize: 8 }) },
+          { width: '*', text: fieldRow('KILOMETRAJE', kilometraje || km, { fontSize: 8 }) },
+        ], margin: [0, 0, 0, 2] },
+        { columns: [
+          { width: '*', text: fieldRow('AÑO FABRICACIÓN', anioFabricacion, { fontSize: 8 }) },
+          { width: '*', text: '' },
+          { width: '*', text: '' },
+        ]},
+      ], margin: [4, 4, 4, 4] }],
+    ]},
+    layout: {
+      hLineWidth: (i) => i === 1 ? 0 : 0.75, vLineWidth: () => 0.75,
+      hLineColor: () => '#000000', vLineColor: () => '#000000',
+      fillColor: (ri) => ri === 0 ? '#eeeeee' : null,
+      paddingLeft: () => 0, paddingRight: () => 0, paddingTop: () => 0, paddingBottom: () => 0,
+    },
+    margin: [0, 0, 0, 8],
+  });
+
+  // Fecha ingreso
+  content.push({ text: `Fecha de ingreso: ${fechaFormatted}`, fontSize: 8, margin: [0, 0, 0, 4] });
+
+  // Motivo
+  const motivo = observaciones || '';
+  content.push({
+    table: { widths: ['*'], body: [
+      [{ text: 'MOTIVO DE INGRESO', fontSize: 8, bold: true, alignment: 'center', margin: [4, 4, 4, 4], fillColor: '#eeeeee' }],
+      [{ text: motivo || 'Sin especificar', fontSize: 8, margin: [4, 4, 4, 4] }],
+    ]},
+    layout: {
+      hLineWidth: (i) => i === 1 ? 0 : 0.75, vLineWidth: () => 0.75,
+      hLineColor: () => '#000000', vLineColor: () => '#000000',
+      fillColor: (ri) => ri === 0 ? '#eeeeee' : null,
+      paddingLeft: () => 0, paddingRight: () => 0, paddingTop: () => 0, paddingBottom: () => 0,
+    },
+    margin: [0, 0, 0, 8],
+  });
+
+  content.push(buildUnifiedBankInfo());
+
+  return { pageSize: 'A4', pageMargins: [20, 20, 20, 20], content, defaultStyle: { fontName: 'Roboto', fontSize: 8 } };
+}
+
 async function buildDocDef(opts) {
   const tf = (opts.tipofactura || '').toLowerCase();
   if (tf === 'guia') return buildDocDefGuia(opts);
+  if (opts.tipo === 'recepcion') return buildDocDefRecepcion(opts);
   switch (opts.tipo) {
     case 'compra': return buildDocDefCompra(opts);
     case 'cotizacion': return buildDocDefCotizacion(opts);
@@ -1168,6 +1253,8 @@ export function docToOpts(data, title) {
     tipo = hasProveedor ? 'compra' : 'factura';
   } else if (hasProveedor) {
     tipo = 'compra';
+  } else if (status === 'recepci\u00f3n') {
+    tipo = 'recepcion';
   } else if (code.startsWith('OT') || code.startsWith('REC')) {
     if (status === 'cotizaci\u00f3n') {
       tipo = 'cotizacion';
