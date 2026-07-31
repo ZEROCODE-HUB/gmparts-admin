@@ -5,8 +5,8 @@ import { where } from "firebase/firestore";
 import Btn from "../ui/Btn";
 import Field, { inputCls } from "../ui/Field";
 import { useDebouncedCallback } from "../../lib/debounce";
-import { useFirestoreCollection, useFirestoreDocuments, mapDocKeyToCollection } from "../../store/firestoreDb";
-import { doc, getDoc } from "firebase/firestore";
+import { useFirestoreCollection, mapDocKeyToCollection } from "../../store/firestoreDb";
+import { doc, getDoc, collection, getDocs } from "firebase/firestore";
 import { db as fbDb } from "../../lib/firebase";
 import { showToast, dismissAll } from "../ui/Toast";
 import * as db from "../../store/db";
@@ -46,7 +46,7 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
   const [saving, setSaving] = useState(false);
   const [cotModal, setCotModal] = useState(false);
   const [cotFilter, setCotFilter] = useState("");
-  const [cotizaciones] = useFirestoreDocuments("vs-cotizacion");
+  const cotizaciones = useFirestoreCollection("recepciones", [where("status", "==", "Cotizaci\u00f3n")]);
   const fireClients = useFirestoreCollection("users", [where("user_role", "==", "Cliente")]).map((d) => ({
     id: d.id,
     nombre: d.display_name || d.nombre || "",
@@ -233,6 +233,58 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
 
   const loadFromCotizacion = async (cot) => {
     const mapped = [];
+
+    // Datos de recepciones (cotizaciones de servicio creadas en la App)
+    const isRecepcion = cot.nombre_cliente || cot.Razon_social || cot.codeCT;
+    if (isRecepcion) {
+      let diags = cot.diagnosticos || [];
+      if (diags.length === 0 && cot.id) {
+        try {
+          const snap = await getDocs(collection(fbDb, "recepciones", cot.id, "diagnosticos"));
+          diags = snap.docs.map((d) => d.data());
+        } catch { /* ignore */ }
+      }
+      for (const diag of diags) {
+        const horas = Number(diag.horasTrabajo ?? diag.Horas_trabajo ?? diag.horas_trabajo ?? 0);
+        const mo = Number(diag.manoDeObra ?? diag.Mano_de_obra ?? diag.mano_de_obra ?? 0);
+        const sol = diag.solucion ?? diag.Solucion ?? "";
+        if (mo > 0) {
+          mapped.push({
+            tipo: "mano_obra",
+            descripcion: sol ? `Mano de obra: ${sol}` : "Mano de obra",
+            cant: horas || 1,
+            pu: horas ? +(mo / horas).toFixed(2) : mo,
+            total: mo,
+            moneda: form.moneda || "PEN",
+          });
+        }
+        for (const rp of diag.Repuestos ?? diag.repuestos ?? []) {
+          const cant = Number(rp.cantidad) || 1;
+          const pu = Number(rp.precio) || Number(rp.pu) || 0;
+          if (pu <= 0) continue;
+          mapped.push({
+            tipo: "repuesto",
+            descripcion: rp.descripcion || rp.nombre || "",
+            codigo: rp.codigo || "",
+            cant,
+            pu,
+            total: cant * pu,
+            moneda: form.moneda || "PEN",
+          });
+        }
+      }
+      if (!form.cliente) {
+        set("cliente", cot.nombre_cliente || cot.Razon_social || "");
+        set("clienteDoc", cot.RUCempresa || cot.DNI || "");
+      }
+      setOrigen({ tipo: "cotizacion", ref: cot.codeCT || cot.id || "" });
+      setCotModal(false);
+      setCotFilter("");
+      setItems(mapped);
+      return;
+    }
+
+    // Datos de cotizaciones con items inline (Facturas)
     for (const it of cot.items || []) {
       const nombre = it.art || it.descripcion || "";
       const sMatch = servicioMatch(nombre);
@@ -530,7 +582,9 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
                 {origen && (
                   <span className="text-[11px] px-2 py-1 rounded-full bg-[var(--accent-dim)] text-[var(--accent)] font-semibold">Origen: {origen.tipo} {origen.ref}</span>
                 )}
-                <button type="button" onClick={() => setCotModal(true)} className="shrink-0 px-3 py-1.5 rounded-lg text-[var(--accent)] hover:bg-[var(--accent-dim)] border border-[var(--line-soft)] text-xs font-semibold flex items-center gap-1"><Plus size={14} /> Agregar Cotización</button>
+                {docKey !== "vs-cotizacion" && (
+                  <button type="button" onClick={() => setCotModal(true)} className="shrink-0 px-3 py-1.5 rounded-lg text-[var(--accent)] hover:bg-[var(--accent-dim)] border border-[var(--line-soft)] text-xs font-semibold flex items-center gap-1"><Plus size={14} /> Agregar Cotización</button>
+                )}
               </div>
             </div>
             <label className="text-[12px] text-[var(--muted)] block mb-1.5">Buscar artículo y agregar</label>
@@ -572,26 +626,31 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
               <button type="button" onClick={() => setCotModal(false)} className="p-1 rounded-md text-[var(--muted)] hover:bg-[var(--surface-2)]"><ArrowLeft size={18} /></button>
             </div>
             <div className="px-5 py-3">
-              <input className={inputCls} value={cotFilter} onChange={(e) => setCotFilter(e.target.value)} placeholder="Filtrar por cliente..." />
+              <input className={inputCls} value={cotFilter} onChange={(e) => setCotFilter(e.target.value)} placeholder="Buscar por cliente o código de cotización..." />
             </div>
             <div className="overflow-y-auto max-h-[55vh] px-5 pb-5">
               {cotizaciones.filter((c) => {
-                const name = c.cliente || c.razonSNombre || c.RazonSNombre || c.nombre_cliente || "";
-                return name.toLowerCase().includes(cotFilter.trim().toLowerCase());
+                const q = cotFilter.trim().toLowerCase();
+                const name = c.nombre_cliente || c.Razon_social || c.cliente || "";
+                const code = c.codeCT || c.numeroorden || "";
+                return name.toLowerCase().includes(q) || code.toLowerCase().includes(q);
               }).map((c) => {
-                const name = c.cliente || c.razonSNombre || c.RazonSNombre || c.nombre_cliente || "";
+                const name = c.nombre_cliente || c.Razon_social || c.cliente || "";
+                const code = c.codeCT || c.numeroorden || "";
+                const fecha = c.fecha_creacion || c.fecha || c.Fecha || "";
                 return (
                 <button key={c.id} type="button" onClick={() => loadFromCotizacion(c)} className="w-full text-left flex items-center justify-between gap-3 px-3 py-3 mb-2 rounded-lg border border-[var(--line-soft)] hover:bg-[var(--surface-2)]">
                   <div>
-                    <div className="font-medium text-[var(--text)]">{c.serie || c.nserie}-{c.numero} · {name}</div>
-                    <div className="text-xs text-[var(--muted)]">{c.fecha || c.Fecha} · {(c.items || []).length} ítem(s)</div>
+                    <div className="font-medium text-[var(--text)]">{code} · {name}</div>
+                    <div className="text-xs text-[var(--muted)]">{fecha}</div>
                   </div>
-                  <div className="gmp-mono text-sm">S/ {Number(c.total || c.Total).toFixed(2)}</div>
                 </button>
               );})}
               {cotizaciones.filter((c) => {
-                const name = c.cliente || c.razonSNombre || c.RazonSNombre || c.nombre_cliente || "";
-                return name.toLowerCase().includes(cotFilter.trim().toLowerCase());
+                const q = cotFilter.trim().toLowerCase();
+                const name = c.nombre_cliente || c.Razon_social || c.cliente || "";
+                const code = c.codeCT || c.numeroorden || "";
+                return name.toLowerCase().includes(q) || code.toLowerCase().includes(q);
               }).length === 0 && (
                 <p className="text-sm text-[var(--muted)] py-4 text-center">Sin cotizaciones</p>
               )}
