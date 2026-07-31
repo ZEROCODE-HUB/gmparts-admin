@@ -105,6 +105,7 @@ export async function deleteCatalogEntry(docKey, id) {
 // Mapa Flutter PascalCase → admin camelCase (top-level)
 const FLUTTER_FIELDS = {
   "RazonNombre": ["proveedor", "cliente"],
+  "RazonSNombre": ["cliente", "proveedor"],
   "Nserie": ["serie"],
   "Total": ["total"],
   "Estado": ["estado"],

@@ -575,16 +575,24 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
               <input className={inputCls} value={cotFilter} onChange={(e) => setCotFilter(e.target.value)} placeholder="Filtrar por cliente..." />
             </div>
             <div className="overflow-y-auto max-h-[55vh] px-5 pb-5">
-              {cotizaciones.filter((c) => (c.cliente || c.razonSNombre || "").toLowerCase().includes(cotFilter.trim().toLowerCase())).map((c) => (
+              {cotizaciones.filter((c) => {
+                const name = c.cliente || c.razonSNombre || c.RazonSNombre || c.nombre_cliente || "";
+                return name.toLowerCase().includes(cotFilter.trim().toLowerCase());
+              }).map((c) => {
+                const name = c.cliente || c.razonSNombre || c.RazonSNombre || c.nombre_cliente || "";
+                return (
                 <button key={c.id} type="button" onClick={() => loadFromCotizacion(c)} className="w-full text-left flex items-center justify-between gap-3 px-3 py-3 mb-2 rounded-lg border border-[var(--line-soft)] hover:bg-[var(--surface-2)]">
                   <div>
-                    <div className="font-medium text-[var(--text)]">{c.serie || c.nserie}-{c.numero} · {c.cliente || c.razonSNombre}</div>
+                    <div className="font-medium text-[var(--text)]">{c.serie || c.nserie}-{c.numero} · {name}</div>
                     <div className="text-xs text-[var(--muted)]">{c.fecha || c.Fecha} · {(c.items || []).length} ítem(s)</div>
                   </div>
                   <div className="gmp-mono text-sm">S/ {Number(c.total || c.Total).toFixed(2)}</div>
                 </button>
-              ))}
-              {cotizaciones.filter((c) => (c.cliente || c.razonSNombre || "").toLowerCase().includes(cotFilter.trim().toLowerCase())).length === 0 && (
+              );})}
+              {cotizaciones.filter((c) => {
+                const name = c.cliente || c.razonSNombre || c.RazonSNombre || c.nombre_cliente || "";
+                return name.toLowerCase().includes(cotFilter.trim().toLowerCase());
+              }).length === 0 && (
                 <p className="text-sm text-[var(--muted)] py-4 text-center">Sin cotizaciones</p>
               )}
             </div>
