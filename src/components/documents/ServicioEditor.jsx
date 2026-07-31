@@ -275,10 +275,8 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
           });
         }
       }
-      if (!form.cliente) {
-        set("cliente", cot.nombre_cliente || cot.Razon_social || "");
-        set("clienteDoc", cot.RUCempresa || cot.DNI || "");
-      }
+      set("cliente", cot.nombre_cliente || cot.Razon_social || "");
+      set("clienteDoc", cot.RUCempresa || cot.DNI || "");
       setOrigen({ tipo: "cotizacion", ref: cot.codeCT || cot.id || "" });
       setCotModal(false);
       setCotFilter("");
@@ -305,10 +303,8 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
       }
     }
     setItems(mapped);
-    if (!form.cliente) {
-      set("cliente", cot.cliente || "");
-      set("clienteDoc", cot.clienteDoc || "");
-    }
+    set("cliente", cot.cliente || cot.RazonSNombre || "");
+    set("clienteDoc", cot.clienteDoc || "");
     if (!form.tipoIgv) set("tipoIgv", cot.tipoIgv || "INCLUIDO");
     if (!form.formaPago) set("formaPago", cot.formaPago || "Contado");
     if (!form.moneda) set("moneda", cot.moneda || "PEN");
@@ -517,9 +513,14 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
         <div className="bg-[var(--panel)] rounded-lg p-6 border border-[var(--line-soft)] mb-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-[var(--text)] uppercase tracking-wide">Datos del documento</h2>
-            {docKey !== "vs-cotizacion" && (
-              <button type="button" onClick={() => setCotModal(true)} className="shrink-0 px-3 py-1.5 rounded-lg text-[var(--accent)] hover:bg-[var(--accent-dim)] border border-[var(--line-soft)] text-xs font-semibold flex items-center gap-1"><Plus size={14} /> Agregar Cotización</button>
-            )}
+            <div className="flex items-center gap-2">
+              {origen && (
+                <span className="text-[11px] px-2 py-1 rounded-full bg-[var(--accent-dim)] text-[var(--accent)] font-semibold">Origen: {origen.tipo} {origen.ref}</span>
+              )}
+              {docKey !== "vs-cotizacion" && (
+                <button type="button" onClick={() => setCotModal(true)} className="shrink-0 px-3 py-1.5 rounded-lg text-[var(--accent)] hover:bg-[var(--accent-dim)] border border-[var(--line-soft)] text-xs font-semibold flex items-center gap-1"><Plus size={14} /> Agregar Cotización</button>
+              )}
+            </div>
           </div>
           <div className="grid grid-cols-3 gap-4">
             <Field label="Serie"><input className={inputMono} value={form.serie} onChange={(e) => set("serie", e.target.value)} placeholder="Ejem: SC01" /></Field>
@@ -585,11 +586,6 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
           <div className="bg-[var(--panel)] rounded-lg p-6 border border-[var(--line-soft)]">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold text-[var(--text)] uppercase tracking-wide flex items-center gap-2"><Package size={16} /> Artículos / Repuestos</h2>
-              <div className="flex items-center gap-2">
-                {origen && (
-                  <span className="text-[11px] px-2 py-1 rounded-full bg-[var(--accent-dim)] text-[var(--accent)] font-semibold">Origen: {origen.tipo} {origen.ref}</span>
-                )}
-              </div>
             </div>
             <label className="text-[12px] text-[var(--muted)] block mb-1.5">Buscar artículo y agregar</label>
             <div className="flex gap-2 mb-3">
