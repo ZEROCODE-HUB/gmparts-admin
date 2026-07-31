@@ -13,6 +13,8 @@ vi.mock("../store/firestoreDb", () => ({
     ];
     return [];
   }),
+  useFirestoreDocuments: vi.fn(() => [[], { remove: vi.fn() }]),
+  mapDocKeyToCollection: vi.fn((k) => k),
   useCatalog: vi.fn(() => []),
   saveMaestro: vi.fn(),
   deleteMaestro: vi.fn(),

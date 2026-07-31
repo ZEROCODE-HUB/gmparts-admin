@@ -198,29 +198,62 @@ export default function DocumentEditor({ title, backPath, onSave, mode = "create
 
   // Flutter crearfactura_widget.dart:1716 "Agregar Cotizacion" -> CotizacionesWidget
   // que vuelca ítems con addToCrearFacturas y devuelve condpago (widget.action, :1296).
-  const loadFromCotizacion = (cot) => {
-    setItems(cot.items.map((it) => ({
-      tipo: "repuesto",
-      codigo: "",
-      descripcion: it.art || it.descripcion || "",
-      cant: it.cant ?? 1,
-      pu: it.pu ?? 0,
-      total: it.total ?? (it.cant ?? 1) * (it.pu ?? 0),
-      moneda: form.moneda || "PEN",
-      stock: null,
-      precioCompra: 0,
-      utilidad: 0,
-    })));
-    set("condPago", cot.formaPago || cot.condPago || form.formaPago);
-    if (!form.cliente) {
-      set("cliente", cot.cliente || "");
-      set("clienteDoc", cot.clienteDoc || "");
-      set("tipoDoc", cot.tipoDoc || "");
+  const articuloMatch = async (nombre, codigo) => {
+    const term = (codigo || nombre || "").trim();
+    if (term.length < 2) return null;
+    const results = await searchArticles(term, { limit: 5 });
+    const lower = (nombre || "").toLowerCase();
+    return results.find((a) => (codigo && a.Codigo === codigo))
+      || results.find((a) => (a.Nombre_name || "").toLowerCase().includes(lower))
+      || results[0]
+      || null;
+  };
+
+  const cotNombre = (c) => c.cliente || c.razonSNombre || c.RazonSNombre || c.nombre_cliente || "";
+  const cotCodigo = (c) => `${c.serie || c.nserie || ""}-${c.numero || ""}`;
+  const cotizacionesFiltradas = cotizaciones.filter((c) => {
+    const q = cotFilter.trim().toLowerCase();
+    if (!q) return true;
+    return cotNombre(c).toLowerCase().includes(q) || cotCodigo(c).toLowerCase().includes(q);
+  });
+
+  const loadFromCotizacion = async (cot) => {
+    const mapped = [];
+    for (const it of cot.items || []) {
+      const descripcion = it.art || it.descripcion || it.Descripcion || "";
+      const codigo = it.codigo || it.Codigo || "";
+      const cant = Number(it.cant ?? it.cantidad ?? 1) || 1;
+      const match = await articuloMatch(descripcion, codigo);
+      const pu = Number(it.pu ?? it.precioVenta ?? (match ? match.Precio_Venta_Sale_price : 0)) || 0;
+      mapped.push({
+        tipo: "repuesto",
+        codigo: codigo || (match ? match.Codigo : ""),
+        articleId: it.articleId || (match ? match.id : undefined),
+        descripcion,
+        cant,
+        pu,
+        total: Number(it.total ?? cant * pu) || cant * pu,
+        moneda: it.moneda || form.moneda || "PEN",
+        stock: it.stock ?? (match ? (match.Stock || 0) : null),
+        precioCompra: Number(it.precioCompra ?? (match ? match.Precio_compra_Purchase_price : 0)) || 0,
+        utilidad: Number(it.utilidad ?? (match ? match.Utilidad_Profit_Percentage : 0)) || 0,
+      });
     }
-    setOrigen({ tipo: "cotizacion", ref: `${cot.serie}-${cot.numero}` });
+    setItems(mapped);
+    const nombreCot = cot.cliente || cot.razonSNombre || cot.RazonSNombre || cot.nombre_cliente || "";
+    const cli = allClients.find((c) => c.nombre === nombreCot);
+    set("cliente", nombreCot);
+    set("clienteDoc", cli ? cli.documento : (cot.clienteDoc || cot.RUCempresa || ""));
+    set("tipoDoc", cli ? cli.tipoDocumento : (cot.tipoDoc || ""));
+    if (cli && cli.direccion) set("direccion", cli.direccion);
+    else if (cot.direccion) set("direccion", cot.direccion);
+    if (cot.formaPago || cot.FPago) set("formaPago", cot.formaPago || cot.FPago);
+    if (cot.moneda) set("moneda", cot.moneda);
+    if (cot.tipoIgv) set("tipoIgv", cot.tipoIgv === "INCLUIDO IGV" ? "INCLUIDO" : cot.tipoIgv === "MAS IGV" ? "MAS" : cot.tipoIgv);
+    if (cot.almacen) set("almacen", cot.almacen);
+    setOrigen({ tipo: "cotizacion", ref: `${cot.serie || cot.nserie || ""}-${cot.numero || ""}` });
     setCotModal(false);
     setCotFilter("");
-    setError("");
   };
 
   // Debounce 2000ms (Flutter: EasyDebounce.debounce Duration(milliseconds:2000)).
@@ -415,7 +448,17 @@ export default function DocumentEditor({ title, backPath, onSave, mode = "create
       </div>
       <form onSubmit={handleSubmit}>
         <div className="bg-[var(--panel)] rounded-lg p-6 border border-[var(--line-soft)] mb-6">
-          <h2 className="text-sm font-semibold text-[var(--text)] mb-4 uppercase tracking-wide">Datos del documento</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-[var(--text)] uppercase tracking-wide">Datos del documento</h2>
+            <div className="flex items-center gap-2">
+              {origen && (
+                <span className="text-[11px] px-2 py-1 rounded-full bg-[var(--accent-dim)] text-[var(--accent)] font-semibold">Origen: {origen.tipo} {origen.ref}</span>
+              )}
+              {docKey !== "va-cotizacion" && (
+                <button type="button" onClick={() => setCotModal(true)} className="shrink-0 px-3 py-1.5 rounded-lg text-[var(--accent)] hover:bg-[var(--accent-dim)] border border-[var(--line-soft)] text-xs font-semibold flex items-center gap-1"><Plus size={14} /> Agregar Cotización</button>
+              )}
+            </div>
+          </div>
           <div className="grid grid-cols-3 gap-4">
             <Field label="Serie"><input className={inputCls} value={form.serie} onChange={(e) => set("serie", e.target.value)} placeholder="Ejem: F001" /></Field>
             <Field label="Número"><input className={inputCls} value={form.numero} onChange={(e) => set("numero", e.target.value)} placeholder="000001" /></Field>
@@ -465,12 +508,6 @@ export default function DocumentEditor({ title, backPath, onSave, mode = "create
         <div className="bg-[var(--panel)] rounded-lg p-6 border border-[var(--line-soft)]">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-[var(--text)] uppercase tracking-wide flex items-center gap-2"><Package size={16} /> Detalle de artículos</h2>
-            <div className="flex items-center gap-2">
-              {origen && (
-                <span className="text-[11px] px-2 py-1 rounded-full bg-[var(--accent-dim)] text-[var(--accent)] font-semibold">Origen: {origen.tipo} {origen.ref}</span>
-              )}
-              <button type="button" onClick={() => setCotModal(true)} className="shrink-0 px-3 py-1.5 rounded-lg text-[var(--accent)] hover:bg-[var(--accent-dim)] border border-[var(--line-soft)] text-xs font-semibold flex items-center gap-1"><Plus size={14} /> Agregar Cotización</button>
-            </div>
           </div>
           <div className="flex gap-3 items-end mb-4">
             <div className="flex-1">
@@ -510,27 +547,21 @@ export default function DocumentEditor({ title, backPath, onSave, mode = "create
               <button type="button" onClick={() => setCotModal(false)} className="p-1 rounded-md text-[var(--muted)] hover:bg-[var(--surface-2)]"><ArrowLeft size={18} /></button>
             </div>
             <div className="px-5 py-3">
-              <input className={inputCls} value={cotFilter} onChange={(e) => setCotFilter(e.target.value)} placeholder="Filtrar por cliente..." />
+              <input className={inputCls} value={cotFilter} onChange={(e) => setCotFilter(e.target.value)} placeholder="Buscar por cliente, serie o número..." />
             </div>
             <div className="overflow-y-auto max-h-[55vh] px-5 pb-5">
-              {cotizaciones.filter((c) => {
-                const name = c.cliente || c.razonSNombre || c.RazonSNombre || c.nombre_cliente || "";
-                return name.toLowerCase().includes(cotFilter.trim().toLowerCase());
-              }).map((c) => {
-                const name = c.cliente || c.razonSNombre || c.RazonSNombre || c.nombre_cliente || "";
+              {cotizacionesFiltradas.map((c) => {
+                const name = cotNombre(c);
                 return (
                 <button key={c.id} type="button" onClick={() => loadFromCotizacion(c)} className="w-full text-left flex items-center justify-between gap-3 px-3 py-3 mb-2 rounded-lg border border-[var(--line-soft)] hover:bg-[var(--surface-2)]">
                   <div>
-                    <div className="font-medium text-[var(--text)]">{c.serie || c.nserie}-{c.numero} · {name}</div>
-                    <div className="text-xs text-[var(--muted)]">{c.fecha || c.Fecha} · {(c.items || []).length} ítem(s)</div>
+                    <div className="font-medium text-[var(--text)]">{cotCodigo(c)} · {name}</div>
+                    <div className="text-xs text-[var(--muted)]">{c.fecha || c.Fecha || ""} · {(c.items || []).length} ítem(s)</div>
                   </div>
-                  <div className="gmp-mono text-sm">S/ {Number(c.total || c.Total).toFixed(2)}</div>
+                  <div className="gmp-mono text-sm">S/ {(Number(c.total ?? c.Total) || 0).toFixed(2)}</div>
                 </button>
               );})}
-              {cotizaciones.filter((c) => {
-                const name = c.cliente || c.razonSNombre || c.RazonSNombre || c.nombre_cliente || "";
-                return name.toLowerCase().includes(cotFilter.trim().toLowerCase());
-              }).length === 0 && (
+              {cotizacionesFiltradas.length === 0 && (
                 <p className="text-sm text-[var(--muted)] py-4 text-center">Sin cotizaciones</p>
               )}
             </div>
