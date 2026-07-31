@@ -5,7 +5,7 @@ import { where } from "firebase/firestore";
 import Btn from "../ui/Btn";
 import Field, { inputCls } from "../ui/Field";
 import { useDebouncedCallback } from "../../lib/debounce";
-import { useFirestoreCollection, mapDocKeyToCollection } from "../../store/firestoreDb";
+import { useFirestoreCollection, useFirestoreDocuments, mapDocKeyToCollection } from "../../store/firestoreDb";
 import { doc, getDoc, collection, getDocs } from "firebase/firestore";
 import { db as fbDb } from "../../lib/firebase";
 import { showToast, dismissAll } from "../ui/Toast";
@@ -46,7 +46,9 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
   const [saving, setSaving] = useState(false);
   const [cotModal, setCotModal] = useState(false);
   const [cotFilter, setCotFilter] = useState("");
-  const cotizaciones = useFirestoreCollection("recepciones", [where("status", "==", "Cotizaci\u00f3n")]);
+  const [cotizacionesFacturas] = useFirestoreDocuments("vs-cotizacion");
+  const cotizacionesRecepciones = useFirestoreCollection("recepciones", [where("status", "==", "Cotizaci\u00f3n")]);
+  const cotizaciones = [...cotizacionesRecepciones, ...cotizacionesFacturas];
   const fireClients = useFirestoreCollection("users", [where("user_role", "==", "Cliente")]).map((d) => ({
     id: d.id,
     nombre: d.display_name || d.nombre || "",
@@ -513,7 +515,12 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
       </div>
       <form onSubmit={handleSubmit}>
         <div className="bg-[var(--panel)] rounded-lg p-6 border border-[var(--line-soft)] mb-6">
-          <h2 className="text-sm font-semibold text-[var(--text)] mb-4 uppercase tracking-wide">Datos del documento</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-[var(--text)] uppercase tracking-wide">Datos del documento</h2>
+            {docKey !== "vs-cotizacion" && (
+              <button type="button" onClick={() => setCotModal(true)} className="shrink-0 px-3 py-1.5 rounded-lg text-[var(--accent)] hover:bg-[var(--accent-dim)] border border-[var(--line-soft)] text-xs font-semibold flex items-center gap-1"><Plus size={14} /> Agregar Cotización</button>
+            )}
+          </div>
           <div className="grid grid-cols-3 gap-4">
             <Field label="Serie"><input className={inputMono} value={form.serie} onChange={(e) => set("serie", e.target.value)} placeholder="Ejem: SC01" /></Field>
             <Field label="Número"><input className={inputMono} value={form.numero} onChange={(e) => set("numero", e.target.value)} placeholder="000001" /></Field>
@@ -581,9 +588,6 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
               <div className="flex items-center gap-2">
                 {origen && (
                   <span className="text-[11px] px-2 py-1 rounded-full bg-[var(--accent-dim)] text-[var(--accent)] font-semibold">Origen: {origen.tipo} {origen.ref}</span>
-                )}
-                {docKey !== "vs-cotizacion" && (
-                  <button type="button" onClick={() => setCotModal(true)} className="shrink-0 px-3 py-1.5 rounded-lg text-[var(--accent)] hover:bg-[var(--accent-dim)] border border-[var(--line-soft)] text-xs font-semibold flex items-center gap-1"><Plus size={14} /> Agregar Cotización</button>
                 )}
               </div>
             </div>
