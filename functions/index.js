@@ -338,11 +338,25 @@ exports.generateDocumentPdf = functions.https.onCall(async (data, context) => {
 // Llamada desde EnviarSunatButton en el frontend.
 // ═════════════════════════════════════════════════════════════════
 
-const FACTILIZA_API = "https://apife-qa.factiliza.com/api/v1";
-const RUC_EMPRESA = "10749283781";
+const FACTILIZA_API = "https://apife.factiliza.com/api/v1";
+const RUC_EMPRESA = "20601720621";
 
 function round2(num) {
   return Math.round(num * 100) / 100;
+}
+
+// Catálogo SUNAT 06 — Tipo de documento de identidad.
+// 0 = Otros, 1 = DNI, 4 = Carnet de extranjería, 6 = RUC, 7 = Pasaporte.
+function tipoDocIdentidad(tipoDoc, numDoc) {
+  const t = String(tipoDoc || "").trim().toUpperCase();
+  if (t === "RUC" || t === "6") return "6";
+  if (t === "DNI" || t === "1") return "1";
+  if (t === "CE" || t === "CARNET DE EXTRANJERIA" || t === "4") return "4";
+  if (t === "PASAPORTE" || t === "PAS" || t === "7") return "7";
+  const n = String(numDoc || "").replace(/\D/g, "");
+  if (n.length === 11) return "6";
+  if (n.length === 8) return "1";
+  return "0";
 }
 
 function buildDetail(items, igvIncluido) {
@@ -375,6 +389,29 @@ function buildDetail(items, igvIncluido) {
       factor_Icbper: 0,
     };
   });
+}
+
+// Extrae un mensaje legible de las distintas formas de error de Factiliza:
+// { data: { error: { message } } }, { message }, CDR de SUNAT, o validación ASP.NET
+// { title, errors: { campo: ["..."] } }.
+function extractFactilizaError(result) {
+  if (!result) return "";
+  const cdr = result?.data?.sunatResponse?.cdrResponse;
+  const partes = [
+    result?.data?.error?.message,
+    cdr?.description,
+    result?.data?.sunatResponse?.error?.message,
+    result?.message,
+    result?.title,
+  ].filter((p) => typeof p === "string" && p.trim());
+
+  if (result?.errors && typeof result.errors === "object") {
+    for (const [campo, msgs] of Object.entries(result.errors)) {
+      const texto = Array.isArray(msgs) ? msgs.join(" ") : String(msgs);
+      partes.push(campo === "$" ? texto : campo + ": " + texto);
+    }
+  }
+  return [...new Set(partes)].join(" | ");
 }
 
 function buildFactilizaPayload(doc, docKey) {
@@ -412,7 +449,7 @@ function buildFactilizaPayload(doc, docKey) {
     tipo_Moneda: "PEN",
     fecha_Emision: (doc.fecha || doc.Fecha || new Date().toISOString().split("T")[0]) + "T00:00:00-05:00",
     empresa_Ruc: RUC_EMPRESA,
-    cliente_Tipo_Doc: esFactura ? "6" : "1",
+    cliente_Tipo_Doc: tipoDocIdentidad(doc.tipoDoc, clienteDocNum),
     cliente_Num_Doc: clienteDocNum,
     cliente_Razon_Social: cliente,
     cliente_Direccion: doc.direccion || doc.clienteDireccion || "",
@@ -485,11 +522,34 @@ exports.sendToSunat = functions.https.onCall(async (data, context) => {
       body: JSON.stringify(payload),
     });
 
-    const result = await response.json();
+    // El API puede responder con body vacío o HTML ante 4xx/5xx; nunca asumir JSON.
+    const rawBody = await response.text();
+    let result = null;
+    if (rawBody) {
+      try {
+        result = JSON.parse(rawBody);
+      } catch (parseErr) {
+        console.error("sendToSunat: respuesta no-JSON", { status: response.status, endpoint, parseErr: parseErr.message, rawBody: rawBody.slice(0, 500) });
+      }
+    }
+
+    if (!response.ok || result === null) {
+      const detalle = extractFactilizaError(result) || rawBody.slice(0, 300) || "sin detalle";
+      const errorMsg = "Factiliza respondió HTTP " + response.status + ": " + detalle;
+      console.error("sendToSunat: error HTTP", { status: response.status, endpoint, errorMsg });
+      await docRef.update({
+        estadoSunat: "Error",
+        estadoFactura: "Rechazado",
+        sunatError: errorMsg,
+        sunatEnviadoAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      return { success: false, sunatSuccess: false, cdrId: null, message: errorMsg };
+    }
+
     const sunatOk = result?.data?.sunatResponse?.success === true;
     const success = result?.success === true;
     const cdrId = result?.data?.sunatResponse?.cdrResponse?.id ?? null;
-    const errorMsg = result?.data?.error?.message || result?.message || "";
+    const errorMsg = extractFactilizaError(result);
 
     // 4. Actualizar documento en Firestore
     const estadoFactura = sunatOk ? "Registrado" : "Rechazado";
@@ -497,7 +557,7 @@ exports.sendToSunat = functions.https.onCall(async (data, context) => {
       estadoSunat: sunatOk ? "Aceptado" : success ? "Rechazado" : "Error",
       estadoFactura,
       sunatCdrId: cdrId,
-      sunatError: errorMsg || null,
+      sunatError: sunatOk ? null : errorMsg || "Error en la validación SUNAT",
       sunatEnviadoAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
