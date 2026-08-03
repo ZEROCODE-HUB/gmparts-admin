@@ -1363,7 +1363,7 @@ export function docToOpts(data, title) {
     color: data.color || data.Color || '',
     combustible: data.combustible || data.Combustible || '',
     kilometraje: data.kilometraje || data.Kilometraje || data.km_ingreso || '',
-    anioFabricacion: data.anioFabricacion || data.AnioFabricacion || data.anio || '',
+    anioFabricacion: data.anioFabricacion || data.AnioFabricacion || data.Ano_fabricacion || data.ano_fabricacion || data.anio || '',
     moneda: data.moneda || data.Moneda || 'SOLES',
     lugarServicio: data.lugarServicio || data.lugar_servicio || '',
     plazoEntrega: data.plazoEntrega || data.plazo_entrega || '',

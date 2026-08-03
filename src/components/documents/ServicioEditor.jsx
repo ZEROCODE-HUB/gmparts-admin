@@ -116,8 +116,8 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
             modelo: data.modelo || data.Modelo || "",
             color: data.color || data.Color || "",
             combustible: data.combustible || data.TipoCombustible || "",
-            kilometraje: data.kilometraje || data.Kilometraje || "",
-            anioFabricacion: data.anioFabricacion || data.anio_de_fabricion || data.AnioFabricacion || "",
+            kilometraje: data.kilometraje || data.Kilometraje || data.km_ingreso || "",
+            anioFabricacion: data.anioFabricacion || data.anio_de_fabricion || data.AnioFabricacion || data.Ano_fabricacion || data.ano_fabricacion || "",
             observacion: data.Observaciones_adicionales || data.motivo_ingreso || "",
             formaPago: "Contado",
             moneda: "PEN",
@@ -307,13 +307,15 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
       set("cliente", cot.nombre_cliente || cot.Razon_social || "");
       set("clienteDoc", cot.RUCempresa || cot.DNI || "");
       set("placa", cot.placa || "");
-      set("direccion", cot.direccion || cot.Direccion || "");
-      set("marca", cot.marca || cot.Marca || "");
-      set("modelo", cot.modelo || cot.Modelo || "");
-      set("color", cot.color || cot.Color || "");
-      set("combustible", cot.combustible || cot.TipoCombustible || "");
-      set("kilometraje", cot.kilometraje || cot.Kilometraje || "");
-      set("anioFabricacion", cot.anioFabricacion || cot.anio_de_fabricion || cot.AnioFabricacion || "");
+      const cliFull = allClients.find((cl) => cl.nombre === (cot.nombre_cliente || cot.Razon_social || ""));
+      set("direccion", cot.direccion || cot.Direccion || (cliFull && cliFull.direccion) || "");
+      const veh = allVehicles.find((v) => v.Placa === cot.placa);
+      set("marca", cot.marca || cot.Marca || (veh && veh.Marca) || "");
+      set("modelo", cot.modelo || cot.Modelo || (veh && veh.Modelo) || "");
+      set("color", cot.color || cot.Color || (veh && veh.Color) || "");
+      set("combustible", cot.combustible || cot.TipoCombustible || (veh && (veh.TipoCombustible || veh.Combustible)) || "");
+      set("kilometraje", cot.kilometraje || cot.Kilometraje || cot.km_ingreso || (veh && (veh.Kilometraje || veh.km || veh.km_ingreso)) || "");
+      set("anioFabricacion", cot.anioFabricacion || cot.anio_de_fabricion || cot.AnioFabricacion || cot.Ano_fabricacion || cot.ano_fabricacion || (veh && (veh.anio_de_fabricion || veh.AnioFabricacion || veh.anio)) || "");
       setOrigen({ tipo: "cotizacion", ref: cot.codeCT || cot.id || "" });
       setCotModal(false);
       setCotFilter("");
@@ -340,8 +342,19 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
       }
     }
     setItems(mapped);
-    set("cliente", cot.cliente || cot.RazonSNombre || "");
+    const nombreCot = cot.cliente || cot.RazonSNombre || "";
+    set("cliente", nombreCot);
     set("clienteDoc", cot.clienteDoc || "");
+    const cliCot = allClients.find((cl) => cl.nombre === nombreCot);
+    set("direccion", cot.direccion || cot.Direccion || (cliCot && cliCot.direccion) || "");
+    set("placa", cot.placa || "");
+    const vehCot = allVehicles.find((v) => v.Placa === (cot.placa || ""));
+    set("marca", cot.marca || cot.Marca || (vehCot && vehCot.Marca) || "");
+    set("modelo", cot.modelo || cot.Modelo || (vehCot && vehCot.Modelo) || "");
+    set("color", cot.color || cot.Color || (vehCot && vehCot.Color) || "");
+    set("combustible", cot.combustible || cot.TipoCombustible || (vehCot && (vehCot.TipoCombustible || vehCot.Combustible)) || "");
+    set("kilometraje", cot.kilometraje || cot.Kilometraje || cot.km_ingreso || (vehCot && (vehCot.Kilometraje || vehCot.km || vehCot.km_ingreso)) || "");
+    set("anioFabricacion", cot.anioFabricacion || cot.anio_de_fabricion || cot.AnioFabricacion || cot.Ano_fabricacion || cot.ano_fabricacion || (vehCot && (vehCot.anio_de_fabricion || vehCot.AnioFabricacion || vehCot.anio)) || "");
     if (!form.tipoIgv) set("tipoIgv", cot.tipoIgv || "INCLUIDO");
     if (!form.formaPago) set("formaPago", cot.formaPago || "Contado");
     if (!form.moneda) set("moneda", cot.moneda || "PEN");
