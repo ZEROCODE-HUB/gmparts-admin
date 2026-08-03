@@ -34,6 +34,7 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
   const [form, setForm] = useState({
     serie: "", numero: "", fecha: new Date().toISOString().split("T")[0],
     cliente: "", placa: "", clienteDoc: "", tipoDoc: "DNI",
+    direccion: "", marca: "", modelo: "", color: "", combustible: "", kilometraje: "", anioFabricacion: "",
     tipoIgv: "INCLUIDO", formaPago: "Contado", moneda: "PEN", observacion: "",
   });
   const [items, setItems] = useState([]);
@@ -79,6 +80,13 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
             cliente: data.cliente || data.razonSNombre || "",
             placa: data.placa || "",
             clienteDoc: data.clienteDoc || data.RUCempresa || "",
+            direccion: data.direccion || "",
+            marca: data.marca || "",
+            modelo: data.modelo || "",
+            color: data.color || "",
+            combustible: data.combustible || "",
+            kilometraje: data.kilometraje || data.km_ingreso || "",
+            anioFabricacion: data.anioFabricacion || data.anio_de_fabricion || "",
             tipoDoc: data.tipoDoc || "DNI",
             observacion: data.Observaciones_adicionales || data.observacion || data.motivo || "",
             tipoIgv: data.tipoIgv === "INCLUIDO IGV" ? "INCLUIDO" : data.tipoIgv === "MAS IGV" ? "MAS" : data.tipoIgv || "INCLUIDO",
@@ -103,6 +111,13 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
             cliente: data.nombre_cliente || data.Razon_social || "",
             placa: data.placa || "",
             clienteDoc: data.RUCempresa || data.DNI || "",
+            direccion: data.direccion || data.Direccion || "",
+            marca: data.marca || data.Marca || "",
+            modelo: data.modelo || data.Modelo || "",
+            color: data.color || data.Color || "",
+            combustible: data.combustible || data.TipoCombustible || "",
+            kilometraje: data.kilometraje || data.Kilometraje || "",
+            anioFabricacion: data.anioFabricacion || data.anio_de_fabricion || data.AnioFabricacion || "",
             observacion: data.Observaciones_adicionales || data.motivo_ingreso || "",
             formaPago: "Contado",
             moneda: "PEN",
@@ -121,6 +136,13 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
           cliente: existing.cliente || "",
           placa: existing.placa || "",
           clienteDoc: existing.clienteDoc || "",
+          direccion: existing.direccion || "",
+          marca: existing.marca || "",
+          modelo: existing.modelo || "",
+          color: existing.color || "",
+          combustible: existing.combustible || "",
+          kilometraje: existing.kilometraje || existing.km_ingreso || "",
+          anioFabricacion: existing.anioFabricacion || existing.anio_de_fabricion || "",
           tipoDoc: existing.tipoDoc || "DNI",
           observacion: existing.Observaciones_adicionales || existing.observacion || "",
           tipoIgv: existing.tipoIgv || "INCLUIDO",
@@ -142,6 +164,13 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
       if (location.state.cliente) set("cliente", location.state.cliente);
       if (location.state.clienteDoc) set("clienteDoc", location.state.clienteDoc);
       if (location.state.placa) set("placa", location.state.placa);
+      if (location.state.direccion) set("direccion", location.state.direccion);
+      if (location.state.marca) set("marca", location.state.marca);
+      if (location.state.modelo) set("modelo", location.state.modelo);
+      if (location.state.color) set("color", location.state.color);
+      if (location.state.combustible) set("combustible", location.state.combustible);
+      if (location.state.kilometraje) set("kilometraje", location.state.kilometraje);
+      if (location.state.anioFabricacion) set("anioFabricacion", location.state.anioFabricacion);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -277,6 +306,14 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
       }
       set("cliente", cot.nombre_cliente || cot.Razon_social || "");
       set("clienteDoc", cot.RUCempresa || cot.DNI || "");
+      set("placa", cot.placa || "");
+      set("direccion", cot.direccion || cot.Direccion || "");
+      set("marca", cot.marca || cot.Marca || "");
+      set("modelo", cot.modelo || cot.Modelo || "");
+      set("color", cot.color || cot.Color || "");
+      set("combustible", cot.combustible || cot.TipoCombustible || "");
+      set("kilometraje", cot.kilometraje || cot.Kilometraje || "");
+      set("anioFabricacion", cot.anioFabricacion || cot.anio_de_fabricion || cot.AnioFabricacion || "");
       setOrigen({ tipo: "cotizacion", ref: cot.codeCT || cot.id || "" });
       setCotModal(false);
       setCotFilter("");
@@ -476,8 +513,14 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
             <Field label="Número"><div className="text-sm py-2">{form.numero || "-"}</div></Field>
             <Field label="Fecha"><div className="text-sm py-2">{form.fecha || "-"}</div></Field>
             <Field label="Cliente"><div className="text-sm py-2">{form.cliente || "-"}</div></Field>
-            <Field label="Placa"><div className="text-sm py-2">{form.placa || "-"}</div></Field>
+            <Field label="Dirección"><div className="text-sm py-2">{form.direccion || "-"}</div></Field>
             <Field label="Documento"><div className="text-sm py-2">{form.clienteDoc || "-"}</div></Field>
+            <Field label="Placa"><div className="text-sm py-2">{form.placa || "-"}</div></Field>
+            <Field label="Marca"><div className="text-sm py-2">{form.marca || "-"}</div></Field>
+            <Field label="Modelo"><div className="text-sm py-2">{form.modelo || "-"}</div></Field>
+            <Field label="Color"><div className="text-sm py-2">{form.color || "-"}</div></Field>
+            <Field label="Combustible"><div className="text-sm py-2">{form.combustible || "-"}</div></Field>
+            <Field label="Kilometraje"><div className="text-sm py-2">{form.kilometraje || "-"}</div></Field>
             <Field label="Tipo IGV"><div className="text-sm py-2">{form.tipoIgv || "-"}</div></Field>
             <Field label="Forma de pago"><div className="text-sm py-2">{form.formaPago || "-"}</div></Field>
             <Field label="Moneda"><div className="text-sm py-2">{form.moneda || "-"}</div></Field>
@@ -527,14 +570,14 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
             <Field label="Número"><input className={inputMono} value={form.numero} onChange={(e) => set("numero", e.target.value)} placeholder="000001" /></Field>
             <Field label="Fecha"><input type="date" className={inputMono} value={form.fecha} onChange={(e) => set("fecha", e.target.value)} /></Field>
             <Field label="Cliente">
-              <select className={inputMono} value={form.cliente} onChange={(e) => { const c = allClients.find((x) => x.nombre === e.target.value); set("cliente", e.target.value); if (c) { set("clienteDoc", c.documento); set("tipoDoc", c.tipoDocumento); } }}>
+              <select className={inputMono} value={form.cliente} onChange={(e) => { const c = allClients.find((x) => x.nombre === e.target.value); set("cliente", e.target.value); if (c) { set("clienteDoc", c.documento); set("tipoDoc", c.tipoDocumento); set("direccion", c.direccion || ""); } }}>
                 <option value="">Selecciona cliente</option>
                 {allClients.filter((c, i, a) => a.findIndex((x) => x.nombre === c.nombre) === i).map((c) => <option key={c.id} value={c.nombre}>{c.nombre}</option>)}
               </select>
             </Field>
             <Field label="Documento"><input className={inputMono} value={form.clienteDoc} readOnly /></Field>
             <Field label="Placa">
-              <select className={inputMono} value={form.placa} onChange={(e) => set("placa", e.target.value)}>
+              <select className={inputMono} value={form.placa} onChange={(e) => { const v = allVehicles.find((x) => x.Placa === e.target.value); set("placa", e.target.value); if (v) { set("marca", v.Marca || ""); set("modelo", v.Modelo || ""); set("color", v.Color || ""); set("combustible", v.TipoCombustible || v.Combustible || ""); set("kilometraje", v.Kilometraje || v.km || ""); set("anioFabricacion", v.anio_de_fabricion || v.AnioFabricacion || ""); } }}>
                 <option value="">Selecciona</option>
                 {allVehicles.filter((v) => v.Propietario_name === form.cliente).map((v) => <option key={v.id} value={v.Placa}>{v.Placa} - {v.Marca} {v.Modelo}</option>)}
               </select>

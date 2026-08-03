@@ -84,7 +84,7 @@ export default function OrdenTrabajoList() {
 
   const facturar = (ot) => {
     const itemsFact = db.getOTFacturaItems(ot);
-    navigate("/vs-factura/nuevo", { state: { fromOT: ot.id, cliente: ot.nombre_cliente || ot.Razon_social, clienteDoc: ot.RUCempresa || ot.DNI || "", placa: ot.placa, items: itemsFact } });
+    navigate("/vs-factura/nuevo", { state: { fromOT: ot.id, cliente: ot.nombre_cliente || ot.Razon_social, clienteDoc: ot.RUCempresa || ot.DNI || "", placa: ot.placa, direccion: ot.direccion || "", marca: ot.marca || "", modelo: ot.modelo || "", color: ot.color || "", combustible: ot.combustible || "", kilometraje: ot.kilometraje || "", anioFabricacion: ot.anioFabricacion || "", items: itemsFact } });
   };
 
   return (

@@ -40,6 +40,10 @@ function formatDateToDDMMYYYY(dateStr) {
     return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
   }
   if (dateStr.includes('/')) return dateStr;
+  if (typeof dateStr === "object") {
+    if (typeof dateStr.toDate === "function") dateStr = dateStr.toDate();
+    else if (dateStr.seconds) dateStr = new Date(dateStr.seconds * 1000);
+  }
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return dateStr;
   return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
@@ -277,11 +281,11 @@ function buildUnifiedHeader(logoData, titulo, numDoc) {
   };
 }
 
-function buildUnifiedCliente(cliente, clienteDoc, direccion, labelCliente, extraRows) {
+function buildUnifiedCliente(cliente, clienteDoc, direccion, labelCliente, fecha, extraRows) {
   const rows = [
     { columns: [
       { width: '*', text: fieldRow(labelCliente || 'CLIENTE', cliente, { fontSize: 8 }) },
-      { width: '*', text: fieldRow('FECHA EMISIÓN', '', { fontSize: 8 }) },
+      { width: '*', text: fieldRow('FECHA EMISIÓN', formatDateToDDMMYYYY(fecha), { fontSize: 8 }) },
     ], margin: [0, 0, 0, 2] },
     { columns: [
       { width: '*', text: fieldRow('RUC / DNI', clienteDoc, { fontSize: 8 }) },
@@ -445,7 +449,7 @@ async function buildDocDefFactura(opts) {
       { width: '*', text: '' },
     ]});
   }
-  content.push(buildUnifiedCliente(cliente, clienteDoc, direccion, 'CLIENTE', extraRows));
+  content.push(buildUnifiedCliente(cliente, clienteDoc, direccion, 'CLIENTE', fechaFormatted, extraRows));
 
   content.push(sectionWithTitle('DATOS DEL VEHÍCULO', [
     { columns: [
@@ -529,7 +533,7 @@ async function buildDocDefCompra(opts) {
       { width: '*', text: '' },
     ]});
   }
-  content.push(buildUnifiedCliente(rep(cliente), clienteDoc, rep(direccion), 'PROVEEDOR', extraRows));
+  content.push(buildUnifiedCliente(rep(cliente), clienteDoc, rep(direccion), 'PROVEEDOR', fechaFormatted, extraRows));
 
   content.push(sectionWithTitle('DATOS DEL VEHÍCULO', [
     { columns: [
@@ -1071,13 +1075,7 @@ async function buildDocDefGuia(opts) {
   const content = [];
   content.push(buildUnifiedHeader(logoData, titulo, numDoc));
 
-  const extraRows = [
-    { columns: [
-      { width: '*', text: fieldRow('FECHA EMISIÓN', fechaFormatted, { fontSize: 8 }) },
-      { width: '*', text: '' },
-    ]},
-  ];
-  content.push(buildUnifiedCliente(rep(cliente), clienteDoc, rep(direccion), 'PROVEEDOR', extraRows));
+  content.push(buildUnifiedCliente(rep(cliente), clienteDoc, rep(direccion), 'PROVEEDOR', fechaFormatted));
 
   const tblBody = [
     [
@@ -1148,7 +1146,7 @@ async function buildDocDefRecepcion(opts) {
   content.push(buildUnifiedHeader(logoData, titulo, numDoc));
 
   // Cliente
-  content.push(buildUnifiedCliente(razonSocial || cliente, clienteDoc, '', 'CLIENTE', [
+  content.push(buildUnifiedCliente(razonSocial || cliente, clienteDoc, '', 'CLIENTE', fechaFormatted, [
     { columns: [
       { width: '*', text: fieldRow('TELÉFONO', telefono, { fontSize: 8 }) },
       { width: '*', text: '' },

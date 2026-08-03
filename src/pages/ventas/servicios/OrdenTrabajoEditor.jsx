@@ -138,7 +138,7 @@ export default function OrdenTrabajoEditor({ backPath, mode = "create" }) {
   const generarFactura = () => {
     const ot = { ...form, diagnosticos };
     const items = db.getOTFacturaItems(ot);
-    navigate("/vs-factura/nuevo", { state: { fromOT: docId, cliente: form.cliente, clienteDoc: form.clienteDoc, placa: form.placa, items } });
+    navigate("/vs-factura/nuevo", { state: { fromOT: docId, cliente: form.cliente, clienteDoc: form.clienteDoc, placa: form.placa, marca: form.marca, modelo: form.modelo, kilometraje: form.km_ingreso, items } });
   };
 
   const handleSubmit = async (e) => {
