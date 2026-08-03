@@ -47,7 +47,7 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
   const [cotModal, setCotModal] = useState(false);
   const [cotFilter, setCotFilter] = useState("");
   const [cotizacionesFacturas] = useFirestoreDocuments("vs-cotizacion");
-  const cotizacionesRecepciones = useFirestoreCollection("recepciones", [where("status", "==", "Cotizaci\u00f3n")]);
+  const cotizacionesRecepciones = useFirestoreCollection("recepciones", [where("status", "not-in", ["Recepci\u00f3n", "Diagn\u00f3stico"])]);
   const cotizaciones = [...cotizacionesRecepciones, ...cotizacionesFacturas];
   const fireClients = useFirestoreCollection("users", [where("user_role", "==", "Cliente")]).map((d) => ({
     id: d.id,
