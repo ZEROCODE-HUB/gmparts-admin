@@ -36,6 +36,7 @@ function normalizeProvider(d) {
     documento: d.Documento || d.documento || "",
     razonSocial: d.razon_social || "",
     correo: d.correo || "",
+    direccion: d.dirreccion_fiscal || d.direccion || "",
   };
 }
 
@@ -47,7 +48,7 @@ export default function CompraEditor({ title, backPath, docKey, onSave, mode = "
 
   const [form, setForm] = useState({
     serie: "", numero: "", fecha: new Date().toISOString().split("T")[0],
-    proveedor: "", proveedorDoc: "", tipoDoc: "RUC",
+    proveedor: "", proveedorDoc: "", tipoDoc: "RUC", direccion: "",
     formaPago: "Contado", moneda: "PEN", tipoIgv: "INCLUIDO IGV", almacen: "", usuario: "GM Parts Admin",
     actualizarStock: true, docRelacion: "",
   });
@@ -79,6 +80,7 @@ export default function CompraEditor({ title, backPath, docKey, onSave, mode = "
             proveedor: data.proveedor || "",
             proveedorDoc: data.proveedorDoc || "",
             tipoDoc: data.tipoDoc || "RUC",
+            direccion: data.direccion || "",
             formaPago: data.formaPago || "Contado",
             moneda: data.moneda || "PEN",
             tipoIgv: normalizeIgv(data.tipoIgv),
@@ -111,6 +113,7 @@ export default function CompraEditor({ title, backPath, docKey, onSave, mode = "
           proveedor: existing.proveedor || "",
           proveedorDoc: existing.proveedorDoc || "",
           tipoDoc: existing.tipoDoc || "RUC",
+          direccion: existing.direccion || "",
           formaPago: existing.formaPago || "Contado",
           moneda: existing.moneda || "PEN",
           tipoIgv: normalizeIgv(existing.tipoIgv),
@@ -141,6 +144,7 @@ export default function CompraEditor({ title, backPath, docKey, onSave, mode = "
     if (p) {
       set("proveedor", p.nombre || p.razonSocial);
       set("proveedorDoc", p.documento || "");
+      set("direccion", p.direccion || "");
     }
   };
 
@@ -315,6 +319,7 @@ export default function CompraEditor({ title, backPath, docKey, onSave, mode = "
             <Field label="Fecha"><div className="text-sm py-2">{form.fecha || "-"}</div></Field>
             <Field label="Proveedor"><div className="text-sm py-2">{form.proveedor || "-"}</div></Field>
             <Field label="Documento"><div className="text-sm py-2">{form.proveedorDoc || "-"}</div></Field>
+            <Field label="Dirección" span><div className="text-sm py-2">{form.direccion || "-"}</div></Field>
             <Field label="Moneda"><div className="text-sm py-2">{form.moneda || "-"}</div></Field>
             <Field label="Forma de pago"><div className="text-sm py-2">{form.formaPago || "-"}</div></Field>
             <Field label="Tipo IGV"><div className="text-sm py-2">{form.tipoIgv || "-"}</div></Field>
@@ -361,6 +366,7 @@ export default function CompraEditor({ title, backPath, docKey, onSave, mode = "
                 </select>
               </Field>
               <Field label="Documento"><input className={inputCls} value={form.proveedorDoc} readOnly /></Field>
+              <Field label="Dirección" span><input className={inputCls} value={form.direccion} onChange={(e) => set("direccion", e.target.value)} placeholder="Dirección del proveedor" /></Field>
               <Field label="Moneda">
                 <select className={inputCls} value={form.moneda} onChange={(e) => set("moneda", e.target.value)}>
                   <option value="PEN">PEN (S/)</option>
@@ -401,6 +407,7 @@ export default function CompraEditor({ title, backPath, docKey, onSave, mode = "
                 </select>
               </Field>
               <Field label="Documento"><input className={inputCls} value={form.proveedorDoc} readOnly /></Field>
+              <Field label="Dirección" span><input className={inputCls} value={form.direccion} onChange={(e) => set("direccion", e.target.value)} placeholder="Dirección del proveedor" /></Field>
               <Field label="Moneda">
                 <select className={inputCls} value={form.moneda} onChange={(e) => set("moneda", e.target.value)}>
                   <option value="PEN">PEN (S/)</option>
@@ -468,6 +475,7 @@ export default function CompraEditor({ title, backPath, docKey, onSave, mode = "
               </select>
             </Field>
             <Field label="Documento"><input className={inputCls} value={form.proveedorDoc} readOnly /></Field>
+            <Field label="Dirección" span><input className={inputCls} value={form.direccion} onChange={(e) => set("direccion", e.target.value)} placeholder="Dirección del proveedor" /></Field>
             <Field label="Moneda">
               <select className={inputCls} value={form.moneda} onChange={(e) => set("moneda", e.target.value)}>
                 <option value="PEN">PEN (S/)</option>
