@@ -104,6 +104,7 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
         const snap = await getDoc(ref);
         if (snap.exists()) {
           const data = snap.data();
+          const vehEdit = allVehicles.find((v) => v.Placa === (data.placa || ""));
           setDocId(id);
           setForm((prev) => ({
             ...prev,
@@ -112,12 +113,12 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
             placa: data.placa || "",
             clienteDoc: data.RUCempresa || data.DNI || "",
             direccion: data.direccion || data.Direccion || "",
-            marca: data.marca || data.Marca || "",
-            modelo: data.modelo || data.Modelo || "",
-            color: data.color || data.Color || "",
-            combustible: data.combustible || data.TipoCombustible || "",
-            kilometraje: data.kilometraje || data.Kilometraje || data.km_ingreso || "",
-            anioFabricacion: data.anioFabricacion || data.anio_de_fabricion || data.AnioFabricacion || data.Ano_fabricacion || data.ano_fabricacion || "",
+            marca: data.marca || data.Marca || (vehEdit && vehEdit.Marca) || "",
+            modelo: data.modelo || data.Modelo || (vehEdit && vehEdit.Modelo) || "",
+            color: data.color || data.Color || (vehEdit && vehEdit.Color) || "",
+            combustible: data.combustible || data.TipoCombustible || (vehEdit && (vehEdit.TipoCombustible || vehEdit.Combustible)) || "",
+            kilometraje: data.kilometraje || data.Kilometraje || data.km_ingreso || (vehEdit && (vehEdit.Kilometraje || vehEdit.km || vehEdit.km_ingreso)) || "",
+            anioFabricacion: data.anioFabricacion || data.anio_de_fabricion || data.AnioFabricacion || data.Ano_fabricacion || data.ano_fabricacion || (vehEdit && (vehEdit.anio_de_fabricion || vehEdit.AnioFabricacion || vehEdit.anio)) || "",
             observacion: data.Observaciones_adicionales || data.motivo_ingreso || "",
             formaPago: "Contado",
             moneda: "PEN",
