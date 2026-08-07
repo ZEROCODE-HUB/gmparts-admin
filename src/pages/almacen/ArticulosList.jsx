@@ -13,6 +13,22 @@ import { exportToExcel } from "../../lib/exportExcel";
 
 const PAGE_SIZE = 20;
 
+async function fetchAllArticles() {
+  const all = [];
+  let last = null;
+  for (;;) {
+    const q = last
+      ? query(collection(db, "Articles"), orderBy("Codigo"), startAfter(last), limit(500))
+      : query(collection(db, "Articles"), orderBy("Codigo"), limit(500));
+    const snap = await getDocs(q);
+    const docs = snap.docs;
+    all.push(...docs.map((d) => ({ id: d.id, ...d.data() })));
+    if (docs.length < 500) break;
+    last = docs[docs.length - 1];
+  }
+  return all;
+}
+
 export default function ArticulosList() {
   const navigate = useNavigate();
   const [items, setItems] = useState([]);
@@ -104,7 +120,7 @@ export default function ArticulosList() {
 
   return (
     <div>
-      <Toolbar title="Registro de artículos" count={-1} onNew={() => navigate("/al-articulos/nuevo")} onExport={() => exportToExcel(items, "Articulos")} />
+      <Toolbar title="Registro de artículos" count={-1} onNew={() => navigate("/al-articulos/nuevo")} onExport={async () => exportToExcel(await fetchAllArticles(), "Articulos")} />
       <SearchBox value={q} onChange={setQ} placeholder="Buscar nombre, código, marca..." />
       {loading && <p className="text-sm text-[var(--muted)] py-4">Cargando...</p>}
       {!loading && items.length === 0 && (
