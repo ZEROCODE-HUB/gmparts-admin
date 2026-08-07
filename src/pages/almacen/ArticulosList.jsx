@@ -9,6 +9,7 @@ import Btn from "../../components/ui/Btn";
 import { searchArticles } from "../../store/firestoreStock";
 import { db } from "../../lib/firebase";
 import { doc, deleteDoc, getDocs, collection, query, limit, startAfter, orderBy } from "firebase/firestore";
+import { exportToExcel } from "../../lib/exportExcel";
 
 const PAGE_SIZE = 20;
 
@@ -103,7 +104,7 @@ export default function ArticulosList() {
 
   return (
     <div>
-      <Toolbar title="Registro de artículos" count={-1} onNew={() => navigate("/al-articulos/nuevo")} onExport={() => {}} />
+      <Toolbar title="Registro de artículos" count={-1} onNew={() => navigate("/al-articulos/nuevo")} onExport={() => exportToExcel(items, "Articulos")} />
       <SearchBox value={q} onChange={setQ} placeholder="Buscar nombre, código, marca..." />
       {loading && <p className="text-sm text-[var(--muted)] py-4">Cargando...</p>}
       {!loading && items.length === 0 && (
