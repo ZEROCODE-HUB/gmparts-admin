@@ -26,7 +26,7 @@ async function fetchAllArticles() {
     if (docs.length < 500) break;
     last = docs[docs.length - 1];
   }
-  return all;
+  return all.map((a) => ({ ...a, Stock: Number(a.Stock ?? a.stock ?? 0) }));
 }
 
 export default function ArticulosList() {
@@ -34,6 +34,7 @@ export default function ArticulosList() {
   const [items, setItems] = useState([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [cursors, setCursors] = useState([]);
   const [page, setPage] = useState(0);
@@ -89,6 +90,16 @@ export default function ArticulosList() {
     }
   };
 
+  const handleExport = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      exportToExcel(await fetchAllArticles(), "Articulos");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (deleteTarget) {
       await deleteDoc(doc(db, "Articles", deleteTarget.id));
@@ -120,9 +131,10 @@ export default function ArticulosList() {
 
   return (
     <div>
-      <Toolbar title="Registro de artículos" count={-1} onNew={() => navigate("/al-articulos/nuevo")} onExport={async () => exportToExcel(await fetchAllArticles(), "Articulos")} />
+      <Toolbar title="Registro de artículos" count={-1} onNew={() => navigate("/al-articulos/nuevo")} onExport={handleExport} />
       <SearchBox value={q} onChange={setQ} placeholder="Buscar nombre, código, marca..." />
       {loading && <p className="text-sm text-[var(--muted)] py-4">Cargando...</p>}
+      {exporting && <p className="text-sm text-[var(--muted)] py-4">Exportando inventario...</p>}
       {!loading && items.length === 0 && (
         <p className="text-sm text-[var(--muted)] py-8 text-center">Sin artículos</p>
       )}
