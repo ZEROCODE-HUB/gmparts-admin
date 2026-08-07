@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Credenciales de servicio (nunca subir a Git)
+serviceAccountKey.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
