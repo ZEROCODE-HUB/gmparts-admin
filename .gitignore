@@ -15,6 +15,10 @@ dist-ssr
 # Credenciales de servicio (nunca subir a Git)
 serviceAccountKey.json
 
+# Cache de despliegue del CLI de Firebase: se regenera en cada deploy y solo
+# produce conflictos.
+.firebase/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
