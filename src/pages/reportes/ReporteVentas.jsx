@@ -83,11 +83,33 @@ export default function ReporteVentas() {
         formaPago: String(campo(d, "formaPago", "FPago") || "Contado"),
         total: Number(campo(d, "total", "Total")) || 0,
         items: d.items || d.Items || [],
+        anulado: d.anulado === true || d.Estado === "Anulado" || d.estado === "Anulado",
+        estadoSunat: d.estadoSunat || "",
+        esPrueba: d.sunatEsPrueba === true,
       }))
     );
   }, [facturasArticulos, boletasArticulos, facturasServicio, boletasServicio]);
 
+  // Un comprobante que no llego a existir fiscalmente no es una venta.
+  //
+  // El informe sumaba TODO lo que hubiera en las colecciones. Comprobado sobre datos reales:
+  // contaba una boleta anulada con su nota de credito ya emitida (S/979.40) y otra que SUNAT
+  // habia rechazado y nunca quedo declarada (S/830), ademas de los ensayos del entorno de
+  // pruebas, que llevan escrito «sin valor fiscal». El Dashboard ya descartaba las anuladas
+  // (Dashboard.jsx:121); este informe no.
+  //
+  // Los que NO llevan `estadoSunat` se conservan: son los anteriores a la integracion con
+  // Factiliza, y descartarlos vaciaria el historico. Solo se excluye lo que consta como
+  // fallido, y por eso se cuentan aparte y se dicen en pantalla: una cifra que encoge sin
+  // explicacion es peor que una equivocada.
+  const ESTADOS_NO_DECLARADOS = ["Rechazado", "Error", "Vencido", "No autorizado"];
+  const cuentaComoVenta = (d) =>
+    !d.anulado && !d.esPrueba && !ESTADOS_NO_DECLARADOS.includes(d.estadoSunat);
+
+  const excluidos = useMemo(() => docs.filter((d) => !cuentaComoVenta(d)).length, [docs]);
+
   const filtered = useMemo(() => docs.filter((d) => {
+    if (!cuentaComoVenta(d)) return false;
     if (ruc && !d.clienteDoc.toLowerCase().includes(ruc.toLowerCase())) return false;
     if (cliente && !d.cliente.toLowerCase().includes(cliente.toLowerCase())) return false;
     if (fechaDesde && d.fecha < fechaDesde) return false;
@@ -119,6 +141,12 @@ export default function ReporteVentas() {
   return (
     <div>
       <Toolbar title="Reporte de ventas" onExport={exportCsv} />
+      {excluidos > 0 && (
+        <p className="text-xs text-[var(--muted)] mb-3">
+          No se cuentan {excluidos} comprobante{excluidos === 1 ? "" : "s"}: anulados con nota de
+          crédito, rechazados por SUNAT o emitidos en el entorno de pruebas.
+        </p>
+      )}
       <div className="bg-[var(--panel)] rounded-lg p-6 border border-[var(--line-soft)] mb-6">
         <h2 className="text-sm font-semibold text-[var(--text)] mb-4 uppercase tracking-wide">Filtros</h2>
         <div className="grid grid-cols-2 gap-4">

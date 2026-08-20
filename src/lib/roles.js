@@ -130,6 +130,15 @@ export const PERMISOS_RUTA = {
   // reglas de Firestore ya se lo permitían a todo el personal; era solo esta matriz.
   "/al-vehiculos": TODOS_MENOS_TECNICO,
 
+  // Los clientes, de quien atiende y factura.
+  //
+  // Mismo caso que `/proveedores`: `/clientes` caia en el modulo de administracion, del que
+  // el asesor de REPUESTOS esta fuera, aunque es uno de los que emite boletas y facturas a
+  // clientes. Con un cliente de mostrador sin registrar se quedaba parado, sin poder darlo
+  // de alta ni verlo. Y el servidor ya se lo permite: los clientes viven en `users` con
+  // `user_role == "Cliente"`, y ahi las reglas dicen `allow read, create: if esPersonal()`.
+  "/clientes": TODOS_MENOS_TECNICO,
+
   // Los proveedores son de quien compra.
   //
   // `/proveedores` caía en el módulo de administración, del que el asesor de REPUESTOS está

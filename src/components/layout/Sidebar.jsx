@@ -139,7 +139,7 @@ export default function Sidebar() {
         <img src="/logo.png" alt="GM Parts" className="w-8 h-8 object-contain" />
           <div>
             <p className="gmp-display font-bold text-sm leading-none">GM<span className="text-[var(--accent)]">PARTS</span></p>
-            <p className="text-[9px] text-[var(--muted)] gmp-mono tracking-wide mt-0.5">TALLER · INVENTORIO</p>
+            <p className="text-[9px] text-[var(--muted)] gmp-mono tracking-wide mt-0.5">TALLER · INVENTARIO</p>
             {session && <p className="text-[9px] text-[var(--accent)] gmp-mono mt-0.5">{session.userRole}</p>}
           </div>
       </div>

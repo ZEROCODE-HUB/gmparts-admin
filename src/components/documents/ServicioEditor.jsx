@@ -10,7 +10,7 @@ import { useFirestoreCollection, useFirestoreDocuments, mapDocKeyToCollection } 
 import { doc, getDoc, collection, getDocs } from "firebase/firestore";
 import { db as fbDb } from "../../lib/firebase";
 import { showToast, dismissAll } from "../ui/Toast";
-import { serieSugerida } from "../../lib/series";
+import { serieSugerida, esDocumentoFiscal } from "../../lib/series";
 import * as db from "../../store/db";
 import { searchArticles, firestoreSaveDocument, marcarRecepcionFacturada } from "../../store/firestoreStock";
 import { desglosarIgv } from "../../lib/igv";
@@ -43,6 +43,10 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
   });
   const [items, setItems] = useState([]);
   const [origen, setOrigen] = useState(null);
+  // Id de la recepcion de la que sale este comprobante. `location.state.fromOT` solo
+  // llega cuando se entra por el boton «Generar factura» de la lista de ordenes; al
+  // elegir la orden aqui dentro, con «Agregar Cotizacion», no llegaba nada.
+  const [otId, setOtId] = useState(null);
   const [artSearch, setArtSearch] = useState("");
   const [artResults, setArtResults] = useState([]);
   const [artQty, setArtQty] = useState(1);
@@ -356,6 +360,7 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
         set("tipoIgv", "INCLUIDO");
       }
 
+      setOtId(cot.id || null);
       setOrigen({ tipo: "cotizacion", ref: cot.codeCT || cot.id || "" });
       setCotModal(false);
       setCotFilter("");
@@ -469,8 +474,18 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
       if (onSave) onSave(doc);
       // Marca la recepción en Firestore (antes iba a localStorage y el flag nunca llegaba
       // ni a la lista de órdenes ni a la app móvil, así que se podía refacturar sin fin).
-      if (location.state?.fromOT) {
-        await marcarRecepcionFacturada(location.state.fromOT, { status: "Finalizado" });
+      // Se marca venga de donde venga la orden, no solo del boton de la lista.
+      //
+      // Facturando desde «Agregar Cotizacion» la recepcion NO se marcaba, asi que la misma
+      // orden se podia facturar una y otra vez: comprobado emitiendo cuatro boletas de la
+      // orden CT001-0000230, con cuatro salidas del mismo repuesto en el kardex y cuatro
+      // comprobantes validos por un unico trabajo.
+      //
+      // Solo cuentan los documentos fiscales: hacer una cotizacion a partir de una orden no
+      // es haberla facturado.
+      const recepcionOrigen = location.state?.fromOT || otId;
+      if (recepcionOrigen && esDocumentoFiscal(docKey)) {
+        await marcarRecepcionFacturada(recepcionOrigen, { status: "Finalizado" });
       }
       navigate(backPath);
     } catch (saveErr) {
@@ -754,6 +769,12 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
                     <div className="font-medium text-[var(--text)]">{code} · {name}</div>
                     <div className="text-xs text-[var(--muted)]">{fecha}</div>
                   </div>
+                  {c.facturado === true && (
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[var(--danger-dim)] text-[var(--danger)] whitespace-nowrap"
+                          title="Esta orden ya tiene comprobante emitido: volver a facturarla descuenta el stock otra vez">
+                      YA FACTURADA
+                    </span>
+                  )}
                 </button>
               );})}
               {cotizaciones.filter((c) => {

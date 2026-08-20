@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { Eye, Pencil, Printer, Trash2 } from "lucide-react";
 import EnviarSunatButton from "../../../components/documents/EnviarSunatButton";
 import AnularComprobanteModal from "../../../components/documents/AnularComprobanteModal";
+import MarcaAnulado, { estaAnulado } from "../../../components/documents/MarcaAnulado";
 import PrintDocument from "../../../components/documents/PrintDocument";
 import Toolbar from "../../../components/ui/Toolbar";
 import SearchBox from "../../../components/ui/SearchBox";
@@ -63,7 +64,7 @@ export default function EmisionBoletaTallerList() {
         renderRow={(c) => (
           <>
             <Td className="gmp-mono text-[var(--muted)]">{c.Nserie || c.nserie || c.serie || ""}</Td>
-            <Td className="gmp-mono">{c.NumCotizacion || c.numero || ""}</Td>
+            <Td className="gmp-mono">{c.NumCotizacion || c.numero || ""}<MarcaAnulado doc={c} /></Td>
             <Td className="text-[var(--muted)]">{c.Fecha || c.fecha || ""}</Td>
             <Td className="font-medium">{c.RazonSNombre || c.razonSNombre || c.cliente || ""}</Td>
             <Td className="gmp-mono text-[var(--muted)]">{c.clienteDoc || ""}</Td>
@@ -75,7 +76,9 @@ export default function EmisionBoletaTallerList() {
                 <button onClick={() => navigate(`/vs-boleta/${c.id}`)} className="p-1.5 rounded-md text-[var(--accent)] hover:bg-[var(--accent-dim)]" title="Editar"><Pencil size={15} /></button>
                 <EnviarSunatButton docKey="vs-boleta" id={c.id} estadoActual={c.estadoSunat || c.estadoFactura} esPrueba={c.sunatEsPrueba} reintentable={c.sunatReintentable} correoEnviado={c.correoEnviadoA} />
                 <button onClick={() => setPrintTarget(c)} className="p-1.5 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]" title="Imprimir"><Printer size={15} /></button>
-                <button onClick={() => setDeleteTarget(c)} className="p-1.5 rounded-md text-[var(--danger)] hover:bg-[var(--danger-dim)]" title="Anular"><Trash2 size={15} /></button>
+                {estaAnulado(c)
+                  ? <span className="p-1.5 text-[var(--muted)] opacity-40" title="Ya anulado: no se puede anular dos veces"><Trash2 size={15} /></span>
+                  : <button onClick={() => setDeleteTarget(c)} className="p-1.5 rounded-md text-[var(--danger)] hover:bg-[var(--danger-dim)]" title="Anular"><Trash2 size={15} /></button>}
               </div>
             </Td>
           </>
