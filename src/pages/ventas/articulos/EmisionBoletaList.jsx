@@ -1,21 +1,20 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import Pagination from "../../../components/ui/Pagination";
 import { exportToExcel } from "../../../lib/exportExcel";
 import { useNavigate } from "react-router-dom";
 import { Eye, Pencil, Trash2, Printer } from "lucide-react";
 import EnviarSunatButton from "../../../components/documents/EnviarSunatButton";
+import AnularComprobanteModal from "../../../components/documents/AnularComprobanteModal";
 import PrintDocument from "../../../components/documents/PrintDocument";
 import Toolbar from "../../../components/ui/Toolbar";
 import SearchBox from "../../../components/ui/SearchBox";
 import Table, { Td } from "../../../components/ui/Table";
-import Modal from "../../../components/ui/Modal";
-import Btn from "../../../components/ui/Btn";
 import DocumentPreviewModal from "../../../components/documents/DocumentPreviewModal";
 import DateRangeFilter from "../../../components/ui/DateRangeFilter";
 import { useFirestoreDocuments } from "../../../store/firestoreDb";
 
 const previewFields = [
-  { key: "serie", label: "Serie" }, { key: "numero", label: "N?mero" },
+  { key: "serie", label: "Serie" }, { key: "numero", label: "Número" },
   { key: "fecha", label: "Fecha" }, { key: "cliente", label: "Cliente" },
   { key: "clienteDoc", label: "DNI" }, { key: "subtotal", label: "Subtotal" },
   { key: "igv", label: "IGV" }, { key: "total", label: "Total" }, { key: "estado", label: "Estado" },
@@ -23,7 +22,7 @@ const previewFields = [
 
 export default function EmisionBoletaList() {
   const navigate = useNavigate();
-  const [items, { remove }] = useFirestoreDocuments("va-boleta");
+  const [items] = useFirestoreDocuments("va-boleta");
   const [q, setQ] = useState("");
   const [sortField, setSortField] = useState("fecha");
   const [sortDir, setSortDir] = useState("desc");
@@ -53,10 +52,10 @@ export default function EmisionBoletaList() {
 
   return (
     <div>
-      <Toolbar title="Emisi?n de boleta" count={rows.length} onNew={() => navigate("/va-boleta/nuevo")} onExport={() => exportToExcel(rows, "Boletas")} />
+      <Toolbar title="Emisión de boleta" count={rows.length} onNew={() => navigate("/va-boleta/nuevo")} onExport={() => exportToExcel(rows, "Boletas")} />
       <SearchBox value={q} onChange={setQ} placeholder="Buscar cliente, serie..." />
       <DateRangeFilter fechaDesde={fechaDesde} fechaHasta={fechaHasta} onChange={(d, h) => { setFechaDesde(d); setFechaHasta(h); }} />
-      <Table columns={["Serie", "N?mero", "Fecha", "Cliente", "DNI", "Total", "Estado", "Acci?n"]}
+      <Table columns={["Serie", "Número", "Fecha", "Cliente", "DNI", "Total", "Estado", "Acción"]}
         sortable={[{key:"serie",label:"Serie"},{key:"numero",label:"N\u00famero"},{key:"fecha",label:"Fecha"},{key:"cliente",label:"Cliente"},{key:"total",label:"Total"},{key:"estado",label:"Estado"}]}
         sortField={sortField} sortDir={sortDir} onSort={handleSort}
         rows={pageRows}
@@ -73,7 +72,7 @@ export default function EmisionBoletaList() {
               <div className="flex gap-1">
                 <button onClick={() => setPreview(c)} className="p-1.5 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]" title="Ver detalle"><Eye size={15} /></button>
                 <button onClick={() => navigate(`/va-boleta/${c.id}`)} className="p-1.5 rounded-md text-[var(--accent)] hover:bg-[var(--accent-dim)]" title="Editar"><Pencil size={15} /></button>
-                <EnviarSunatButton docKey="va-boleta" id={c.id} estadoActual={c.estadoFactura} />
+                <EnviarSunatButton docKey="va-boleta" id={c.id} estadoActual={c.estadoSunat || c.estadoFactura} esPrueba={c.sunatEsPrueba} reintentable={c.sunatReintentable} correoEnviado={c.correoEnviadoA} />
                 <button onClick={() => setPrintTarget(c)} className="p-1.5 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]" title="Imprimir"><Printer size={15} /></button>
                 <button onClick={() => setDeleteTarget(c)} className="p-1.5 rounded-md text-[var(--danger)] hover:bg-[var(--danger-dim)]" title="Anular"><Trash2 size={15} /></button>
               </div>
@@ -82,14 +81,7 @@ export default function EmisionBoletaList() {
         )}
       />
       {deleteTarget && (
-        <Modal title="Anular boleta" onClose={() => setDeleteTarget(null)}>
-          <p className="text-sm text-[var(--muted)] mb-6">?Est?s seguro de anular esta boleta?</p>
-          <p className="font-medium mb-6">{deleteTarget.serie}-{deleteTarget.numero}</p>
-          <div className="flex justify-end gap-2">
-            <Btn variant="ghost" onClick={() => setDeleteTarget(null)}>Cancelar</Btn>
-            <Btn variant="danger" onClick={() => { remove(deleteTarget.id); setDeleteTarget(null); }}>Anular</Btn>
-          </div>
-        </Modal>
+        <AnularComprobanteModal docKey="va-boleta" id={deleteTarget.id} onClose={() => setDeleteTarget(null)} />
       )}
       {preview && <DocumentPreviewModal title="Vista previa - Boleta" data={preview} fields={previewFields} collection="FacturasVentasCompras" onClose={() => setPreview(null)} />}
       {printTarget && <PrintDocument title="Comprobante" data={printTarget} onClose={() => setPrintTarget(null)} />}

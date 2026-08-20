@@ -1,8 +1,341 @@
 rules_version = '2';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Reglas de seguridad — GM Parts (g-m-parts-lac7fg)
+//
+// SUSTITUYEN a `allow read, write: if true`, que dejaba toda la base abierta a
+// cualquiera que tuviera el projectId — y el projectId viaja dentro del bundle del
+// panel admin, así que estaba al alcance de cualquier visitante.
+//
+// Criterio, derivado del Excel de flujo del cliente:
+//   · CLIENTE: solo su propio documento de usuario. Nada más. Su sitio es el micrositio de
+//     aprobaciones, que ni siquiera pasa por aquí (va por Cloud Functions con Admin SDK).
+//   · TALLER (Jefe de Taller, Técnico): el flujo de recepciones y diagnósticos, lectura del
+//     catálogo de artículos para diagnosticar, y vales de insumos. No tocan facturación,
+//     cobranza ni correlativos.
+//   · ASESOR (Servicio, Repuesto): además, emitir comprobantes, cobranza y mantenimiento de
+//     catálogos e inventario.
+//   · ADMINISTRACIÓN (Administrador, Gerente General): todo, y es el único que BORRA.
+//   · Nadie cambia `user_role` salvo administración — sería la vía más directa para
+//     saltarse todo lo anterior.
+//   · Los correlativos (LastCode) no se pueden borrar nunca: un hueco en la numeración
+//     hay que justificarlo ante SUNAT.
+//
+// El micrositio de aprobaciones NO necesita acceso anónimo: entra por Cloud Functions,
+// que usan el Admin SDK y no pasan por estas reglas. Verificado en el código: web-client
+// solo importa `app` para getFunctions; el `db` que exporta lib/firebase.ts no lo usa
+// ninguna página.
+//
+// Colecciones contrastadas contra el código de los dos clientes (2026-08-17): las 24 que
+// referencia el móvil en lib/backend/schema/*.dart y las 9 del admin están todas
+// declaradas aquí, así que el `if false` del final no deja fuera ningún flujo actual.
+//
+// ⚠️ ANTES DE DESPLEGAR, comprobar con la app móvil en la mano:
+//   1. Iniciar sesión y listar recepciones.
+//   2. Crear una recepción con cliente y vehículo nuevos.
+//   3. Abrir un enlace de cotización y aprobarlo desde el navegador del cliente.
+//   4. Con un usuario Administrador, ANULAR un documento (ver el aviso de abajo).
+// Si alguna pantalla del móvil leyera Firestore sin usuario autenticado, fallaría aquí.
+//
+// ⚠️ ANTES DE DESPLEGAR hay que ejecutar `sincronizarRolesAuth` una vez.
+// De los 15 usuarios, 2 tienen ID de documento autogenerado (20 caracteres) en vez de su
+// uid de Auth (28), y uno de ellos —alex.vilcahuaman@gearmotorparts.com— es Administrador.
+// Como el respaldo en Firestore busca por uid, ese administrador se quedaría sin permiso
+// para borrar. La función copia el rol al token de Auth, que es de donde lee `rol()`
+// primero y ya no depende de cómo se llame el documento.
+// ═══════════════════════════════════════════════════════════════════════════
+
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // «Autenticado» excluye a propósito el acceso anónimo. Si el proveedor anónimo está
+    // habilitado en la consola, `request.auth != null` a secas bastaría para que cualquiera
+    // se colara con una sesión anónima creada desde el navegador — que es casi lo mismo que
+    // dejar la base abierta. Ningún cliente usa login anónimo: en el móvil existe la función
+    // signInAnonymously pero es andamiaje de FlutterFlow y nadie la llama.
+    function autenticado() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider != "anonymous";
+    }
+
+    // El rol se lee primero del token de Auth (custom claim) y solo si no está ahí se
+    // busca en Firestore.
+    //
+    // El orden importa. La búsqueda en Firestore da por hecho que el ID del documento de
+    // usuario ES el uid de Auth, y en esta base eso NO siempre se cumple: de 15 usuarios,
+    // 2 tienen ID autogenerado de 20 caracteres, y uno de ellos
+    // (alex.vilcahuaman@gearmotorparts.com) es Administrador. Con solo la búsqueda en
+    // Firestore, ese administrador se quedaría sin permisos para borrar nada.
+    //
+    // El claim lo asigna la función `sincronizarRolesAuth`, que empareja por correo. Hasta
+    // que se ejecute, el respaldo en Firestore mantiene funcionando a los otros 14.
+    function rolDelClaim() {
+      return request.auth.token.get("role", "");
+    }
+
+    function rolEnFirestore() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get("user_role", "")
+        : "";
+    }
+
+    function rol() {
+      return rolDelClaim() != "" ? rolDelClaim() : rolEnFirestore();
+    }
+
+    function esAdmin() {
+      return autenticado() && (rol() == "Administrador" || rol() == "Gerente General");
+    }
+
+    // Reparto por rol, derivado del Excel de flujo del cliente.
+    //
+    // Antes solo existía «admin / no admin», y solo para borrar: leer y escribir estaba
+    // abierto a cualquier autenticado, de modo que un Cliente podía escribir facturas,
+    // correlativos y kárdex. Ahora cada familia de datos tiene su público.
+    function tieneRol(roles) {
+      return autenticado() && rol() in roles;
+    }
+
+    // Quien atiende al cliente y vende.
+    function esAsesor() {
+      return tieneRol(["Asesor Servicio", "Asesor Repuesto"]);
+    }
+
+    // Quien ejecuta el trabajo del taller.
+    function esTaller() {
+      return tieneRol(["Jefe de Taller", "Tecnico Mecanico"]);
+    }
+
+    // Todo el personal interno: cualquiera menos el Cliente y los roles no reconocidos.
+    function esPersonal() {
+      return esAdmin() || esAsesor() || esTaller();
+    }
+
+    // ── Personas ──────────────────────────────────────────────────────────
+    // Un cliente puede leer y editar SU propio documento (la app se lo permite), pero no el
+    // de los demás: antes cualquier autenticado leía la ficha completa de los 15 usuarios.
+    //
+    // `user_role` se protege aparte: quien no sea administrador no puede cambiarse el rol a
+    // sí mismo ni asignárselo a otro, que sería la forma más directa de saltarse todo esto.
+    match /users/{userId} {
+      // La tercera condición rompe una dependencia circular: para saber si alguien es
+      // «personal» hay que leer su rol de `users`, y para leer `users` había que ser
+      // personal. Quien tiene su documento nombrado con su uid sale del bucle por la
+      // segunda condición; quien NO —el caso de alex.vilcahuaman, que es Administrador—
+      // se quedaba encerrado y sin poder ni identificarse.
+      // Comparar contra el correo del token solo deja ver la ficha propia.
+      allow read: if esPersonal()
+        || request.auth.uid == userId
+        || resource.data.email == request.auth.token.email;
+      allow create: if esPersonal();
+      allow update: if esAdmin()
+        || ((esPersonal() || request.auth.uid == userId)
+            && (!("user_role" in request.resource.data)
+                || request.resource.data.user_role == resource.data.user_role));
+      allow delete: if esAdmin();
+    }
+
+    match /Proveedores/{id} {
+      allow read: if esPersonal();
+      allow create, update: if esAdmin() || esAsesor();
+      allow delete: if esAdmin();
+    }
+
+    // ── Taller ────────────────────────────────────────────────────────────
+    // Las claves de acceso público (quote/report/reception_access_key) viven en estos
+    // documentos, pero solo las escriben y consumen las Cloud Functions.
+    // El taller entero trabaja sobre las recepciones: es el flujo del Excel, y en él
+    // participan asesor, jefe de taller y técnico.
+    match /recepciones/{id} {
+      // Quién es el cliente y cuál es el vehículo lo fija quien recepciona —el asesor—, y
+      // no se toca después desde el taller. El técnico entra a trabajar la orden: registrar
+      // el diagnóstico, avanzar el estado, dejar sus comentarios y sus fotos. Cambiar el
+      // nombre del cliente o la placa a mitad del servicio no es reportar avance, es
+      // reescribir el expediente.
+      //
+      // Es una lista de campos PROHIBIDOS, no de permitidos, a propósito: la app móvil
+      // escribe en esta colección muchos campos del flujo del taller (control de calidad,
+      // fotos de finalización, tiempos) y una lista blanca los rompería todos en cuanto
+      // apareciera uno nuevo.
+      function identidadDelExpedienteIntacta() {
+        return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          "nombre_cliente", "Razon_social", "DNI", "RUCempresa",
+          "placa", "marca", "modelo",
+          "tipo_documento", "tipo_persona",
+          "Correo_electronico", "telefono",
+          "codeCT", "numeroorden",
+        ]);
+      }
+
+      allow read, create: if esPersonal();
+      allow update: if esAdmin() || esAsesor()
+        || (esTaller() && identidadDelExpedienteIntacta());
+      allow delete: if esAdmin();
+
+      match /diagnosticos/{diagId} {
+        allow read, write: if esPersonal();
+      }
+    }
+
+    // ── Inventario ────────────────────────────────────────────────────────
+    // Leer el catálogo lo necesita todo el personal (el técnico consulta repuestos al
+    // diagnosticar). Modificarlo, solo quien lleva almacén.
+    match /Articles/{id} {
+      // El taller puede mover EXISTENCIAS, pero no tocar el maestro.
+      //
+      // Un vale de insumos descuenta stock: es su razón de ser. Con la regla anterior el
+      // jefe de taller creaba el vale —permitido— y el descuento se denegaba a continuación,
+      // así que el vale quedaba guardado y los repuestos seguían contados en el almacén.
+      // Comprobado: quedó un vale huérfano en la base.
+      //
+      // Se le deja cambiar `Stock` y nada más: precios, códigos y descripciones siguen
+      // siendo de quien lleva repuestos.
+      function soloMueveExistencias() {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(["Stock"]);
+      }
+
+      allow read: if esPersonal();
+      allow create: if esAdmin() || esAsesor();
+      allow update: if esAdmin() || esAsesor()
+        || (esTaller() && soloMueveExistencias());
+      allow delete: if esAdmin();
+    }
+
+    match /Almacen/{id} {
+      allow read: if esPersonal();
+      allow create, update: if esAdmin() || esAsesor();
+      allow delete: if esAdmin();
+    }
+
+    match /Vehiculos/{id} {
+      allow read, create, update: if esPersonal();
+      allow delete: if esAdmin();
+    }
+
+    match /service/{id} {
+      allow read: if esPersonal();
+      allow create, update: if esAdmin() || esAsesor();
+      allow delete: if esAdmin();
+    }
+
+    // Trazabilidad de stock: se escribe al emitir documentos y no debería borrarse a mano.
+    match /Kardex_element/{id} {
+      allow read: if esPersonal();
+      allow create, update: if esAdmin() || esAsesor();
+      allow delete: if esAdmin();
+    }
+
+    match /Almacen_movement/{id} {
+      // Crear el movimiento es dejar constancia de lo que salió con un vale, así que el
+      // taller también lo hace. Corregir un movimiento ya escrito, no: eso es rehacer el
+      // histórico del almacén.
+      allow read: if esPersonal();
+      allow create: if esAdmin() || esAsesor() || esTaller();
+      allow update: if esAdmin() || esAsesor();
+      allow delete: if esAdmin();
+    }
+
+    match /Articles_Warehouse/{id} {
+      allow read: if esPersonal();
+      allow create, update: if esAdmin() || esAsesor();
+      allow delete: if esAdmin();
+    }
+
+    // El vale de insumos lo pide el taller: aquí el técnico sí escribe.
+    match /ValeInsumos/{id} {
+      allow read, create, update: if esPersonal();
+      allow delete: if esAdmin();
+    }
+
+    // ── Comprobantes ──────────────────────────────────────────────────────
+    // Un comprobante declarado ante SUNAT no se borra: se anula con nota de crédito.
+    // El técnico no factura, así que ni lee ni escribe aquí.
+    match /Facturas/{id} {
+      allow read, create, update: if esAdmin() || esAsesor();
+      allow delete: if esAdmin();
+    }
+
+    match /FacturasVentasCompras/{id} {
+      allow read, create, update: if esAdmin() || esAsesor();
+      allow delete: if esAdmin();
+    }
+
+    // ── Cobranza ──────────────────────────────────────────────────────────
+    // El dinero es de administración; el asesor consulta para saber si un cliente debe.
+    match /cuentasPorCobrar/{id} {
+      allow read: if esAdmin() || esAsesor();
+      allow create, update: if esAdmin() || esAsesor();
+      allow delete: if esAdmin();
+
+      // Historial de pagos: se añade, no se reescribe ni se borra.
+      match /pagos_CporCobrar/{pagoId} {
+        allow read, create: if esAdmin() || esAsesor();
+        allow update, delete: if esAdmin();
+      }
+    }
+
+    // ── Correlativos ──────────────────────────────────────────────────────
+    // Nunca se borran: un salto en la numeración hay que justificarlo ante SUNAT.
+    match /LastCode/{id} {
+      // Hay dos clases de contador aquí dentro y no merecen el mismo trato:
+      //
+      //  · Los FISCALES —las series de comprobantes: F001, B001, FC01, y sus equivalentes
+      //    de prueba PRUEBA-*— siguen reservados a quien puede emitir. Consumir uno de
+      //    estos es emitir, y un hueco hay que justificarlo ante SUNAT.
+      //
+      //  · Los INTERNOS del taller —`vs-orden` (el nº de OT) y `codeCT` (el código de
+      //    documento de la recepción)— los gasta cualquiera que abra o guarde una orden de
+      //    trabajo, y eso incluye al técnico. Con la regla anterior, un técnico no podía
+      //    guardar NINGUNA orden: al asignar el correlativo la escritura se denegaba y el
+      //    editor respondía «Missing or insufficient permissions». Comprobado con una
+      //    sesión real de técnico.
+      function contadorInterno() {
+        return id in ["vs-orden", "codeCT"];
+      }
+
+      allow read: if esPersonal();
+      allow create, update: if esAdmin() || esAsesor()
+        || (contadorInterno() && esTaller());
+      allow delete: if false;
+    }
+
+    // ── Catálogos ─────────────────────────────────────────────────────────
+    // Se leen desde casi todas las pantallas; escribirlos es mantenimiento.
+    match /Group/{id}                 { allow read: if esPersonal(); allow write: if esAdmin() || esAsesor(); }
+    match /subgroup/{id}              { allow read: if esPersonal(); allow write: if esAdmin() || esAsesor(); }
+    match /article_brand_marca/{id}   { allow read: if esPersonal(); allow write: if esAdmin() || esAsesor(); }
+    match /measurement_unit/{id}      { allow read: if esPersonal(); allow write: if esAdmin() || esAsesor(); }
+    match /vehicle_marca_brand/{id}   { allow read: if esPersonal(); allow write: if esAdmin() || esAsesor(); }
+    match /vehicle_model_modelo/{id}  { allow read: if esPersonal(); allow write: if esAdmin() || esAsesor(); }
+    match /encargados/{id}            { allow read: if esPersonal(); allow write: if esAdmin(); }
+    match /personal/{id}              { allow read: if esPersonal(); allow write: if esAdmin(); }
+
+    // Catálogos legacy congelados: se conservan como histórico, no reciben escrituras.
+    match /Repuestos/{id} { allow read: if esPersonal(); allow write: if false; }
+    match /Insumos/{id}   { allow read: if esPersonal(); allow write: if false; }
+
+    // ── Consultas de grupo de colección ───────────────────────────────────
+    // Una consulta collectionGroup NO se autoriza con la regla anidada: Firestore la
+    // evalúa contra una regla `/{path=**}/`, y sin ella devuelve permiso denegado aunque
+    // el mismo usuario pueda leer esos documentos uno a uno.
+    //
+    // La app móvil hace collectionGroup('diagnosticos') y collectionGroup('pagos_CporCobrar')
+    // (diagnosticos_record.dart:155 y pagos_cpor_cobrar_record.dart:74). Las reglas que hay
+    // hoy desplegadas incluyen esta excepción para diagnosticos; quitarla dejaría la
+    // pantalla de diagnósticos en blanco.
+    match /{path=**}/diagnosticos/{diagId} {
+      allow read: if esPersonal();
+    }
+
+    match /{path=**}/pagos_CporCobrar/{pagoId} {
+      allow read: if esAdmin() || esAsesor();
+    }
+
+    // ── Cierre ────────────────────────────────────────────────────────────
+    // Cualquier colección no contemplada arriba queda denegada por defecto, en vez de
+    // heredar el `if true` anterior. Si aparece una nueva, hay que declararla aquí.
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 }

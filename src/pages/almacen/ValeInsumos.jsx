@@ -8,14 +8,15 @@ import Btn from "../../components/ui/Btn";
 import Field, { inputCls } from "../../components/ui/Field";
 
 import { db } from "../../lib/firebase";
-import { collection, getDocs, addDoc } from "firebase/firestore";
+import { collection, getDocs, doc, writeBatch, increment } from "firebase/firestore";
 import { useFirestoreDocuments, useFirestoreCollection } from "../../store/firestoreDb";
 const ALMACENES = [
   { id: "w1", Nombre: "Almacén Principal" },
   { id: "w2", Nombre: "Almacén Secundario" },
   { id: "w3", Nombre: "Depósito Taller" },
 ];
-import { searchArticles, updateArticleStockByCode } from "../../store/firestoreStock";
+import { searchArticles, getArticleRefByCode } from "../../store/firestoreStock";
+import { getSession } from "../../store/auth";
 import { showToast } from "../../components/ui/Toast";
 
 export default function ValeInsumos() {
@@ -70,17 +71,37 @@ export default function ValeInsumos() {
     setSearch("");
   };
 
+  // El vale lo firma quien lo emite. Estaba escrito a fuego «GM Parts Admin», así que
+  // todos los vales salían a nombre de la misma persona.
+  const currentUsuario = getSession()?.displayName || getSession()?.email || "";
+
   const submit = async () => {
     if (repuestos.length === 0) { setError("Agregue al menos un repuesto"); return; }
     setSaving(true);
     try {
-      const valeRef = await addDoc(collection(db, "ValeInsumos"), {
-        ...form, repuestos, usuario: "GM Parts Admin", fechaCreacion: new Date().toISOString(),
-      });
+      // Todo en un solo lote: o se guarda el vale CON su descuento y su movimiento, o no se
+      // guarda nada.
+      //
+      // Antes se escribía en tres pasos sueltos y el primero era el vale. Si el descuento
+      // fallaba —le pasaba al jefe de taller, que no tenía permiso sobre las existencias—,
+      // el vale quedaba en la base y los repuestos seguían contados en el almacén. Se
+      // encontró uno así, huérfano, al probar este flujo.
+      const referencias = [];
       for (const r of repuestos) {
-        if (r.codigo) await updateArticleStockByCode(r.codigo, -r.cantidad, r.articleId);
+        if (!r.codigo) continue;
+        const ref = await getArticleRefByCode(r.codigo, r.articleId);
+        if (ref) referencias.push({ ref, cantidad: r.cantidad });
       }
-      await addDoc(collection(db, "Almacen_movement"), {
+
+      const lote = writeBatch(db);
+      const valeRef = doc(collection(db, "ValeInsumos"));
+      lote.set(valeRef, {
+        ...form, repuestos, usuario: currentUsuario, fechaCreacion: new Date().toISOString(),
+      });
+      for (const { ref, cantidad } of referencias) {
+        lote.update(ref, { Stock: increment(-cantidad) });
+      }
+      lote.set(doc(collection(db, "Almacen_movement")), {
         Movement_type: "Salida",
         Article_name: repuestos.map((r) => r.descripcion).join(", "),
         Code_Id: repuestos.map((r) => r.codigo).join(", "),
@@ -91,6 +112,8 @@ export default function ValeInsumos() {
         Description: form.observacion || "Vale de insumos",
         Document_Number: valeRef.id,
       });
+
+      await lote.commit();
       setForm({ fecha: new Date().toISOString().split("T")[0], almacen: "w1", recepcionRef: "", observacion: "" });
       setRepuestos([]);
       setError("");
@@ -99,7 +122,16 @@ export default function ValeInsumos() {
       const snap = await getDocs(collection(db, "ValeInsumos"));
       setVales(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     } catch (e) {
-      showToast("Error al crear vale", "error");
+      // Se dice QUÉ falló. El mensaje genérico anterior no distinguía entre un problema de
+      // permisos y un dato mal puesto, y encima se tragaba el error sin dejar rastro.
+      console.error("Vale de insumos:", e);
+      const msg = String(e?.message || "");
+      showToast(
+        msg.includes("permission")
+          ? "No tienes permisos para descontar existencias del almacén."
+          : "No se pudo crear el vale. Revisa los datos e inténtalo de nuevo.",
+        "error"
+      );
     } finally {
       setSaving(false);
     }

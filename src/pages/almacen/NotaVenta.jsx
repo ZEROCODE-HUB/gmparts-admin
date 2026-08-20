@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import Pagination from "../../components/ui/Pagination";
 import { exportToExcel } from "../../lib/exportExcel";
 import { useNavigate } from "react-router-dom";
@@ -14,9 +14,9 @@ import DateRangeFilter from "../../components/ui/DateRangeFilter";
 import { useFirestoreDocuments } from "../../store/firestoreDb";
 
 const previewFields = [
-  { key: "serie", label: "Serie" }, { key: "numero", label: "N�mero" },
+  { key: "serie", label: "Serie" }, { key: "numero", label: "Número" },
   { key: "fecha", label: "Fecha" }, { key: "cliente", label: "Cliente" },
-  { key: "clienteDoc", label: "Doc. Cliente" }, { key: "almacen", label: "Almac�n" },
+  { key: "clienteDoc", label: "Doc. Cliente" }, { key: "almacen", label: "Almacén" },
   { key: "subtotal", label: "Subtotal" }, { key: "igv", label: "IGV" },
   { key: "total", label: "Total" }, { key: "estado", label: "Estado" },
 ];
@@ -68,7 +68,7 @@ export default function NotaVenta() {
             <Td className="gmp-mono text-[var(--muted)]">{c.clienteDoc || ""}</Td>
             <Td className="text-[var(--muted)]">{c.almacen || ""}</Td>
             <Td className="gmp-mono">S/ {Number(c.total || 0).toFixed(2)}</Td>
-            <Td><span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${c.estado === "Anulado" ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>{c.estado || "�"}</span></Td>
+            <Td><span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${c.estado === "Anulado" ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"}`}>{c.estado || "—"}</span></Td>
             <Td>
               <div className="flex gap-1">
                 <button onClick={() => setPreview(c)} className="p-1.5 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]" title="Ver detalle"><Eye size={15} /></button>
@@ -82,7 +82,7 @@ export default function NotaVenta() {
       />
       {deleteTarget && (
         <Modal title="Anular nota de venta" onClose={() => setDeleteTarget(null)}>
-          <p className="text-sm text-[var(--muted)] mb-6">�Est�s seguro de anular esta nota de venta? Se revertir� el stock consumido.</p>
+          <p className="text-sm text-[var(--muted)] mb-6">¿Estás seguro de anular esta nota de venta? Se revertirá el stock consumido.</p>
           <p className="font-medium mb-6">{(deleteTarget.serie || "NV")}-{deleteTarget.numero || deleteTarget.id} - {deleteTarget.cliente}</p>
           <div className="flex justify-end gap-2">
             <Btn variant="ghost" onClick={() => setDeleteTarget(null)}>Cancelar</Btn>

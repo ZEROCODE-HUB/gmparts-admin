@@ -5,10 +5,12 @@ import Btn from "../../components/ui/Btn";
 import Field, { inputCls } from "../../components/ui/Field";
 import { saveMaestro, deleteMaestro } from "../../store/firestoreDb";
 import { db } from "../../lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, getDocs, query, collection } from "firebase/firestore";
 import { where } from "firebase/firestore";
 import { useFirestoreCollection } from "../../store/firestoreDb";
 import { useCatalog } from "../../store/useCatalog";
+import { showToast } from "../../components/ui/Toast";
+import { validarVehiculo, normalizarPlaca } from "../../lib/vehiculos";
 
 const COL = "Vehiculos";
 
@@ -76,14 +78,39 @@ export default function VehiculoForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const comprobacion = validarVehiculo(form);
+    if (!comprobacion.ok) { showToast(comprobacion.error, "error"); return; }
+
     setSaving(true);
     try {
-      const formData = { ...form, id };
+      // La placa se guarda normalizada y se comprueba que no exista ya. En la base hay cuatro
+      // vehículos con la placa «2907TEST»: cuando el asesor abre el desplegable no tiene forma
+      // de saber cuál de los cuatro es el coche que tiene delante.
+      const placa = normalizarPlaca(form.Placa);
+      const repetidas = await getDocs(query(collection(db, COL), where("Placa", "==", placa)));
+      const chocaConOtro = repetidas.docs.some((d) => d.id !== id);
+      if (chocaConOtro) {
+        showToast(`Ya hay un vehículo con la placa ${placa}.`, "error");
+        setSaving(false);
+        return;
+      }
+
+      const formData = { ...form, Placa: placa, id };
       const clienteSel = clientesOpts.find(c => c.nombre === form.Propietario_name);
       if (clienteSel?.id) formData.Propietario = doc(db, "users", clienteSel.id);
       await saveMaestro(COL, formData);
       navigate("/al-vehiculos");
-    } catch {
+    } catch (err) {
+      // Antes este catch se tragaba el error sin decir nada: el botón dejaba de girar y el
+      // usuario no sabía si había guardado o no.
+      const msg = String(err?.message || "");
+      showToast(
+        msg.includes("permission")
+          ? "No tienes permisos para guardar vehículos."
+          : "No se pudo guardar el vehículo. Revisa los datos e inténtalo de nuevo.",
+        "error"
+      );
       setSaving(false);
     }
   };

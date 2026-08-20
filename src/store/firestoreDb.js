@@ -46,9 +46,17 @@ export const CATALOG_NAME_FIELD = {
 
 
 // Split confirmado en D3: vs-* → Facturas, va-*/c-* → FacturasVentasCompras
+//
+// EXCEPCIÓN `vs-orden` (Orden de Trabajo): NO es un comprobante, es la recepción del
+// taller. Vive en `recepciones` — que es lo que leen la app móvil, OrdenTrabajoList y el
+// trigger de push `onRecepcionPush`. Apuntarla a `Facturas` hacía que una orden creada
+// desde el admin no apareciera ni en su propia lista ni en la app (BACKEND_SPEC.md §1.11:
+// "la ORDEN en sí se registra en `recepciones`; solo al FACTURAR se crea el doc en
+// `Facturas`"). El documento de venta que nace al facturar usa `vs-factura`/`vs-boleta`.
 export function mapDocKeyToCollection(docKey) {
   if (CATALOG_MAP[docKey]) return CATALOG_MAP[docKey];
-  const FACTURAS = ["vs-factura", "vs-boleta", "vs-cotizacion", "vs-orden", "vs-notas"];
+  if (docKey === "vs-orden") return "recepciones";
+  const FACTURAS = ["vs-factura", "vs-boleta", "vs-cotizacion", "vs-notas"];
   const FACTURAS_VC = [
     "va-factura", "va-boleta", "va-cotizacion", "va-guia", "va-notacredito",
     "c-factura", "c-boleta", "c-notas", "c-guia", "c-orden", "al-notaventa",
@@ -63,26 +71,10 @@ export function isFirestoreDocKey(docKey) {
   return docKey in CATALOG_MAP;
 }
 
-export async function getDocuments(docKey) {
-  const snap = await getDocs(collection(db, mapDocKeyToCollection(docKey)));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-}
-
-export async function saveDocument(docKey, doc) {
-  if (doc.id && !String(doc.id).startsWith("seed:")) {
-    const ref = doc(db, mapDocKeyToCollection(docKey), doc.id);
-    await setDoc(ref, doc, { merge: true });
-    return doc.id;
-  }
-  const { id, ...data } = doc;
-  const ref = await addDoc(collection(db, mapDocKeyToCollection(docKey)), data);
-  return ref.id;
-}
-
-export async function deleteDocument(docKey, id) {
-  if (!id || String(id).startsWith("seed:")) return;
-  await deleteDoc(doc(db, mapDocKeyToCollection(docKey), id));
-}
+// `getDocuments`, `saveDocument` y `deleteDocument` vivían aquí y no los importaba nadie:
+// la escritura real de documentos pasa por `firestoreSaveDocument` (firestoreStock.js), que
+// además aplica stock, kardex y cuentas. Arrastraban el mismo error de shadowing de `doc()`
+// que rompía las cuentas a crédito, así que habrían fallado el día que alguien las usara.
 
 // ---- Catálogos (Fase D1) ----
 export async function addCatalogEntry(docKey, name, extra = {}) {
@@ -227,7 +219,9 @@ function sortByDateDesc(arr, fields = ["fecha", "Fecha", "Date"]) {
 export function useFirestoreDocuments(docKey) {
   const colName = mapDocKeyToCollection(docKey);
   const tipo = DOC_TYPE[docKey] || docKey;
-  const constraints = [where("tipofactura", "==", tipo)];
+  // `recepciones` no lleva discriminador `tipofactura` (no es una colección de
+  // comprobantes): filtrar por él devolvería siempre cero documentos.
+  const constraints = colName === "recepciones" ? [] : [where("tipofactura", "==", tipo)];
   if (colName === "FacturasVentasCompras" && TIPO_OPERACION[docKey]) {
     constraints.push(where("TipoOperacion", "==", TIPO_OPERACION[docKey]));
   }

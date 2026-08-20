@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { validarDocumento, documentoValidoParaComprobante } from "../../lib/documentos";
 import { ArrowLeft, Plus, Trash2, Wrench, Package } from "lucide-react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { where } from "firebase/firestore";
@@ -9,8 +10,10 @@ import { useFirestoreCollection, useFirestoreDocuments, mapDocKeyToCollection } 
 import { doc, getDoc, collection, getDocs } from "firebase/firestore";
 import { db as fbDb } from "../../lib/firebase";
 import { showToast, dismissAll } from "../ui/Toast";
+import { serieSugerida } from "../../lib/series";
 import * as db from "../../store/db";
-import { searchArticles, firestoreSaveDocument } from "../../store/firestoreStock";
+import { searchArticles, firestoreSaveDocument, marcarRecepcionFacturada } from "../../store/firestoreStock";
+import { desglosarIgv } from "../../lib/igv";
 
 const COSTO_HORA = 60;
 
@@ -32,7 +35,8 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
   const [docId, setDocId] = useState(id && id !== "nuevo" ? id : null);
 
   const [form, setForm] = useState({
-    serie: "", numero: "", fecha: new Date().toISOString().split("T")[0],
+    // Serie con el formato que exige SUNAT; escribirla a mano dejaba series inválidas.
+    serie: serieSugerida(docKey), numero: "", fecha: new Date().toISOString().split("T")[0],
     cliente: "", placa: "", clienteDoc: "", tipoDoc: "DNI",
     direccion: "", marca: "", modelo: "", color: "", combustible: "", kilometraje: "", anioFabricacion: "",
     tipoIgv: "INCLUIDO", formaPago: "Contado", moneda: "PEN", observacion: "",
@@ -163,7 +167,18 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
     if (mode === "create" && location.state?.items) {
       setItems(location.state.items.map((li) => ({ ...li })));
       if (location.state.cliente) set("cliente", location.state.cliente);
-      if (location.state.clienteDoc) set("clienteDoc", location.state.clienteDoc);
+      if (location.state.clienteDoc) {
+        set("clienteDoc", location.state.clienteDoc);
+        // El TIPO de documento tiene que viajar con el número. Al venir desde una Orden de
+        // Trabajo solo llegaba el número, y el formulario se quedaba con su valor inicial
+        // «DNI»: una factura a un cliente con RUC salía marcada como DNI y así se declaraba
+        // a SUNAT. Se toma del maestro de clientes y, si no aparece, de la propia forma del
+        // número: 11 dígitos es un RUC.
+        const ficha = allClients.find((c) => c.nombre === location.state.cliente);
+        const soloDigitos = String(location.state.clienteDoc).replace(/\D/g, "");
+        set("tipoDoc", ficha?.tipoDocumento || (soloDigitos.length === 11 ? "RUC" : "DNI"));
+        if (!location.state.direccion && ficha?.direccion) set("direccion", ficha.direccion);
+      }
       if (location.state.placa) set("placa", location.state.placa);
       if (location.state.direccion) set("direccion", location.state.direccion);
       if (location.state.marca) set("marca", location.state.marca);
@@ -317,6 +332,30 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
       set("combustible", cot.combustible || cot.TipoCombustible || (veh && (veh.TipoCombustible || veh.Combustible)) || "");
       set("kilometraje", cot.kilometraje || cot.Kilometraje || cot.km_ingreso || (veh && (veh.Kilometraje || veh.km || veh.km_ingreso)) || "");
       set("anioFabricacion", cot.anioFabricacion || cot.anio_de_fabricion || cot.AnioFabricacion || cot.Ano_fabricacion || cot.ano_fabricacion || (veh && (veh.anio_de_fabricion || veh.AnioFabricacion || veh.anio)) || "");
+      // Base del IGV: la decide la orden, no el valor por defecto del formulario.
+      //
+      // La app movil guarda en la recepcion `Subtotal`, `IGV` y `Total`, y trata los
+      // importes de mano de obra y repuestos como NETOS: 830 de base, 149.40 de IGV, 979.40
+      // en total. Eso es lo que se le ensena al cliente en el micrositio y lo que aprueba.
+      // El editor, en cambio, arrancaba siempre en «INCLUIDO IGV», asi que interpretaba esos
+      // mismos 830 como precio final y emitia la boleta por 830: S/149.40 menos de lo que el
+      // cliente habia aceptado, en TODA orden facturada desde aqui. Verificado con la orden
+      // CT001-0000230, aprobada por 979.40 y facturada por 830.
+      //
+      // En vez de fijar «MAS IGV» a ciegas se compara la suma de las lineas con lo que la
+      // orden guarda: si coincide con el Subtotal, las lineas son netas; si coincide con el
+      // Total, ya llevan el IGV dentro. Asi la regla se verifica sola con cada documento y
+      // no se rompe si manana la app cambia de criterio.
+      const sumaLineas = mapped.reduce((acc, it) => acc + (Number(it.total) || 0), 0);
+      const subtotalOT = Number(cot.Subtotal ?? cot.subtotal ?? 0) || 0;
+      const totalOT = Number(cot.Total ?? cot.total ?? 0) || 0;
+      const cerca = (a, b) => a > 0 && b > 0 && Math.abs(a - b) < 0.05;
+      if (cerca(sumaLineas, subtotalOT) && totalOT > subtotalOT) {
+        set("tipoIgv", "MAS");
+      } else if (cerca(sumaLineas, totalOT)) {
+        set("tipoIgv", "INCLUIDO");
+      }
+
       setOrigen({ tipo: "cotizacion", ref: cot.codeCT || cot.id || "" });
       setCotModal(false);
       setCotFilter("");
@@ -390,21 +429,31 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
   const updateItemUtilidad = (idx, val) => patchItem(idx, "utilidad", Math.max(0, val));
 
   const sumaItems = items.reduce((s, i) => s + i.total, 0);
-  const { subtotal, igv, total } = form.tipoIgv === "INCLUIDO"
-    ? { subtotal: sumaItems / 1.18, igv: sumaItems - sumaItems / 1.18, total: sumaItems }
-    : { subtotal: sumaItems, igv: sumaItems * 0.18, total: sumaItems * 1.18 };
+  const { subtotal, igv, total } = desglosarIgv(sumaItems, form.tipoIgv === "INCLUIDO");
 
   const validate = () => {
     if (!form.moneda) return "Seleccione Moneda";
     if (!form.fecha) return "La fecha es obligatoria";
     if (items.length === 0) return "Seleccione articulos";
-    const c = allClients.find((cl) => cl.nombre === form.cliente);
-    if (title.toLowerCase().startsWith("factura") && c && c.tipoPersona !== "Jurídica") {
-      return "Persona debe ser Jurídica para generar Factura";
+
+    // Lo que decide qué comprobante se puede emitir es el DOCUMENTO, no el tipo de persona.
+    //
+    // La regla anterior era «Factura solo a Jurídica», y se equivocaba por los dos lados:
+    // rechazaba a una persona natural con negocio —que tiene RUC que empieza por 10 y puede
+    // recibir factura— y dejaba pasar a una «Jurídica» cuyo documento no fuera un RUC, que
+    // es justo lo que SUNAT rechaza. En la base hay clientes marcados como Jurídica con
+    // documento «03021», que no es ningún RUC.
+    const esComprobante = /^(factura|boleta)/i.test(title || "");
+    if (esComprobante) {
+      const tipoDoc = form.tipoDoc || (String(form.clienteDoc || "").length === 11 ? "RUC" : "DNI");
+
+      const formato = validarDocumento(tipoDoc, form.clienteDoc);
+      if (!formato.ok) return `Documento del cliente: ${formato.error}`;
+
+      const permitido = documentoValidoParaComprobante(title, tipoDoc);
+      if (!permitido.ok) return permitido.error;
     }
-    if (title.toLowerCase().startsWith("boleta") && c && c.tipoPersona !== "Natural") {
-      return "Persona debe ser Natural para generar Boleta";
-    }
+
     return "";
   };
 
@@ -418,7 +467,11 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
     try {
       if (docKey) await firestoreSaveDocument(docKey, doc);
       if (onSave) onSave(doc);
-      if (location.state?.fromOT) db.markRecepcionFacturada(location.state.fromOT);
+      // Marca la recepción en Firestore (antes iba a localStorage y el flag nunca llegaba
+      // ni a la lista de órdenes ni a la app móvil, así que se podía refacturar sin fin).
+      if (location.state?.fromOT) {
+        await marcarRecepcionFacturada(location.state.fromOT, { status: "Finalizado" });
+      }
       navigate(backPath);
     } catch (saveErr) {
       console.error(saveErr);

@@ -378,8 +378,26 @@ function buildUnifiedBankInfo() {
   };
 }
 
-function buildUnifiedSunatText(tipo) {
+// Un documento que no ha sido aceptado por SUNAT no es una representación impresa de nada:
+// no tiene hash, no tiene CDR y no se puede consultar en la web de SUNAT. Imprimirlo con el
+// texto de siempre lo hace pasar por comprobante válido delante del cliente. Y lo emitido
+// en el entorno de pruebas tampoco existe fiscalmente, aunque SUNAT lo «acepte».
+export function sinValorFiscal(estadoSunat, esPrueba) {
+  if (esPrueba) return "DOCUMENTO DE PRUEBA — SIN VALOR FISCAL";
+  if (estadoSunat !== "Aceptado") return "DOCUMENTO NO DECLARADO ANTE SUNAT — SIN VALOR FISCAL";
+  return "";
+}
+
+function buildUnifiedSunatText(tipo, estadoSunat, esPrueba) {
   const label = tipo === 'boleta' ? 'BOLETA ELECTRÓNICA' : 'FACTURA ELECTRÓNICA';
+  const aviso = sinValorFiscal(estadoSunat, esPrueba);
+  if (aviso) {
+    return [
+      { text: aviso, fontSize: 7, bold: true, color: '#b91c1c', alignment: 'left', width: 150 },
+      { text: 'No es una representación impresa válida: aún no ha sido aceptado por SUNAT.', fontSize: 6, alignment: 'left', width: 150 },
+      { text: 'gearmparts@gmail.com', fontSize: 6, alignment: 'left', width: 150 },
+    ];
+  }
   return [
     { text: `Representación impresa de la ${label}`, fontSize: 6, alignment: 'left', width: 150 },
     { text: 'CONSULTE SU DOCUMENTO EN WWW.SUNAT.GOB.PE CON SU CLAVE SOL', fontSize: 6, alignment: 'left', width: 150 },
@@ -488,14 +506,24 @@ async function buildDocDefFactura(opts) {
       margin: [4, 4, 4, 4],
     });
   }
-  const sunatLines = (tipofactura === 'boleta') ? [] : buildUnifiedSunatText(tipofactura);
+  // En la boleta el pie de SUNAT no se imprime, pero el aviso de que el documento no tiene
+  // valor fiscal sí tiene que salir: es justo el caso en que engaña.
+  const avisoFiscal = sinValorFiscal(opts.estadoSunat, opts.sunatEsPrueba);
+  const sunatLines = (tipofactura === 'boleta' && !avisoFiscal)
+    ? []
+    : buildUnifiedSunatText(tipofactura, opts.estadoSunat, opts.sunatEsPrueba);
 
   content.push(...buildUnifiedFooter(
     totalEnLetrasVal.toUpperCase(), subtotal, igv, total,
     buildUnifiedBankInfo(), sunatLines, extraStack,
   ));
 
-  return { pageSize: 'A4', pageMargins: [20, 20, 20, 20], content, styles: S, defaultStyle: { fontName: 'Roboto' } };
+  return {
+    pageSize: 'A4', pageMargins: [20, 20, 20, 20], content, styles: S,
+    defaultStyle: { fontName: 'Roboto' },
+    // La línea del pie es pequeña y se pasa por alto; la marca cruzada no.
+    ...(avisoFiscal ? { watermark: { text: 'SIN VALOR FISCAL', color: '#b91c1c', opacity: 0.12, bold: true } } : {}),
+  };
 }
 
 async function buildDocDefCompra(opts) {
@@ -1365,6 +1393,10 @@ export function docToOpts(data, title) {
     kilometraje: data.kilometraje || data.Kilometraje || data.km_ingreso || '',
     anioFabricacion: data.anioFabricacion || data.AnioFabricacion || data.Ano_fabricacion || data.ano_fabricacion || data.anio || '',
     moneda: data.moneda || data.Moneda || 'SOLES',
+    // Estado ante SUNAT: decide si el PDF puede presentarse como comprobante o tiene que
+    // salir marcado como sin valor fiscal.
+    estadoSunat: data.estadoSunat || '',
+    sunatEsPrueba: data.sunatEsPrueba === true,
     lugarServicio: data.lugarServicio || data.lugar_servicio || '',
     plazoEntrega: data.plazoEntrega || data.plazo_entrega || '',
     validezOferta: data.validezOferta || data.validez_oferta || '',

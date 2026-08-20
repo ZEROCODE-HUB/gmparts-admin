@@ -14,7 +14,7 @@ import DateRangeFilter from "../../../components/ui/DateRangeFilter";
 import { useFirestoreDocuments } from "../../../store/firestoreDb";
 
 const previewFields = [
-  { key: "serie", label: "Serie" }, { key: "numero", label: "N?mero" },
+  { key: "serie", label: "Serie" }, { key: "numero", label: "Número" },
   { key: "fecha", label: "Fecha" }, { key: "cliente", label: "Cliente" },
   { key: "clienteDoc", label: "Doc. Cliente" }, { key: "subtotal", label: "Subtotal" },
   { key: "igv", label: "IGV" }, { key: "total", label: "Total" }, { key: "estado", label: "Estado" },
@@ -55,7 +55,7 @@ export default function CotizacionesList() {
       <Toolbar title="Cotizaciones" count={rows.length} onNew={() => navigate("/va-cotizacion/nuevo")} onExport={() => exportToExcel(rows, "Cotizaciones")} />
       <SearchBox value={q} onChange={setQ} placeholder="Buscar cliente, serie..." />
       <DateRangeFilter fechaDesde={fechaDesde} fechaHasta={fechaHasta} onChange={(d, h) => { setFechaDesde(d); setFechaHasta(h); }} />
-      <Table columns={["Serie", "N?mero", "Fecha", "Cliente", "Documento", "Total", "Estado", "Acci?n"]}
+      <Table columns={["Serie", "Número", "Fecha", "Cliente", "Documento", "Total", "Estado", "Acción"]}
         sortable={[{key:"serie",label:"Serie"},{key:"numero",label:"N\u00famero"},{key:"fecha",label:"Fecha"},{key:"cliente",label:"Cliente"},{key:"total",label:"Total"},{key:"estado",label:"Estado"}]}
         sortField={sortField} sortDir={sortDir} onSort={handleSort}
         rows={pageRows}
@@ -80,8 +80,8 @@ export default function CotizacionesList() {
         )}
       />
       {deleteTarget && (
-        <Modal title="Anular cotizaci?n" onClose={() => setDeleteTarget(null)}>
-          <p className="text-sm text-[var(--muted)] mb-6">?Est?s seguro de anular esta cotizaci?n?</p>
+        <Modal title="Anular cotización" onClose={() => setDeleteTarget(null)}>
+          <p className="text-sm text-[var(--muted)] mb-6">¿Estás seguro de anular esta cotización?</p>
           <p className="font-medium mb-6">{deleteTarget.serie}-{deleteTarget.numero} - {deleteTarget.cliente}</p>
           <div className="flex justify-end gap-2">
             <Btn variant="ghost" onClick={() => setDeleteTarget(null)}>Cancelar</Btn>
@@ -89,7 +89,7 @@ export default function CotizacionesList() {
           </div>
         </Modal>
       )}
-      {preview && <DocumentPreviewModal title="Vista previa - Cotizaci?n" data={preview} fields={previewFields} collection="FacturasVentasCompras" onClose={() => setPreview(null)} />}
+      {preview && <DocumentPreviewModal title="Vista previa - Cotización" data={preview} fields={previewFields} collection="FacturasVentasCompras" onClose={() => setPreview(null)} />}
       {printTarget && <PrintDocument title="Comprobante" data={printTarget} onClose={() => setPrintTarget(null)} />}
       <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>

@@ -9,6 +9,7 @@ import { useFirestoreCollection, useFirestoreDocuments, mapDocKeyToCollection } 
 import { doc, getDoc } from "firebase/firestore";
 import { db as fbDb } from "../../lib/firebase";
 import { showToast, dismissAll } from "../ui/Toast";
+import { serieSugerida, validarSerie } from "../../lib/series";
 import * as db from "../../store/db";
 
 const ALMACENES = [
@@ -17,6 +18,7 @@ const ALMACENES = [
   { id: "w3", Nombre: "Depósito Taller" },
 ];
 import { searchArticles, firestoreSaveDocument } from "../../store/firestoreStock";
+import { desglosarIgv } from "../../lib/igv";
 
 function findSeedById(id, key) {
   if (key) return db.getDocumentById(key, id);
@@ -45,7 +47,8 @@ export default function DocumentEditor({ title, backPath, onSave, mode = "create
   const allClients = useFirestoreCollection("users", [where("user_role", "==", "Cliente")]).map(normalizeClient);
 
   const [form, setForm] = useState({
-    serie: "", numero: "", fecha: new Date().toISOString().split("T")[0],
+    // Serie con el formato que exige SUNAT; escribirla a mano dejaba series inválidas.
+    serie: serieSugerida(docKey), numero: "", fecha: new Date().toISOString().split("T")[0],
     cliente: "", clienteDoc: "", tipoDoc: "DNI", direccion: "", motivo: "",
     formaPago: "Contado", moneda: "PEN", tipoIgv: "INCLUIDO", almacen: "",
   });
@@ -285,9 +288,7 @@ export default function DocumentEditor({ title, backPath, onSave, mode = "create
   const updateItemUtilidad = (idx, val) => patchItem(idx, "utilidad", Math.max(0, val));
 
   const sumaItems = items.reduce((s, i) => s + i.total, 0);
-  const { subtotal, igv, total } = form.tipoIgv === "INCLUIDO"
-    ? { subtotal: sumaItems / 1.18, igv: sumaItems - sumaItems / 1.18, total: sumaItems }
-    : { subtotal: sumaItems, igv: sumaItems * 0.18, total: sumaItems * 1.18 };
+  const { subtotal, igv, total } = desglosarIgv(sumaItems, form.tipoIgv === "INCLUIDO");
 
   // Valida campos obligatorios y tipo de cliente (crearfactura_compra_widget.dart).
   const validate = () => {
@@ -304,6 +305,10 @@ export default function DocumentEditor({ title, backPath, onSave, mode = "create
     if (title.toLowerCase().startsWith("boleta") && c && c.tipoPersona !== "Natural") {
       return "Persona debe ser Natural para generar Boleta";
     }
+    // El campo es libre y en Firestore hay series como «123123» o «NS», que SUNAT rechaza.
+    // Avisar aquí evita descubrirlo al enviar, cuando el correlativo ya está gastado.
+    const errSerie = validarSerie(docKey, form.serie);
+    if (errSerie) return errSerie;
     return "";
   };
 

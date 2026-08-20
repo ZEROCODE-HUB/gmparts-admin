@@ -1,5 +1,9 @@
 ﻿import { useState } from "react";
 import Pagination from "../../components/ui/Pagination";
+import { validarDocumento } from "../../lib/documentos";
+// Faltaba: el manejador de errores ya llamaba a showToast sin importarlo, así que un fallo
+// al guardar un proveedor lanzaba «showToast is not defined» en vez de avisar.
+import { showToast } from "../../components/ui/Toast";
 import { exportToExcel } from "../../lib/exportExcel";
 import { Pencil, Trash2 } from "lucide-react";
 import Toolbar from "../../components/ui/Toolbar";
@@ -88,6 +92,12 @@ export default function ProveedoresList() {
   const openEdit = (p) => { setSaving(false); setEditing(p); setForm(cleanForm(p)); setModalOpen(true); };
 
   const handleSave = async () => {
+    // Un proveedor emite facturas a nombre de la empresa, así que su documento es siempre un
+    // RUC. Sin esta comprobación se cuela cualquier cosa y el problema aparece más tarde, al
+    // registrar la compra.
+    const doc = validarDocumento("RUC", form.documento);
+    if (!doc.ok) { showToast(doc.error, "error"); return; }
+
     setSaving(true);
     try {
       await saveMaestro(COL, { ...toFirestore(form), id: editing?.id });

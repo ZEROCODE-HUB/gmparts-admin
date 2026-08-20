@@ -16,6 +16,8 @@ import { useFirestoreDocuments } from "../../../store/firestoreDb";
 import { db } from "../../../lib/firebase";
 import { collection, addDoc } from "firebase/firestore";
 import { getNextCorrelative } from "../../../store/firestoreStock";
+import { serieSugerida } from "../../../lib/series";
+import { desglosarIgv } from "../../../lib/igv";
 
 const previewFields = [
   { key: "nserie", label: "Serie" }, { key: "numero", label: "N\u00famero" },
@@ -80,16 +82,23 @@ export default function RegistroNotaVentasList() {
     if (!canjeTarget || canjeItems.length === 0) return;
     setCanjeando(true);
     try {
-      const nextNum = await getNextCorrelative("vs-" + tipoDestino.toLowerCase(), "");
+      const docKeyDestino = "vs-" + tipoDestino.toLowerCase();
+      // `nserie` es la SERIE, no el número: se estaba rellenando con el correlativo, así
+      // que el comprobante nacía con serie «000012» — rechazo seguro ante SUNAT.
+      const serie = serieSugerida(docKeyDestino);
+      const { numero: nextNum, clave } = await getNextCorrelative(docKeyDestino, serie);
+      const { subtotal, igv, total } = desglosarIgv(subtotalCanje, true);
       const now = new Date().toISOString().split("T")[0];
       const docData = {
         razonSNombre: canjeTarget.cliente || canjeTarget.razonSNombre || "",
-        nserie: String(nextNum).padStart(6, "0"),
+        nserie: serie,
+        serie,
         numero: String(nextNum).padStart(6, "0"),
+        correlativoDe: clave,
         Fecha: now,
-        total: totalCanje,
-        subtotal: subtotalCanje,
-        igv: 0,
+        total,
+        subtotal,
+        igv,
         FPago: canjeTarget.formaPago || canjeTarget.FPago || "Contado",
         fPago: canjeTarget.formaPago || canjeTarget.FPago || "Contado",
         moneda: canjeTarget.moneda || "PEN",

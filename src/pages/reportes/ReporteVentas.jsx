@@ -1,13 +1,33 @@
 import { useState, useMemo } from "react";
+import { normalizaFormaPago, esCredito } from "../../store/firestoreStock";
 import { Download, Eye } from "lucide-react";
 import Toolbar from "../../components/ui/Toolbar";
 import Field from "../../components/ui/Field";
 import { inputCls } from "../../components/ui/Field";
 import Table, { Td } from "../../components/ui/Table";
 import DocumentPreviewModal from "../../components/documents/DocumentPreviewModal";
-import * as db from "../../store/db";
+import { useFirestoreDocuments } from "../../store/firestoreDb";
 
 const VENTA_KEYS = ["va-factura", "va-boleta", "vs-factura", "vs-boleta"];
+
+// Los documentos de venta de servicios (colección `Facturas`) guardan las claves con el
+// nombre del legacy Flutter — razonSNombre, nserie, FPago, Fecha — mientras que los de
+// artículos usan las del admin. El reporte acepta las dos formas.
+const campo = (d, ...nombres) => {
+  for (const n of nombres) {
+    const v = d[n];
+    if (v !== undefined && v !== null && v !== "") return v;
+  }
+  return "";
+};
+
+const soloFecha = (v) => {
+  if (!v) return "";
+  if (typeof v === "string") return v.slice(0, 10);
+  if (typeof v.toDate === "function") return v.toDate().toISOString().slice(0, 10);
+  if (typeof v.seconds === "number") return new Date(v.seconds * 1000).toISOString().slice(0, 10);
+  return "";
+};
 
 function downloadCsv(filename, rows) {
   const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
@@ -27,6 +47,11 @@ const previewFields = [
   { key: "total", label: "Total" },
 ];
 
+// Cómo se muestra una forma de pago, ya unificada: «Contado» o «Crédito».
+function etiquetaFormaPago(valor) {
+  return esCredito(valor) ? "Crédito" : "Contado";
+}
+
 export default function ReporteVentas() {
   const [ruc, setRuc] = useState("");
   const [cliente, setCliente] = useState("");
@@ -34,20 +59,33 @@ export default function ReporteVentas() {
   const [fechaHasta, setFechaHasta] = useState("");
   const [preview, setPreview] = useState(null);
 
+  // Un hook por tipo de documento — la lista es fija, así que el orden de los hooks
+  // es estable. Antes esto leía localStorage y el reporte salía siempre vacío.
+  const [facturasArticulos] = useFirestoreDocuments("va-factura");
+  const [boletasArticulos] = useFirestoreDocuments("va-boleta");
+  const [facturasServicio] = useFirestoreDocuments("vs-factura");
+  const [boletasServicio] = useFirestoreDocuments("vs-boleta");
+
   const docs = useMemo(() => {
-    const out = [];
-    for (const key of VENTA_KEYS) {
-      const tipo = key.includes("boleta") ? "Boleta" : "Factura";
-      for (const d of db.getDocuments(key)) {
-        out.push({
-          id: d.id, tipo, serie: d.serie, numero: d.numero, fecha: d.fecha,
-          cliente: d.cliente || "", clienteDoc: d.clienteDoc || "",
-          formaPago: d.formaPago || "Contado", total: d.total || 0, items: d.items || [],
-        });
-      }
-    }
-    return out;
-  }, []);
+    const fuentes = [
+      [facturasArticulos, "Factura"], [boletasArticulos, "Boleta"],
+      [facturasServicio, "Factura"], [boletasServicio, "Boleta"],
+    ];
+    return fuentes.flatMap(([lista, tipo]) =>
+      (lista || []).map((d) => ({
+        id: d.id,
+        tipo,
+        serie: String(campo(d, "serie", "nserie", "Nserie")),
+        numero: String(campo(d, "numero", "NumCotizacion")),
+        fecha: soloFecha(campo(d, "fecha", "Fecha")),
+        cliente: String(campo(d, "cliente", "razonSNombre", "RazonSNombre", "RazonNombre")),
+        clienteDoc: String(campo(d, "clienteDoc", "proveedorDoc")),
+        formaPago: String(campo(d, "formaPago", "FPago") || "Contado"),
+        total: Number(campo(d, "total", "Total")) || 0,
+        items: d.items || d.Items || [],
+      }))
+    );
+  }, [facturasArticulos, boletasArticulos, facturasServicio, boletasServicio]);
 
   const filtered = useMemo(() => docs.filter((d) => {
     if (ruc && !d.clienteDoc.toLowerCase().includes(ruc.toLowerCase())) return false;
@@ -58,15 +96,18 @@ export default function ReporteVentas() {
   }), [docs, ruc, cliente, fechaDesde, fechaHasta]);
 
   const conditions = useMemo(() => {
+    // Se agrupa por la forma de pago NORMALIZADA, no por el texto tal cual.
+    //
+    // En la base conviven «Contado», «CONTADO» y «Crédito»/«Credito» según quién y desde
+    // dónde se guardó el documento, y el informe los contaba como condiciones distintas:
+    // salía «Contado 12» y «CONTADO 3» en dos filas, como si fueran dos cosas.
     const map = {};
     for (const d of filtered) {
-      const k = `${d.formaPago}|${d.tipo}`;
-      map[k] = (map[k] || 0) + 1;
+      const clave = `${normalizaFormaPago(d.formaPago)}|${d.tipo}`;
+      if (!map[clave]) map[clave] = { condicion: etiquetaFormaPago(d.formaPago), tipo: d.tipo, cantidad: 0 };
+      map[clave].cantidad += 1;
     }
-    return Object.entries(map).map(([k, cantidad]) => {
-      const [condicion, tipo] = k.split("|");
-      return { condicion, tipo, cantidad };
-    });
+    return Object.values(map);
   }, [filtered]);
 
   const exportCsv = () => {

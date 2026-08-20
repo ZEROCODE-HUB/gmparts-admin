@@ -5,24 +5,39 @@ import Field from "../../components/ui/Field";
 import { inputCls } from "../../components/ui/Field";
 import Table, { Td } from "../../components/ui/Table";
 import DocumentPreviewModal from "../../components/documents/DocumentPreviewModal";
-import * as db from "../../store/db";
+import { useFirestoreCollection } from "../../store/firestoreDb";
 
-const ALL_KEYS = [
-  "va-factura", "va-boleta", "va-cotizacion", "va-guia", "va-notacredito",
-  "vs-factura", "vs-boleta", "vs-cotizacion", "vs-orden", "vs-notas",
-  "c-factura", "c-boleta", "c-guia", "c-notas", "c-orden",
-];
-
-function classifyTipo(key) {
-  if (key.includes("factura")) return "Factura";
-  if (key.includes("boleta")) return "Boleta";
-  if (key.includes("notacredito")) return "Nota de crédito";
-  if (key.includes("cotizacion")) return "Cotización";
-  if (key.includes("guia")) return "Guía";
-  if (key.includes("orden")) return "Orden";
-  if (key.includes("notas")) return "Nota";
+// Se leen las dos colecciones de comprobantes completas y se clasifican por su propio
+// discriminador `tipofactura`. Antes se recorrían 15 docKeys contra localStorage, que
+// no contiene ningún documento real.
+function classifyTipo(tipofactura) {
+  const t = String(tipofactura || "").toLowerCase();
+  if (t.includes("notacredito") || t.includes("nota de credito") || t.includes("nota de crédito")) return "Nota de crédito";
+  if (t.includes("nota de venta") || t.includes("notaventa")) return "Nota";
+  if (t.includes("notapedido")) return "Nota";
+  if (t.includes("factura")) return "Factura";
+  if (t.includes("boleta")) return "Boleta";
+  if (t.includes("cotizacion")) return "Cotización";
+  if (t.includes("guia")) return "Guía";
+  if (t.includes("orden")) return "Orden";
   return "Otro";
 }
+
+const campo = (d, ...nombres) => {
+  for (const n of nombres) {
+    const v = d[n];
+    if (v !== undefined && v !== null && v !== "") return v;
+  }
+  return "";
+};
+
+const soloFecha = (v) => {
+  if (!v) return "";
+  if (typeof v === "string") return v.slice(0, 10);
+  if (typeof v.toDate === "function") return v.toDate().toISOString().slice(0, 10);
+  if (typeof v.seconds === "number") return new Date(v.seconds * 1000).toISOString().slice(0, 10);
+  return "";
+};
 
 function downloadCsv(filename, rows) {
   const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
@@ -46,22 +61,32 @@ export default function ReporteDocElect() {
   const [anio, setAnio] = useState("");
   const [preview, setPreview] = useState(null);
 
+  const servicios = useFirestoreCollection("Facturas");
+  const articulosYCompras = useFirestoreCollection("FacturasVentasCompras");
+
   const docs = useMemo(() => {
-    const out = [];
-    for (const key of ALL_KEYS) {
-      const tipo = classifyTipo(key);
-      for (const d of db.getDocuments(key)) {
-        const fecha = d.fecha || "";
-        out.push({
-          id: d.id, key, tipo, serie: d.serie, numero: d.numero, fecha,
-          contraparte: d.cliente || d.proveedor || "",
-          total: d.total || 0, items: d.items || [],
-          year: fecha.slice(0, 4), month: fecha.slice(5, 7),
-        });
-      }
-    }
-    return out;
-  }, []);
+    const todos = [
+      ...(servicios || []).map((d) => ({ ...d, _col: "Facturas" })),
+      ...(articulosYCompras || []).map((d) => ({ ...d, _col: "FacturasVentasCompras" })),
+    ];
+    return todos.map((d) => {
+      const fecha = soloFecha(campo(d, "fecha", "Fecha"));
+      return {
+        id: d.id,
+        key: d._col,
+        tipo: classifyTipo(d.tipofactura),
+        serie: String(campo(d, "serie", "nserie", "Nserie")),
+        numero: String(campo(d, "numero", "NumCotizacion")),
+        fecha,
+        contraparte: String(campo(d, "cliente", "razonSNombre", "RazonSNombre", "RazonNombre", "proveedor")),
+        total: Number(campo(d, "total", "Total")) || 0,
+        estadoSunat: d.estadoSunat || "",
+        items: d.items || d.Items || [],
+        year: fecha.slice(0, 4),
+        month: fecha.slice(5, 7),
+      };
+    });
+  }, [servicios, articulosYCompras]);
 
   const years = useMemo(() => [...new Set(docs.map((d) => d.year).filter(Boolean))].sort(), [docs]);
 

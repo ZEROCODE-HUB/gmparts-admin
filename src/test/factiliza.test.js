@@ -8,7 +8,10 @@ const {
   extractFactilizaError,
   buildFactilizaPayload,
   validarPayload,
+  buildDocumentoRequest,
+  correlativoParaFactiliza,
   RUC_EMPRESA,
+  RUC_EMPRESA_PRUEBAS,
 } = require("../../functions/factiliza.js");
 
 const ISO_SUNAT = /^\d{4}-\d{2}-\d{2}T00:00:00-05:00$/;
@@ -181,5 +184,67 @@ describe("validarPayload", () => {
 
   it("rechaza un documento sin ítems", () => {
     expect(validarPayload({ ...ok, detalle: [] })).toContain("al menos un ítem");
+  });
+});
+
+describe("buildDocumentoRequest — RUC con el que se pide el PDF y el XML", () => {
+  // El comprobante se declara con el RUC del entorno, así que descargarlo con otro devuelve
+  // 400 «El usuario no se encuentra configurado para el RUC». Antes se pedía siempre con el
+  // de producción y en modo pruebas no había forma de bajar el PDF de nada.
+  it("en pruebas usa el RUC de pruebas aunque el documento no guarde ninguno", () => {
+    const cuerpo = buildDocumentoRequest({ serie: "B066", numero: "8801" }, "03", { esPrueba: true });
+    expect(cuerpo.empresa_Ruc).toBe(RUC_EMPRESA_PRUEBAS);
+    expect(cuerpo).toMatchObject({ tipo_Doc: "03", serie: "B066", correlativo: "8801" });
+  });
+
+  it("en producción usa el RUC de la empresa", () => {
+    expect(buildDocumentoRequest({ serie: "F001", numero: "1" }, "01").empresa_Ruc).toBe(RUC_EMPRESA);
+  });
+
+  it("el mismo RUC que se usó para emitir es el que se usa para descargar", () => {
+    const doc = { tipofactura: "Boleta", serie: "B066", numero: "8801", clienteDoc: "12345678",
+      cliente: "X", items: [{ codigo: "A", descripcion: "A", cant: 1, pu: 10 }] };
+    const { payload } = buildFactilizaPayload(doc, "vs-boleta", { esPrueba: true });
+    const cuerpo = buildDocumentoRequest(doc, "03", { esPrueba: true });
+    expect(cuerpo.empresa_Ruc).toBe(payload.empresa_Ruc);
+  });
+
+  it("acepta la serie y el número guardados con los nombres del panel", () => {
+    const cuerpo = buildDocumentoRequest({ nserie: "F066", numero: "12" }, "01", { esPrueba: true });
+    expect(cuerpo.serie).toBe("F066");
+  });
+});
+
+describe("correlativoParaFactiliza — el numero que viaja al API", () => {
+  // Factiliza normaliza el correlativo: pedir el PDF de «B066-000001» devuelve «B066-1»,
+  // que puede ser otro documento. Verificado contra QA: la descarga trajo el comprobante de
+  // otra empresa y se guardo en Storage como propio. Se envia sin ceros en las dos
+  // direcciones para que envio y descarga apunten siempre al mismo sitio.
+  it("quita los ceros de relleno", () => {
+    expect(correlativoParaFactiliza("000001")).toBe("1");
+    expect(correlativoParaFactiliza("000230")).toBe("230");
+  });
+
+  it("deja intacto un número que ya viene sin ceros", () => {
+    expect(correlativoParaFactiliza("8801")).toBe("8801");
+  });
+
+  it("acepta números en vez de cadenas", () => {
+    expect(correlativoParaFactiliza(12)).toBe("12");
+  });
+
+  it("no inventa nada si no hay número", () => {
+    expect(correlativoParaFactiliza("")).toBe("");
+    expect(correlativoParaFactiliza(null)).toBe("");
+  });
+
+  it("el envío y la descarga piden EXACTAMENTE el mismo correlativo", () => {
+    const doc = { tipofactura: "Boleta", serie: "B066", numero: "000001", clienteDoc: "71234568",
+      cliente: "X", items: [{ codigo: "A", descripcion: "A", cant: 1, pu: 830 }] };
+    const { payload } = buildFactilizaPayload(doc, "vs-boleta", { esPrueba: true });
+    const descarga = buildDocumentoRequest(doc, "03", { esPrueba: true });
+    expect(payload.correlativo).toBe("1");
+    expect(descarga.correlativo).toBe(payload.correlativo);
+    expect(descarga.serie).toBe(payload.serie);
   });
 });

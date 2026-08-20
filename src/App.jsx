@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, Link } from "react-router-dom";
+import { Lock } from "lucide-react";
 import Splash from "./pages/auth/Splash";
 import Login from "./pages/auth/Login";
 import RestaurarContrasena1 from "./pages/auth/RestaurarContrasena1";
@@ -50,20 +51,49 @@ import ReporteVentas from "./pages/reportes/ReporteVentas";
 import ReporteDocElect from "./pages/reportes/ReporteDocElect";
 import Placeholder from "./pages/Placeholder";
 import { getSession, observeAuth } from "./store/auth";
+import { puedeVerRuta } from "./lib/roles";
 import ToastContainer from "./components/ui/Toast";
 
 const placeholderRoutes = [];
 
+// Pantalla que se muestra cuando alguien llega a una ruta que su rol no alcanza.
+// Decirlo claramente es mejor que redirigir en silencio al dashboard: quien lo ve entiende
+// que la pantalla existe pero no le corresponde, y a quién pedírsela.
+function SinPermiso({ rol }) {
+  return (
+    <div className="max-w-lg mx-auto mt-16 text-center">
+      <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[var(--danger-dim)] text-[var(--danger)] mb-4">
+        <Lock size={22} />
+      </div>
+      <h1 className="text-lg font-semibold text-[var(--text)] mb-2">Esta sección no te corresponde</h1>
+      <p className="text-sm text-[var(--muted)] mb-6">
+        Tu rol es <strong>{rol || "sin asignar"}</strong> y no incluye esta pantalla. Si crees que
+        deberías tener acceso, pídeselo a administración.
+      </p>
+      <Link to="/dashboard" className="text-sm font-medium text-[var(--accent)] hover:underline">
+        Volver al inicio
+      </Link>
+    </div>
+  );
+}
+
 function Layout({ children }) {
   const session = getSession();
+  const { pathname } = useLocation();
   if (!session) return <Navigate to="/login" replace />;
+
+  // Autorización por rol. Antes el único control era «¿hay sesión?»: las ~60 rutas se
+  // renderizaban igual para cualquiera, y ocultar un grupo del menú no impedía llegar
+  // escribiendo la dirección.
+  const autorizado = puedeVerRuta(session.userRole, pathname);
+
   return (
     <div className="gmp-root flex min-h-screen">
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <Topbar />
         <main className="flex-1 p-6 gmp-scroll overflow-y-auto">
-          {children}
+          {autorizado ? children : <SinPermiso rol={session.userRole} />}
         </main>
       </div>
     </div>

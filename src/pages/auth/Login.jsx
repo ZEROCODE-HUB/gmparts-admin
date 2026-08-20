@@ -33,7 +33,7 @@ export default function Login() {
         <h2 className="gmp-display text-xl font-semibold mb-6">Iniciar sesión</h2>
         <div className="flex flex-col gap-4">
           <Field label="Correo electrónico">
-            <input className={inputCls} value={email} onChange={(e) => { setEmail(e.target.value); setError(""); }} placeholder="admin@gmparts.com" />
+            <input className={inputCls} value={email} onChange={(e) => { setEmail(e.target.value); setError(""); }} placeholder="nombre@gearmotorparts.com" />
           </Field>
           <Field label="Contraseña">
             <input type="password" className={inputCls} value={password} onChange={(e) => { setPassword(e.target.value); setError(""); }} placeholder="Ingrese contraseña" onKeyDown={(e) => e.key === "Enter" && handleLogin()} />
@@ -44,7 +44,6 @@ export default function Login() {
           ¿Olvidaste tu contraseña?
         </button>
         <Btn className="w-full justify-center mt-6" onClick={handleLogin} disabled={loading}>{loading ? "Iniciando sesión..." : "Iniciar sesión"}</Btn>
-        <p className="text-[11px] text-[var(--muted)] mt-4 text-center">Demo: admin@gmparts.com / admin123</p>
       </div>
     </div>
   );

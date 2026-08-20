@@ -4,7 +4,17 @@ import {
   Home, Building2, ShoppingBag, Wrench, ShoppingCart, Package,
   Calculator, BarChart3, LogOut, ChevronDown
 } from "lucide-react";
-import { getSession, canViewAdministracion } from "../../store/auth";
+import { getSession, logout } from "../../store/auth";
+import { puedeVerRuta, puedeVerModulo } from "../../lib/roles";
+
+// Los grupos del menú usan claves cortas propias (`vartic`, `vserv`, `alm`…); esto las
+// traduce a los módulos de permisos.
+// El resto de claves (administracion, compras, almacen, cobranza, reportes) ya coinciden con
+// el nombre del módulo.
+const MODULO_DE_GRUPO = {
+  vartic: "ventasArticulos",
+  vserv: "ventasServicio",
+};
 
 const NAV = [
   { key: "dashboard", label: "Dashboard", icon: Home, path: "/dashboard" },
@@ -81,9 +91,31 @@ export default function Sidebar() {
   const location = useLocation();
   const [openGroups, setOpenGroups] = useState(["administracion"]);
   const session = getSession();
-  const navItems = NAV.filter(
-    (item) => !(item.key === "administracion" && session && !canViewAdministracion(session.userRole))
-  );
+
+  // El menú se filtra por rol de arriba abajo: primero el grupo y después cada entrada,
+  // porque hay rutas más restringidas que su grupo (Gestión Personal, por ejemplo, es solo
+  // de administración aunque el asesor sí vea Clientes y Proveedores).
+  //
+  // Antes solo se escondía el grupo «Administración» y todo lo demás se mostraba a todo el
+  // mundo. Ocultar no autoriza: la comprobación de verdad está en Layout (App.jsx) y en las
+  // reglas de Firestore; esto es para que nadie vea puertas que no puede abrir.
+  const rol = session?.userRole;
+  // Un grupo se muestra si el rol tiene su módulo O si le queda alguna entrada dentro.
+  //
+  // Antes bastaba con que el módulo estuviera prohibido para esconder el grupo entero, y eso
+  // dejaba pantallas alcanzables por URL pero imposibles de encontrar clicando: el asesor de
+  // servicio puede dar de alta vehículos, pero «Vehículos» vive bajo Almacén, un módulo que
+  // no es suyo, así que el grupo desaparecía y la opción con él.
+  const navItems = NAV
+    .map((item) => (item.children
+      ? { ...item, children: item.children.filter((c) => puedeVerRuta(rol, c.path)) }
+      : item))
+    .filter((item) => {
+      if (item.path) return puedeVerRuta(rol, item.path);
+      const modulo = MODULO_DE_GRUPO[item.key] || item.key;
+      return puedeVerModulo(rol, modulo) || (item.children && item.children.length > 0);
+    })
+    .filter((item) => !item.children || item.children.length > 0);
 
   const toggleGroup = (key) => {
     setOpenGroups((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
@@ -152,7 +184,13 @@ export default function Sidebar() {
       </nav>
       <div className="p-3 border-t border-[var(--line-soft)]">
         <button
-          onClick={() => navigate("/login")}
+          onClick={async () => {
+            // Cierra la sesión de Firebase Auth y borra la de localStorage antes de salir.
+            // Antes solo navegaba a /login: la sesión seguía viva y bastaba volver a
+            // cualquier ruta protegida para entrar de nuevo sin credenciales.
+            await logout();
+            navigate("/login", { replace: true });
+          }}
           className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--danger)]"
         >
           <LogOut size={16} /> Cerrar sesión

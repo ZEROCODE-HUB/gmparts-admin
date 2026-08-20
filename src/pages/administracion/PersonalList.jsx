@@ -1,7 +1,7 @@
 ﻿import { useState, useCallback } from "react";
 import Pagination from "../../components/ui/Pagination";
 import { exportToExcel } from "../../lib/exportExcel";
-import { Pencil, Trash2, Eye, EyeOff } from "lucide-react";
+import { Pencil, Trash2, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import Toolbar from "../../components/ui/Toolbar";
 import SearchBox from "../../components/ui/SearchBox";
 import Table, { Td } from "../../components/ui/Table";
@@ -9,8 +9,8 @@ import Modal from "../../components/ui/Modal";
 import Btn from "../../components/ui/Btn";
 import Field, { inputCls } from "../../components/ui/Field";
 import { useFirestoreCollection, saveMaestro, deleteMaestro } from "../../store/firestoreDb";
-import { EMPLOYEE_ROLES, fbCreateUser } from "../../store/auth";
-import { hashPassword } from "../../lib/authLib";
+import { fbCreateUser } from "../../store/auth";
+import { EMPLOYEE_ROLES } from "../../lib/roles";
 import { where } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { functions } from "../../lib/firebase";
@@ -37,7 +37,8 @@ function fromFirestore(d) {
     sexo: d.sexo,
     cargoEmpleado: d.cargo_empleado,
     userRole: d.user_role,
-    password: d.password_plain || '',
+    // La contraseña no se lee de Firestore: no debe estar ahí. Al editar se deja en blanco.
+    password: '',
     created_time: d.created_time || "",
   };
 }
@@ -81,6 +82,7 @@ export default function PersonalList() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [sincronizando, setSincronizando] = useState(false);
 
   const rows = items
     .filter((p) =>
@@ -105,13 +107,16 @@ export default function PersonalList() {
     setSaving(true);
     try {
       const data = toFirestore(form);
-      if (!editing) {
-        data.user_role = form.cargoEmpleado;
-      }
-      if (form.password) {
-        data.password_hash = await hashPassword(form.password);
-        data.password_plain = form.password;
-      }
+
+      // El rol se escribe también al editar. Antes solo se asignaba al crear, así que no
+      // había manera de corregir el rol de nadie desde ninguna pantalla: quedaba congelado
+      // con el valor del alta.
+      data.user_role = form.cargoEmpleado;
+
+      // La contraseña NO se guarda en Firestore. Antes se escribía `password_plain` con la
+      // contraseña en claro (y se enseñaba en un toast): con las reglas abiertas, cualquiera
+      // podía leerlas. La contraseña vive solo en Firebase Auth, que es su sitio.
+      // `password_hash` tampoco aporta nada desde que el login por Firestore se eliminó.
 
       if (!editing && form.password) {
         // Nuevo usuario con contraseña: crear Auth primero, guardar Firestore con el UID
@@ -119,15 +124,18 @@ export default function PersonalList() {
         if (!res.ok) { showToast(res.error || "Error al crear usuario", "error"); setSaving(false); return; }
         const { setDoc, doc } = await import("firebase/firestore");
         const { db } = await import("../../lib/firebase");
-        await setDoc(doc(db, COL, res.uid), { ...data, password_hash: data.password_hash || '', auth_uid: res.uid });
+        // El documento se llama como el uid de Auth: es lo que permite que las reglas y las
+        // Cloud Functions resuelvan el rol sin tener que buscar por correo.
+        await setDoc(doc(db, COL, res.uid), { ...data, auth_uid: res.uid });
       } else {
         // Edición o usuario sin contraseña: guardar normalmente
         await saveMaestro(COL, { ...data, id: editing?.id });
       }
 
       closeModal();
-      const pwd = form.password;
-      showToast(pwd ? `Personal guardado — Contraseña: ${pwd}` : "Personal guardado");
+      // El toast ya no muestra la contraseña: aparecía en pantalla y quedaba en el historial
+      // de notificaciones a la vista de quien pasara por delante.
+      showToast("Personal guardado");
     } catch {
       showToast("Error al guardar personal", "error");
     } finally {
@@ -157,9 +165,65 @@ export default function PersonalList() {
     }
   };
 
+  // Copia el rol de cada usuario al token de Firebase Auth.
+  //
+  // Las reglas de seguridad leen el rol del token primero, porque buscarlo en Firestore por
+  // uid falla con los documentos cuyo ID no es el uid de Auth — que es el caso de un
+  // administrador real. Hay que ejecutarlo tras cambiar roles; el cambio le llega al usuario
+  // al renovar su token (hasta una hora, o al instante si vuelve a entrar).
+  //
+  // Primero simula y enseña lo que cambiaría: sincronizar es tocar los permisos de todos.
+  const sincronizarRoles = async () => {
+    setSincronizando(true);
+    try {
+      const fn = httpsCallable(functions, "createAuthUser");
+      const previo = (await fn({ accion: "sincronizarRoles", simular: true })).data;
+
+      if (!previo.actualizados.length) {
+        const pendientes = previo.sinCuentaAuth.length + previo.rolDesconocido.length;
+        showToast(
+          pendientes
+            ? `Todo al día (${previo.yaCorrectos} usuarios). ${pendientes} no se pudieron resolver.`
+            : `Todo al día: los ${previo.yaCorrectos} usuarios ya tienen su rol sincronizado.`
+        );
+        setSincronizando(false);
+        return;
+      }
+
+      const detalle = previo.actualizados
+        .map((u) => `· ${u.correo || u.docId} → ${u.rol}`)
+        .join("\n");
+      const sinCuenta = previo.sinCuentaAuth.length
+        ? `\n\nSin cuenta en Auth (se omiten): ${previo.sinCuentaAuth.map((u) => u.correo || u.id).join(", ")}`
+        : "";
+      const desconocido = previo.rolDesconocido.length
+        ? `\n\nCon rol no reconocido (se omiten): ${previo.rolDesconocido.map((u) => `${u.correo || u.id} (${u.rol || "vacío"})`).join(", ")}`
+        : "";
+
+      if (!window.confirm(`Se van a sincronizar ${previo.actualizados.length} de ${previo.total} usuarios:\n\n${detalle}${sinCuenta}${desconocido}\n\n¿Continuar?`)) {
+        setSincronizando(false);
+        return;
+      }
+
+      const res = (await fn({ accion: "sincronizarRoles" })).data;
+      showToast(res.message || "Roles sincronizados", "success");
+    } catch (e) {
+      showToast("No se pudieron sincronizar los roles: " + (e?.message || ""), "error");
+    }
+    setSincronizando(false);
+  };
+
   return (
     <div>
       <Toolbar title="Personal" count={rows.length} onNew={openNew} onExport={() => exportToExcel(rows, "Personal")} />
+      <div className="mb-4 flex items-center gap-3 flex-wrap">
+        <Btn variant="ghost" onClick={sincronizarRoles} loading={sincronizando}>
+          <ShieldCheck size={15} className="mr-1.5" /> Sincronizar roles
+        </Btn>
+        <span className="text-xs text-[var(--muted)]">
+          Aplica los roles a los permisos reales. Ejecútalo después de cambiar el rol de alguien.
+        </span>
+      </div>
       <SearchBox value={q} onChange={setQ} placeholder="Buscar nombre, correo, DNI..." />
       <Table columns={["Nombre", "Correo", "Teléfono", "WSP", "DNI", "Dirección", "Distrito", "Cargo", "Rol", "Acción"]}
         sortable={[{key:"displayName",label:"Nombre"},{key:"email",label:"Correo"},{key:"telefono",label:"Teléfono"},{key:"DNI",label:"DNI"},{key:"direccion",label:"Dirección"},{key:"cargoEmpleado",label:"Cargo"},{key:"userRole",label:"Rol"}]}
@@ -211,12 +275,23 @@ export default function PersonalList() {
                 {EMPLOYEE_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
               </select>
             </Field>
-            <Field label={editing ? "Nueva contraseña (dejar vacío para mantener)" : "Contraseña"} span>
-              <div className="flex gap-1">
-                <input type={showPassword ? "text" : "password"} className={inputCls} value={form.password} onChange={(e) => set("password", e.target.value)} placeholder={editing ? "Dejar vacío para mantener" : "Asignar contraseña"} />
-                <button type="button" onClick={() => setShowPassword((v) => !v)} className="p-2 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]" tabIndex={-1}>{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button>
-              </div>
-            </Field>
+            {/* La contraseña solo se pide al crear. Al editar, el campo prometía cambiarla
+                pero no hacía nada: el guardado solo crea la cuenta de Auth en el alta. */}
+            {!editing ? (
+              <Field label="Contraseña" span>
+                <div className="flex gap-1">
+                  <input type={showPassword ? "text" : "password"} className={inputCls} value={form.password} onChange={(e) => set("password", e.target.value)} placeholder="Asignar contraseña" />
+                  <button type="button" onClick={() => setShowPassword((v) => !v)} className="p-2 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]" tabIndex={-1}>{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button>
+                </div>
+              </Field>
+            ) : (
+              <Field label="Contraseña" span>
+                <p className="text-sm text-[var(--muted)] py-2">
+                  La cambia cada usuario desde su propia sesión. Si la ha olvidado, use
+                  «Restaurar contraseña» en la pantalla de acceso.
+                </p>
+              </Field>
+            )}
           </div>
           <div className="flex justify-end gap-2 mt-6">
             <Btn variant="ghost" onClick={closeModal} disabled={saving}>Cancelar</Btn>

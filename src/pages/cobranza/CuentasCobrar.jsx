@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+﻿import { useState, useEffect } from "react";
 import Pagination from "../../components/ui/Pagination";
 import { exportToExcel } from "../../lib/exportExcel";
 import { Eye } from "lucide-react";
@@ -7,9 +7,30 @@ import Table, { Td } from "../../components/ui/Table";
 import Modal from "../../components/ui/Modal";
 import Btn from "../../components/ui/Btn";
 import { useFirestoreDocuments } from "../../store/firestoreDb";
-import * as db from "../../store/db";
+import { db as fbDb } from "../../lib/firebase";
+import { addDoc, setDoc, doc, collection, getDocs } from "firebase/firestore";
+import { showToast } from "../../components/ui/Toast";
 
-function PagoModal({ cuenta, onClose, onRegistrarPago }) {
+// El historial de pagos vive en la subcolección `pagos_CporCobrar`, no en el documento.
+function usePagosDeCuenta(cuentaId) {
+  const [pagos, setPagos] = useState([]);
+  useEffect(() => {
+    if (!cuentaId) { setPagos([]); return; }
+    let vigente = true;
+    (async () => {
+      try {
+        const snap = await getDocs(collection(fbDb, "cuentasPorCobrar", cuentaId, "pagos_CporCobrar"));
+        if (vigente) setPagos(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      } catch {
+        if (vigente) setPagos([]);
+      }
+    })();
+    return () => { vigente = false; };
+  }, [cuentaId]);
+  return pagos;
+}
+
+function PagoModal({ cuenta, onClose, onRegistrarPago, contraparte = "Cliente" }) {
   const [metodoPago, setMetodoPago] = useState("Efectivo");
   const [monto, setMonto] = useState(0);
   const [fechaPago, setFechaPago] = useState(new Date().toISOString().split("T")[0]);
@@ -55,7 +76,7 @@ function PagoModal({ cuenta, onClose, onRegistrarPago }) {
               <span className="text-sm gmp-mono font-semibold">S/ {Math.max(0, saldoRestante).toFixed(2)}</span>
             </div>
             <div className="flex justify-between py-2 border-t border-[var(--line-soft)]">
-              <span className="text-sm text-[var(--muted)]">Cliente</span>
+              <span className="text-sm text-[var(--muted)]">{contraparte}</span>
               <span className="text-sm font-medium">{cuenta.clientenombre || ""}</span>
             </div>
           </div>
@@ -73,22 +94,45 @@ export default function CuentasCobrar({ kind = "Cobrar" }) {
 
   const items = all.filter((c) => c.tipoCuenta === kind);
   const title = kind === "Cobrar" ? "Cuentas por cobrar" : "Cuentas por pagar";
+  // La misma pantalla sirve para cobrar y para pagar. En «cuentas por pagar» la contraparte
+  // es el PROVEEDOR, y el diálogo lo llamaba «Cliente»: al registrar el pago de una compra
+  // se leía «Cliente: REPUESTOS JAPONESES».
+  const contraparte = kind === "Cobrar" ? "Cliente" : "Proveedor";
   const [page, setPage] = useState(0);
   const totalPages = Math.ceil(items.length / 20);
   const pageRows = items.slice(page * 20, (page + 1) * 20);
 
-  const registrarPago = (id, pago) => {
+  // El pago se escribe en Firestore: la cabecera de la cuenta y una entrada en la
+  // subcolección `pagos_CporCobrar` (§1.10 BACKEND_SPEC.md), que es donde el legacy
+  // guarda el historial. Antes iba a localStorage y desaparecía al recargar.
+  const registrarPago = async (id, pago) => {
     const cuenta = all.find((c) => c.id === id);
     if (!cuenta) return;
-    const nuevoPendiente = Math.max(0, cuenta.saldoPendiente - pago.monto);
-    const updated = {
-      ...cuenta,
-      pagoTotalActual: cuenta.pagoTotalActual + pago.monto,
-      saldoPendiente: nuevoPendiente,
-      estado: nuevoPendiente < 1 ? "Pagado" : "Pendiente",
-      pagos: [...(cuenta.pagos || []), { ...pago, montopagado: pago.monto, montopendiente: nuevoPendiente, estado: "aprobado" }],
-    };
-    db.saveCuenta(updated);
+    const monto = Number(pago.monto) || 0;
+    const nuevoPendiente = Math.max(0, Number(cuenta.saldoPendiente || 0) - monto);
+    const pagado = Number(cuenta.pagoTotalActual || 0) + monto;
+    const estado = nuevoPendiente < 0.01 ? "Pagado" : "Pendiente";
+
+    try {
+      await addDoc(collection(fbDb, "cuentasPorCobrar", id, "pagos_CporCobrar"), {
+        fecha: pago.fecha || new Date().toISOString().split("T")[0],
+        montopagado: monto,
+        montopendiente: nuevoPendiente,
+        metodopago: pago.metodoPago || "",
+        numerocuenta: cuenta.numeroCotizacion || "",
+        estado: "aprobado",
+        fecha_creacion: new Date().toISOString(),
+      });
+      await setDoc(
+        doc(fbDb, "cuentasPorCobrar", id),
+        { pagoTotalActual: pagado, saldoPendiente: nuevoPendiente, estado },
+        { merge: true }
+      );
+      showToast(`Pago de S/ ${monto.toFixed(2)} registrado`, "success");
+    } catch (e) {
+      console.error("No se pudo registrar el pago:", e);
+      showToast("No se pudo registrar el pago", "error");
+    }
   };
 
   return (
@@ -114,48 +158,53 @@ export default function CuentasCobrar({ kind = "Cobrar" }) {
           </>
         )}
       />
-      {pagoCuenta && <PagoModal cuenta={pagoCuenta} onClose={() => setPagoCuenta(null)} onRegistrarPago={registrarPago} />}
-      {detalle && (
-        <Modal title={`${detalle.tipoDocumento} ${detalle.numeroCotizacion}`} onClose={() => setDetalle(null)} wide>
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div><span className="text-[12px] text-[var(--muted)]">Cliente</span><p className="text-sm font-medium">{detalle.clientenombre || ""}</p></div>
-            <div><span className="text-[12px] text-[var(--muted)]">Total</span><p className="text-sm gmp-mono">S/ {Number(detalle.montoTotal || 0).toFixed(2)}</p></div>
-            <div><span className="text-[12px] text-[var(--muted)]">Pagado</span><p className="text-sm gmp-mono">S/ {Number(detalle.pagoTotalActual || 0).toFixed(2)}</p></div>
-            <div><span className="text-[12px] text-[var(--muted)]">Saldo</span><p className="text-sm gmp-mono">S/ {Number(detalle.saldoPendiente || 0).toFixed(2)}</p></div>
-            <div><span className="text-[12px] text-[var(--muted)]">Estado</span><p className="text-sm">{detalle.estado || ""}</p></div>
-            <div><span className="text-[12px] text-[var(--muted)]">Fecha</span><p className="text-sm">{detalle.fecha || ""}</p></div>
-          </div>
-          {detalle.pagos && detalle.pagos.length > 0 && (
-            <div>
-              <h4 className="text-sm font-semibold text-[var(--text)] mb-3 uppercase tracking-wide">Historial de pagos</h4>
-              <div className="bg-[var(--surface-2)] rounded-lg overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-[11px] uppercase tracking-wide text-[var(--text)] font-semibold">
-                      <th className="px-4 py-3">Fecha</th>
-                      <th className="px-4 py-3">Método</th>
-                      <th className="px-4 py-3 text-right">Monto</th>
-                      <th className="px-4 py-3 text-right">Saldo restante</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {detalle.pagos.map((p, i) => (
-                      <tr key={i} className="border-t border-[var(--line-soft)]">
-                        <td className="px-4 py-3">{p.fecha || ""}</td>
-                        <td className="px-4 py-3">{p.metodopago || ""}</td>
-                        <td className="px-4 py-3 text-right gmp-mono">S/ {Number(p.montopagado || 0).toFixed(2)}</td>
-                        <td className="px-4 py-3 text-right gmp-mono">S/ {Number(p.montopendiente || 0).toFixed(2)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </Modal>
-      )}
+      {pagoCuenta && <PagoModal cuenta={pagoCuenta} onClose={() => setPagoCuenta(null)} onRegistrarPago={registrarPago} contraparte={contraparte} />}
+      {detalle && <DetalleModal cuenta={detalle} onClose={() => setDetalle(null)} contraparte={contraparte} />}
       <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
+  );
+}
+
+function DetalleModal({ cuenta, onClose, contraparte = "Cliente" }) {
+  const pagos = usePagosDeCuenta(cuenta.id);
+  return (
+    <Modal title={`${cuenta.tipoDocumento} ${cuenta.numeroCotizacion}`} onClose={onClose} wide>
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        <div><span className="text-[12px] text-[var(--muted)]">{contraparte}</span><p className="text-sm font-medium">{cuenta.clientenombre || ""}</p></div>
+        <div><span className="text-[12px] text-[var(--muted)]">Total</span><p className="text-sm gmp-mono">S/ {Number(cuenta.montoTotal || 0).toFixed(2)}</p></div>
+        <div><span className="text-[12px] text-[var(--muted)]">Pagado</span><p className="text-sm gmp-mono">S/ {Number(cuenta.pagoTotalActual || 0).toFixed(2)}</p></div>
+        <div><span className="text-[12px] text-[var(--muted)]">Saldo</span><p className="text-sm gmp-mono">S/ {Number(cuenta.saldoPendiente || 0).toFixed(2)}</p></div>
+        <div><span className="text-[12px] text-[var(--muted)]">Estado</span><p className="text-sm">{cuenta.estado || ""}</p></div>
+        <div><span className="text-[12px] text-[var(--muted)]">Fecha</span><p className="text-sm">{cuenta.fecha || ""}</p></div>
+      </div>
+      <h4 className="text-sm font-semibold text-[var(--text)] mb-3 uppercase tracking-wide">Historial de pagos</h4>
+      {pagos.length === 0 ? (
+        <p className="text-sm text-[var(--muted)]">Todavía no se ha registrado ningún pago en esta cuenta.</p>
+      ) : (
+        <div className="bg-[var(--surface-2)] rounded-lg overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-[11px] uppercase tracking-wide text-[var(--text)] font-semibold">
+                <th className="px-4 py-3">Fecha</th>
+                <th className="px-4 py-3">Método</th>
+                <th className="px-4 py-3 text-right">Monto</th>
+                <th className="px-4 py-3 text-right">Saldo restante</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pagos.map((p) => (
+                <tr key={p.id} className="border-t border-[var(--line-soft)]">
+                  <td className="px-4 py-3">{p.fecha || ""}</td>
+                  <td className="px-4 py-3">{p.metodopago || ""}</td>
+                  <td className="px-4 py-3 text-right gmp-mono">S/ {Number(p.montopagado || 0).toFixed(2)}</td>
+                  <td className="px-4 py-3 text-right gmp-mono">S/ {Number(p.montopendiente || 0).toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Modal>
   );
 }
 

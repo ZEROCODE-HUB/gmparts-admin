@@ -10,7 +10,7 @@ import Btn from "../../components/ui/Btn";
 import Field, { inputCls } from "../../components/ui/Field";
 import { useFirestoreCollection, saveMaestro, deleteMaestro } from "../../store/firestoreDb";
 import { fbCreateUser } from "../../store/auth";
-import { hashPassword } from "../../lib/authLib";
+import { validarIdentidad } from "../../lib/documentos";
 import { where } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { functions } from "../../lib/firebase";
@@ -35,7 +35,7 @@ function fromFirestore(d) {
     provincia: d.provincia,
     departamento: d.departamento,
     encargado: d.encargado,
-    password: d.password_plain || '',
+    password: '',
     created_time: d.created_time || "",
   };
 }
@@ -105,27 +105,39 @@ export default function ClientesList() {
   const openEdit = useCallback((c) => { setSaving(false); setEditing(c); setForm(cleanForm(c)); setModalOpen(true); }, []);
 
   const handleSave = async () => {
+    // Se valida ANTES de tocar la base. Un documento mal formado no da problemas hoy: los da
+    // el día de emitir el comprobante, cuando SUNAT rechaza el envío y hay que rastrear de
+    // dónde salió el dato.
+    const identidad = validarIdentidad({
+      tipoPersona: form.tipoPersona,
+      tipoDocumento: form.tipoDocumento,
+      documento: form.documento,
+    });
+    if (!identidad.ok) { showToast(identidad.error, "error"); return; }
+
     setSaving(true);
     try {
       const data = toFirestore(form);
-      if (form.password) {
-        data.password_hash = await hashPassword(form.password);
-        data.password_plain = form.password;
-      }
+
+      // La contraseña NO se guarda en Firestore. Antes se escribían `password_plain` (en
+      // claro) y `password_hash`, igual que hacía la pantalla de personal. Se corrigió allí
+      // y aquí se quedó sin corregir, que es la pantalla de los 11 clientes reales.
+      // La contraseña vive solo en Firebase Auth.
 
       if (!editing && form.password) {
         const res = await fbCreateUser(form.email, form.password);
         if (!res.ok) { showToast(res.error || "Error al crear usuario", "error"); setSaving(false); return; }
         const { setDoc, doc } = await import("firebase/firestore");
         const { db } = await import("../../lib/firebase");
-        await setDoc(doc(db, COL, res.uid), { ...data, password_hash: data.password_hash || '', auth_uid: res.uid });
+        await setDoc(doc(db, COL, res.uid), { ...data, auth_uid: res.uid });
       } else {
         await saveMaestro(COL, { ...data, id: editing?.id });
       }
 
       closeModal();
-      const pwd = form.password;
-      showToast(pwd ? `Cliente guardado — Contraseña: ${pwd}` : "Cliente guardado");
+      // El toast ya no muestra la contraseña: quedaba a la vista de cualquiera que pasara
+      // por delante de la pantalla y en el historial de notificaciones.
+      showToast("Cliente guardado");
     } catch (e) {
       const msg = e.message || "";
       if (msg.includes("undefined")) showToast("Completa todos los campos requeridos", "error");
@@ -205,12 +217,18 @@ export default function ClientesList() {
             <Field label="Provincia"><input className={inputCls} value={form.provincia} onChange={(e) => set("provincia", e.target.value)} /></Field>
             <Field label="Departamento"><input className={inputCls} value={form.departamento} onChange={(e) => set("departamento", e.target.value)} /></Field>
             <Field label="Encargado"><input className={inputCls} value={form.encargado} onChange={(e) => set("encargado", e.target.value)} /></Field>
-            <Field label={editing ? "Nueva contraseña (dejar vacío para mantener)" : "Contraseña"} span>
-              <div className="flex gap-1">
-                <input type={showPassword ? "text" : "password"} className={inputCls} value={form.password} onChange={(e) => set("password", e.target.value)} placeholder={editing ? "Dejar vacío para mantener" : "Asignar contraseña"} />
-                <button type="button" onClick={() => setShowPassword((v) => !v)} className="p-2 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]" tabIndex={-1}>{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button>
-              </div>
-            </Field>
+            {/* El campo solo aparece al crear. Al editar prometía «dejar vacío para mantener»,
+                dando a entender que escribiendo algo se cambiaba la contraseña — y no se
+                cambiaba nada: el único punto que la usa es el alta. Cambiar la contraseña de
+                alguien que ya existe se hace desde «¿Olvidaste tu contraseña?». */}
+            {!editing && (
+              <Field label="Contraseña" span>
+                <div className="flex gap-1">
+                  <input type={showPassword ? "text" : "password"} className={inputCls} value={form.password} onChange={(e) => set("password", e.target.value)} placeholder="Asignar contraseña" />
+                  <button type="button" onClick={() => setShowPassword((v) => !v)} className="p-2 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]" tabIndex={-1}>{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button>
+                </div>
+              </Field>
+            )}
           </div>
           <div className="flex justify-end gap-2 mt-6">
             <Btn variant="ghost" onClick={closeModal} disabled={saving}>Cancelar</Btn>

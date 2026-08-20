@@ -71,7 +71,7 @@ describe("EnviarSunatButton", () => {
     expect(screen.getByTitle(/Reintentar envío a SUNAT/)).toBeInTheDocument();
   });
 
-  it("marca Enviado y notifica en caso de éxito", async () => {
+  it("marca Registrado y notifica en caso de éxito", async () => {
     httpsCallableMock.mockResolvedValue({
       data: { success: true, sunatSuccess: true, cdrId: "cdr-9", message: "Documento validado correctamente en SUNAT" },
     });
@@ -80,20 +80,51 @@ describe("EnviarSunatButton", () => {
     renderBtn({ onDone });
     fireEvent.click(screen.getByTitle("Enviar a SUNAT"));
 
-    await waitFor(() => expect(screen.getByText("Enviado")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Registrado")).toBeInTheDocument());
     expect(screen.getByText(/Documento validado correctamente en SUNAT/)).toBeInTheDocument();
     expect(onDone).toHaveBeenCalled();
   });
 
-  it("un documento Rechazado conserva el botón para reintentar", () => {
-    renderBtn({ estadoActual: "Rechazado" });
-    expect(screen.getByText("Rechazado")).toBeInTheDocument();
-    expect(screen.getByTitle("Reintentar envío a SUNAT")).toBeInTheDocument();
+  it("distingue un comprobante de PRUEBAS de uno con valor fiscal", async () => {
+    httpsCallableMock.mockResolvedValue({
+      data: { success: true, sunatSuccess: true, esPrueba: true, message: "Documento aceptado en el entorno de PRUEBAS (sin valor fiscal)" },
+    });
+
+    renderBtn({ esPrueba: true });
+    fireEvent.click(screen.getByTitle("Enviar a SUNAT"));
+
+    await waitFor(() => expect(screen.getByText("Prueba")).toBeInTheDocument());
+    expect(screen.queryByText("Registrado")).toBeNull();
   });
 
-  it("un documento Registrado no permite reenviar", () => {
+  it("un documento Rechazado que admite reintento conserva el botón", () => {
+    renderBtn({ estadoActual: "Rechazado", reintentable: true });
+    expect(screen.getByText("Rechazado")).toBeInTheDocument();
+    expect(screen.getByTitle(/Reintentar envío a SUNAT/)).toBeInTheDocument();
+  });
+
+  it("un rechazo definitivo de SUNAT avisa de que hay que corregir, no reenviar", () => {
+    // error.code numérico = SUNAT juzgó los datos: reenviar quema correlativo sin cambiar nada.
+    renderBtn({ estadoActual: "Rechazado", reintentable: false });
+    expect(screen.getByTitle(/corrige el documento antes de reenviar/)).toBeInTheDocument();
+  });
+
+  it("un documento Registrado no se reenvía, pero deja bajar el comprobante oficial", () => {
     renderBtn({ estadoActual: "Registrado" });
     expect(screen.getByText("Registrado")).toBeInTheDocument();
-    expect(screen.queryByRole("button")).toBeNull();
+    // Ya no hay botón de envío; el único botón es el de descarga del PDF/XML de SUNAT.
+    expect(screen.queryByTitle("Enviar a SUNAT")).toBeNull();
+    expect(screen.getByTitle("Descargar PDF y XML oficiales de SUNAT")).toBeInTheDocument();
+  });
+
+  it("trae el comprobante oficial de Factiliza, no el PDF interno", async () => {
+    httpsCallableMock.mockResolvedValue({ data: { pdfUrl: "https://storage/x.pdf", xmlUrl: "https://storage/x.xml" } });
+    const abrir = vi.spyOn(window, "open").mockImplementation(() => {});
+
+    renderBtn({ estadoActual: "Registrado" });
+    fireEvent.click(screen.getByTitle("Descargar PDF y XML oficiales de SUNAT"));
+
+    await waitFor(() => expect(abrir).toHaveBeenCalledWith("https://storage/x.pdf", "_blank", "noopener"));
+    abrir.mockRestore();
   });
 });

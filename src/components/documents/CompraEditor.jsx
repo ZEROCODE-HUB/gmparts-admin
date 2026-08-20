@@ -1,4 +1,17 @@
 import { useState, useEffect, useCallback } from "react";
+import { getSession } from "../../store/auth";
+
+// Quién registra la compra.
+//
+// Estaba escrito a fuego «GM Parts Admin» en los tres sitios donde se rellena el campo, así
+// que TODAS las compras quedaban a nombre de la misma persona, la registrara quien la
+// registrara. Comprobado: una compra hecha por el asesor de repuestos se guardó firmada por
+// «GM Parts Admin».
+function usuarioActual() {
+  const s = getSession();
+  return s?.displayName || s?.email || "";
+}
+
 import { ArrowLeft, Plus, Trash2, Package } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import Btn from "../ui/Btn";
@@ -16,6 +29,7 @@ const ALMACENES = [
   { id: "w3", Nombre: "Depósito Taller" },
 ];
 import { searchArticles, firestoreSaveDocument } from "../../store/firestoreStock";
+import { desglosarIgv } from "../../lib/igv";
 
 function findSeedById(id, docKey) {
   return db.getDocumentById(docKey, id);
@@ -49,7 +63,7 @@ export default function CompraEditor({ title, backPath, docKey, onSave, mode = "
   const [form, setForm] = useState({
     serie: "", numero: "", fecha: new Date().toISOString().split("T")[0],
     proveedor: "", proveedorDoc: "", tipoDoc: "RUC", direccion: "",
-    formaPago: "Contado", moneda: "PEN", tipoIgv: "INCLUIDO IGV", almacen: "", usuario: "GM Parts Admin",
+    formaPago: "Contado", moneda: "PEN", tipoIgv: "INCLUIDO IGV", almacen: "", usuario: usuarioActual(),
     actualizarStock: true, docRelacion: "",
   });
   const [items, setItems] = useState([]);
@@ -85,7 +99,7 @@ export default function CompraEditor({ title, backPath, docKey, onSave, mode = "
             moneda: data.moneda || "PEN",
             tipoIgv: normalizeIgv(data.tipoIgv),
             almacen: data.almacen || "",
-            usuario: data.usuario || "GM Parts Admin",
+            usuario: data.usuario || usuarioActual(),
             actualizarStock: data.actualizarStock ?? true,
             docRelacion: data.docRelacion || "",
           });
@@ -118,7 +132,7 @@ export default function CompraEditor({ title, backPath, docKey, onSave, mode = "
           moneda: existing.moneda || "PEN",
           tipoIgv: normalizeIgv(existing.tipoIgv),
           almacen: existing.almacen || "",
-          usuario: existing.usuario || "GM Parts Admin",
+          usuario: existing.usuario || usuarioActual(),
           actualizarStock: existing.actualizarStock ?? true,
           docRelacion: existing.docRelacion || "",
         });
@@ -213,9 +227,10 @@ export default function CompraEditor({ title, backPath, docKey, onSave, mode = "
   const updateItemUtilidad = (idx, val) => patchItem(idx, "utilidad", Math.max(0, val));
 
   const sumaItems = items.reduce((s, i) => s + i.total, 0);
-  const { subtotal, igv, total } = form.tipoIgv === "INCLUIDO" || form.tipoIgv === "INCLUIDO IGV"
-    ? { subtotal: sumaItems / 1.18, igv: sumaItems - sumaItems / 1.18, total: sumaItems }
-    : { subtotal: sumaItems, igv: sumaItems * 0.18, total: sumaItems * 1.18 };
+  const { subtotal, igv, total } = desglosarIgv(
+    sumaItems,
+    form.tipoIgv === "INCLUIDO" || form.tipoIgv === "INCLUIDO IGV"
+  );
 
   const validate = () => {
     if (!form.moneda) return "Seleccione Moneda";

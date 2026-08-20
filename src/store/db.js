@@ -60,22 +60,15 @@ export function nextDocId(docKey) {
   return `${prefix}${max + 1}`;
 }
 
-export function saveCuenta(cuenta) {
-  saveDocument("cuentasPorCobrar", cuenta);
-}
-export function getCuentas() {
-  return getDocuments("cuentasPorCobrar");
-}
+// Movidos a Firestore (store/firestoreStock.js), ya no viven aquí:
+//   getOTFacturaItems   → ítems de factura a partir de los diagnósticos de la recepción
+//   markRecepcionFacturada → marcarRecepcionFacturada, escribe en `recepciones`
+//   saveCuenta / getCuentas → cuentasPorCobrar + subcolección pagos_CporCobrar
+// Eran stubs que devolvían [] o escribían en localStorage, y hacían que el flujo de
+// facturación de órdenes de trabajo y el registro de pagos no llegaran nunca a la base.
 
-export function markRecepcionFacturada(otId) {
-  const ot = getDocumentById("vs-orden", otId);
-  if (!ot) return;
-  saveDocument("vs-orden", { ...ot, facturado: true });
-}
-
-// Stubs para compatibilidad (artículos vía Algolia, stock vía Firestore)
+// Stubs restantes para compatibilidad (artículos vía Algolia, stock vía Firestore)
 export function getKardex() { return []; }
-export function getOTFacturaItems() { return []; }
 export function saveVale() {}
 export function getArticulos() { return []; }
 export function articuloEstado() { return "Disponible"; }

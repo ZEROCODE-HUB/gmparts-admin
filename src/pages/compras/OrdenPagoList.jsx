@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import Pagination from "../../components/ui/Pagination";
 import { exportToExcel } from "../../lib/exportExcel";
 import { useNavigate } from "react-router-dom";
@@ -15,9 +15,9 @@ import DateRangeFilter from "../../components/ui/DateRangeFilter";
 import { useFirestoreDocuments } from "../../store/firestoreDb";
 
 const previewFields = [
-  { key: "serie", label: "Serie" }, { key: "numero", label: "N?mero" },
+  { key: "serie", label: "Serie" }, { key: "numero", label: "Número" },
   { key: "fecha", label: "Fecha" }, { key: "proveedor", label: "Proveedor" },
-  { key: "proveedorDoc", label: "Doc. Proveedor" }, { key: "docRelacion", label: "Doc. Relaci?n" },
+  { key: "proveedorDoc", label: "Doc. Proveedor" }, { key: "docRelacion", label: "Doc. Relación" },
   { key: "total", label: "Total" }, { key: "estado", label: "Estado" },
 ];
 
@@ -56,7 +56,7 @@ export default function OrdenPagoList() {
       <Toolbar title="Compra - Orden de Pago" count={rows.length} onNew={() => navigate("/c-orden/nuevo")} onExport={() => exportToExcel(rows, "OrdenesPago")} />
       <SearchBox value={q} onChange={setQ} placeholder="Buscar proveedor, serie..." />
       <DateRangeFilter fechaDesde={fechaDesde} fechaHasta={fechaHasta} onChange={(d, h) => { setFechaDesde(d); setFechaHasta(h); }} />
-      <Table columns={["Serie", "N?mero", "Fecha", "Proveedor", "Documento", "Doc. Relaci?n", "Total", "Estado", "Acci?n"]}
+      <Table columns={["Serie", "Número", "Fecha", "Proveedor", "Documento", "Doc. Relación", "Total", "Estado", "Acción"]}
         sortable={[{key:"serie",label:"Serie"},{key:"numero",label:"N\u00famero"},{key:"fecha",label:"Fecha"},{key:"proveedor",label:"Proveedor"},{key:"total",label:"Total"},{key:"estado",label:"Estado"}]}
         sortField={sortField} sortDir={sortDir} onSort={handleSort}
         rows={pageRows}
@@ -74,7 +74,7 @@ export default function OrdenPagoList() {
               <div className="flex gap-1">
                 <button onClick={() => setPreview(c)} className="p-1.5 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]" title="Ver detalle"><Eye size={15} /></button>
                 <button onClick={() => navigate(`/c-orden/${c.id}`)} className="p-1.5 rounded-md text-[var(--accent)] hover:bg-[var(--accent-dim)]" title="Editar"><Pencil size={15} /></button>
-                <EnviarSunatButton docKey="c-orden" id={c.id} estadoActual={c.estadoFactura} />
+                <EnviarSunatButton docKey="c-orden" id={c.id} estadoActual={c.estadoSunat || c.estadoFactura} esPrueba={c.sunatEsPrueba} reintentable={c.sunatReintentable} correoEnviado={c.correoEnviadoA} />
                 <button onClick={() => setPrintTarget(c)} className="p-1.5 rounded-md text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]" title="Imprimir"><Printer size={15} /></button>
                 <button onClick={() => setDeleteTarget(c)} className="p-1.5 rounded-md text-[var(--danger)] hover:bg-[var(--danger-dim)]" title="Anular"><Trash2 size={15} /></button>
               </div>
@@ -84,7 +84,7 @@ export default function OrdenPagoList() {
       />
       {deleteTarget && (
         <Modal title="Anular orden de pago" onClose={() => setDeleteTarget(null)}>
-          <p className="text-sm text-[var(--muted)] mb-6">?Est?s seguro de anular esta orden de pago?</p>
+          <p className="text-sm text-[var(--muted)] mb-6">¿Estás seguro de anular esta orden de pago?</p>
           <p className="font-medium mb-6">{deleteTarget.serie}-{deleteTarget.numero} - {deleteTarget.proveedor}</p>
           <div className="flex justify-end gap-2">
             <Btn variant="ghost" onClick={() => setDeleteTarget(null)}>Cancelar</Btn>

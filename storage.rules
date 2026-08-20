@@ -1,0 +1,107 @@
+rules_version = '2';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Reglas de Firebase Storage — GM Parts (g-m-parts-lac7fg)
+//
+// Hasta 2026-08-18 este bucket NO tenía ningún archivo de reglas en ninguno de los tres
+// repos, y estaba abierto de par en par. Comprobado sin credenciales de ningún tipo:
+//   · listar el bucket entero devolvía 200 (313 objetos bajo users/, los PDF de Facturas/,
+//     FacturasVentasCompras/, sunat/ y hasta un recepciones.xlsx),
+//   · descargar un PDF de factura devolvía 200,
+//   · y SUBIR un archivo nuevo también devolvía 200.
+// Es decir, cualquiera podía inventariar y descargarse las fotos de los vehículos y los
+// comprobantes de los clientes, y además plantar archivos en el bucket o pisar un PDF ya
+// emitido. El de prueba que se subió para verificarlo se borró acto seguido.
+//
+// Por qué esto NO rompe nada de lo que ya funciona:
+//   1. Las fotos que ve el cliente en el micrositio de aprobaciones se sirven por URL de
+//      descarga con token (`?alt=media&token=…`). Esas URL se saltan estas reglas por
+//      diseño de Firebase. Verificado sobre los objetos reales: todos los de users/
+//      llevan su `downloadTokens`.
+//   2. Los PDF y XML de comprobantes se publican con `makePublic()` y se enlazan por
+//      `storage.googleapis.com`, que va por ACL del objeto, no por estas reglas.
+//   3. Las Cloud Functions usan el Admin SDK, que tampoco pasa por aquí.
+// Lo único que se cierra es el acceso directo y anónimo a la API de Storage: listar el
+// bucket, y leer o escribir objetos sin un enlace legítimo.
+// ═══════════════════════════════════════════════════════════════════════════
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Igual que en Firestore, «autenticado» excluye el acceso anónimo a propósito: el
+    // proveedor anónimo es andamiaje de FlutterFlow, y admitirlo equivaldría a dejar
+    // el bucket abierto con un paso extra.
+    function autenticado() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider != "anonymous";
+    }
+
+    // El rol viaja en el custom claim que asignan `onUserRoleWrite` y `barrerRolesAuth`.
+    // Aquí no se consulta Firestore: encadenar un get() por cada foto saldría caro y
+    // añadiría un punto de fallo a algo que ya está resuelto en el token.
+    function esPersonal() {
+      return autenticado() && request.auth.token.get("role", "") in [
+        "Administrador", "Gerente General", "Jefe de Taller",
+        "Asesor Servicio", "Asesor Repuesto", "Tecnico Mecanico"
+      ];
+    }
+
+    // Administración, para los casos en que hay que limpiar lo de otro.
+    function esAdmin() {
+      return autenticado() && request.auth.token.get("role", "") in ["Administrador", "Gerente General"];
+    }
+
+    // Tope de tamaño: sin él, una cuenta comprometida puede llenar el bucket. 25 MB deja
+    // holgura de sobra para una foto de móvil.
+    function tamanoRazonable() {
+      return request.resource.size < 25 * 1024 * 1024;
+    }
+
+    // Subidas de la app móvil. FlutterFlow escribe siempre bajo el uid de quien ha
+    // iniciado sesión, así que cada uno solo puede escribir en su propia carpeta.
+    // La lectura se deja a todo el personal porque el panel y la app muestran fotos
+    // subidas por otros compañeros.
+    match /users/{userId}/{allPaths=**} {
+      allow read: if esPersonal();
+
+      // Crear y actualizar llevan tope de tamaño; borrar, no.
+      //
+      // `allow write` incluye el borrado, y `tamanoRazonable()` mira `request.resource.size`
+      // — que en un DELETE no existe. Resultado: la condición era siempre falsa y nadie podía
+      // borrar sus propias fotos, ni siquiera para deshacer una subida recién hecha.
+      // Comprobado con una cuenta real: subir devolvía 200 y borrar 403.
+      allow create, update: if autenticado() && request.auth.uid == userId && tamanoRazonable();
+      allow delete: if (autenticado() && request.auth.uid == userId) || esAdmin();
+    }
+
+    // Comprobantes y exportaciones: los escribe el Admin SDK desde las Cloud Functions,
+    // que no pasa por estas reglas. Nadie debe escribirlos desde un cliente — pisar un
+    // PDF ya emitido es justo lo que había que impedir.
+    match /Facturas/{allPaths=**} {
+      allow read: if esPersonal();
+      allow write: if false;
+    }
+
+    match /FacturasVentasCompras/{allPaths=**} {
+      allow read: if esPersonal();
+      allow write: if false;
+    }
+
+    match /sunat/{allPaths=**} {
+      allow read: if esPersonal();
+      allow write: if false;
+    }
+
+    match /recepciones/{allPaths=**} {
+      allow read: if esPersonal();
+      allow write: if esPersonal() && tamanoRazonable();
+    }
+
+    // Todo lo demás —incluidos los sueltos que quedaron en la raíz del bucket— queda
+    // cerrado. Si mañana aparece una ruta nueva, es preferible que falle de forma
+    // evidente a que herede permiso de una regla comodín.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

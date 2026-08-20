@@ -1,6 +1,9 @@
 ﻿import { useState } from "react";
 import { X, Download, Printer, FileText } from "lucide-react";
-import { docToOpts, descargarPDF, imprimirPDF } from "../../lib/pdfGenerator";
+
+// El generador de PDF pesa 1,8 MB (pdfmake y sus fuentes). Se carga al pulsar, no al
+// abrir la aplicación: antes viajaba en el bundle inicial aunque nadie imprimiera nada.
+const cargarGeneradorPDF = () => import("../../lib/pdfGenerator");
 
 export default function PrintDocument({ title = "Documento", data, onClose }) {
   const [loading, setLoading] = useState(false);
@@ -11,6 +14,7 @@ export default function PrintDocument({ title = "Documento", data, onClose }) {
     setAction("download");
     setLoading(true);
     try {
+      const { docToOpts, descargarPDF } = await cargarGeneradorPDF();
       await descargarPDF(docToOpts(data, title), `${title}_${data.serie || data.Nserie || ""}${data.numero || ""}.pdf`);
     } catch (e) { console.error("PDF error:", e); }
     setLoading(false);
@@ -21,6 +25,7 @@ export default function PrintDocument({ title = "Documento", data, onClose }) {
     setAction("print");
     setLoading(true);
     try {
+      const { docToOpts, imprimirPDF } = await cargarGeneradorPDF();
       await imprimirPDF(docToOpts(data, title));
     } catch (e) { console.error("PDF error:", e); }
     setLoading(false);
