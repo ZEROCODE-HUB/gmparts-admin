@@ -37,6 +37,7 @@ const estadoColor = (e) => ({
   "Diagnóstico": "bg-blue-100 text-blue-700",
   "Cotización": "bg-purple-100 text-purple-700",
   "Reparación": "bg-amber-100 text-amber-700",
+  "Listo para entrega": "bg-teal-100 text-teal-700",
   "Finalizado": "bg-green-100 text-green-700",
 }[e] || "bg-gray-100 text-gray-700");
 

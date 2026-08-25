@@ -9,6 +9,14 @@ import { getSession } from "../store/auth";
 
 const DAYS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sab"];
 
+// «Listo para entrega» sigue contando como vehículo en taller —el coche está ahí hasta
+// que el cliente lo recoge— pero no es lo mismo que estar en el elevador, y el color es
+// lo único que lo distingue de un vistazo.
+const TONO_ESTADO = {
+  "Reparación": "info",
+  "Listo para entrega": "success",
+};
+
 function useDashboardData(rol) {
   const [stats, setStats] = useState({ clientes: 0, diagnosticos: 0, trabajosEnProceso: 0, cotizaciones: 0 });
   const [weekly, setWeekly] = useState([]);
@@ -261,7 +269,7 @@ export default function Dashboard() {
                   <div key={i} className="flex items-center justify-between text-sm">
                     <span className="gmp-mono">{o.placa}</span>
                     <span className="text-[var(--muted)] flex-1 px-3 truncate">{o.cliente}</span>
-                    <Badge tone={o.estado === "Reparación" ? "info" : "amber"}>{o.estado}</Badge>
+                    <Badge tone={TONO_ESTADO[o.estado] || "amber"}>{o.estado}</Badge>
                   </div>
                 ))}
           </div>

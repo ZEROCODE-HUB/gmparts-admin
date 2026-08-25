@@ -60,14 +60,36 @@ describe("correcciones", () => {
 describe("opciones que ve el usuario", () => {
   it("el desplegable solo ofrece destinos alcanzables", () => {
     expect(estadosDisponibles("Recepción")).toEqual(["Recepción", "Diagnóstico"]);
-    expect(estadosDisponibles("Reparación")).toEqual(["Cotización", "Reparación", "Finalizado"]);
+    expect(estadosDisponibles("Reparación")).toEqual(
+      ["Cotización", "Reparación", "Listo para entrega", "Finalizado"]);
   });
 
   it("nunca ofrece estados que no existen en la base", () => {
+    // «Listo para entrega» SÍ existe desde que el taller puede cerrar su parte sin esperar a
+    // que el cliente conteste la encuesta; lo escribe la app al pulsar «Está listo para
+    // entregar». «Entregado» sigue sin existir en ningún documento.
     const todos = estadosDisponibles(null);
-    expect(todos).not.toContain("Listo para entrega");
+    expect(todos).toContain("Listo para entrega");
     expect(todos).not.toContain("Entregado");
     expect(todos).toContain("Finalizado");
+  });
+
+  it("el taller puede cerrar la orden sin pasar por el cliente", () => {
+    // Este es el motivo del estado: antes «Finalizado» solo lo escribía el cliente al
+    // contestar la encuesta, y una orden acabada cuyo cliente no responde se quedaba en
+    // «Reparación» para siempre.
+    expect(transicionPermitida("Reparación", "Listo para entrega")).toBe(true);
+    expect(transicionPermitida("Listo para entrega", "Finalizado")).toBe(true);
+  });
+
+  it("se puede deshacer un cierre prematuro", () => {
+    expect(transicionPermitida("Listo para entrega", "Reparación")).toBe(true);
+    expect(transicionPermitida("Finalizado", "Listo para entrega")).toBe(true);
+  });
+
+  it("no se salta el trabajo para llegar a listo para entrega", () => {
+    expect(transicionPermitida("Recepción", "Listo para entrega")).toBe(false);
+    expect(transicionPermitida("Cotización", "Listo para entrega")).toBe(false);
   });
 
   it("una orden nueva empieza pudiendo elegir cualquier estado inicial", () => {

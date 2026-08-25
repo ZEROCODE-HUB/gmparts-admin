@@ -15,17 +15,28 @@ import { getSession } from "../../../store/auth";
 // Firestore. El editor ofrecía "Listo para entrega" y "Entregado", que no existen en
 // ningún documento, y NO ofrecía "Finalizado", que es el estado más común (20 de 48
 // recepciones). Elegir uno inexistente dejaba la orden fuera de todos los filtros.
-const ESTADOS = ["Recepción", "Diagnóstico", "Cotización", "Reparación", "Finalizado"];
+const ESTADOS = ["Recepción", "Diagnóstico", "Cotización", "Reparación",
+  "Listo para entrega", "Finalizado"];
 
 // Transiciones permitidas. Antes se podía saltar de "Recepción" a "Finalizado" sin pasar
 // por diagnóstico ni reparación, y quedaba una orden facturable sin trabajo registrado.
 // Se puede retroceder un paso (corregir un cambio equivocado) y anular desde cualquiera.
+//
+// «Listo para entrega» se añadió porque el taller no podía cerrar su propia orden:
+// `Finalizado` solo lo escribía el CLIENTE al contestar la encuesta de satisfacción, así que
+// una orden acabada cuyo cliente no responde se quedaba en «Reparación» para siempre. Con
+// este estado el taller marca que el coche está terminado —lo hace la app al pulsar «Está
+// listo para entregar»— y lo que falta es entregarlo y cobrarlo.
+//
+// Se deja «Reparación» → «Finalizado» directo a propósito: facturar una orden ya la cierra
+// (marcarRecepcionFacturada) y no tiene por qué obligar a pasar por el estado intermedio.
 const TRANSICIONES = {
   "Recepción": ["Diagnóstico", "Anulado"],
   "Diagnóstico": ["Cotización", "Recepción", "Anulado"],
   "Cotización": ["Reparación", "Diagnóstico", "Anulado"],
-  "Reparación": ["Finalizado", "Cotización", "Anulado"],
-  "Finalizado": ["Reparación"],
+  "Reparación": ["Listo para entrega", "Finalizado", "Cotización", "Anulado"],
+  "Listo para entrega": ["Finalizado", "Reparación", "Anulado"],
+  "Finalizado": ["Listo para entrega", "Reparación"],
   "Anulado": [],
 };
 
