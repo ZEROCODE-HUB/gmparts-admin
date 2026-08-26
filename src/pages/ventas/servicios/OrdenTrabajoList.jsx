@@ -1,5 +1,4 @@
 import { useState, useCallback } from "react";
-import { getSession } from "../../../store/auth";
 import Pagination from "../../../components/ui/Pagination";
 import { exportToExcel } from "../../../lib/exportExcel";
 import { useNavigate } from "react-router-dom";
@@ -25,13 +24,6 @@ const previewFields = [
   { key: "status", label: "Estado" }, { key: "facturado", label: "Facturado" },
 ];
 
-const ffecha = (ts) => {
-  if (!ts) return "";
-  if (typeof ts === "string") return ts.slice(0, 10);
-  if (ts.seconds) return new Date(ts.seconds * 1000).toISOString().slice(0, 10);
-  return "";
-};
-
 const estadoColor = (e) => ({
   "Cita programada": "bg-slate-100 text-slate-700",
   "Recepción": "bg-gray-100 text-gray-700",
@@ -54,13 +46,9 @@ export default function OrdenTrabajoList() {
   const [fechaHasta, setFechaHasta] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
 
-  // Un técnico abre esta pantalla para ver el trabajo que tiene encima, no el taller entero.
-  // Se le filtra por sus órdenes de entrada, pero con la casilla a la vista para levantar el
-  // filtro: en un taller pequeño hace falta poder mirar la cola de todos, y esconderla sin
-  // avisar sería peor que no filtrar.
-  const sesion = getSession();
-  const esTecnico = sesion?.userRole === "Tecnico Mecanico";
-  const [soloMias, setSoloMias] = useState(esTecnico);
+  // El filtro «solo mis órdenes» del técnico se retiró: el técnico ya no entra al panel.
+  // Su herramienta es «Mis órdenes» en la app móvil, que además le deja reportar el avance
+  // —aquí solo podía mirar—. Mantener las dos versiones era pedir que se desincronizaran.
 
   // Agenda: las citas de la etapa 01, ordenadas por el día acordado y no por la fecha en que
   // se apuntaron. Es la pregunta que un taller hace cada mañana —«¿qué tenemos hoy?»— y no se
@@ -75,13 +63,6 @@ export default function OrdenTrabajoList() {
     return "";
   };
 
-  const esMia = useCallback((c) => {
-    if (!sesion) return true;
-    const porReferencia = c.tecnicoservicioRef?.id && c.tecnicoservicioRef.id === sesion.uid;
-    const nombre = String(c.tecnico_servicio || "").trim().toLowerCase();
-    const mio = String(sesion.displayName || "").trim().toLowerCase();
-    return porReferencia || (!!nombre && nombre === mio);
-  }, [sesion]);
   const [preview, setPreview] = useState(null);
   const [printTarget, setPrintTarget] = useState(null);
 
@@ -102,7 +83,6 @@ export default function OrdenTrabajoList() {
 
   const rows = items
     .filter((c) => {
-      if (soloMias && !esMia(c)) return false;
       if (fechaDesde && (c.fecha_creacion || "") < fechaDesde) return false;
       if (fechaHasta && (c.fecha_creacion || "") > fechaHasta) return false;
       return (`${c.nombre_cliente || c.Razon_social || ""} ${c.codeCT || ""} ${c.numeroorden || ""} ${c.placa || ""}`).toLowerCase().includes(q.toLowerCase());
@@ -139,12 +119,6 @@ export default function OrdenTrabajoList() {
         <input type="checkbox" checked={soloAgenda} onChange={(e) => setSoloAgenda(e.target.checked)} />
         Ver solo la agenda (citas programadas, por día)
       </label>
-      {esTecnico && (
-        <label className="flex items-center gap-2 text-sm text-[var(--muted)] mb-3 cursor-pointer select-none">
-          <input type="checkbox" checked={soloMias} onChange={(e) => setSoloMias(e.target.checked)} />
-          Solo mis órdenes
-        </label>
-      )}
       <Table columns={["Documento", "Cliente", "Placa", "Estado", "Facturado", "Acci\u00f3n"]}
         sortable={[{key:"codeCT",label:"Documento"},{key:"fecha_creacion",label:"Fecha"},{key:"nombre_cliente",label:"Cliente"},{key:"placa",label:"Placa"},{key:"status",label:"Estado"}]}
         sortField={sortField} sortDir={sortDir} onSort={handleSort}

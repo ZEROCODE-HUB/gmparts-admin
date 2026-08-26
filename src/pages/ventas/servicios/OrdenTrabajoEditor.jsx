@@ -219,7 +219,8 @@ export default function OrdenTrabajoEditor({ backPath, mode = "create" }) {
   // técnico entra a registrar el diagnóstico y avanzar el estado, así que esos campos le
   // salen bloqueados. Las reglas de Firestore lo impiden igualmente —esto es solo para que
   // no descubra el límite chocándose con un error al guardar—.
-  const soloTaller = ["Tecnico Mecanico", "Jefe de Taller"].includes(getSession()?.userRole || "");
+  // De los dos roles de taller solo el jefe llega hasta aquí; el técnico trabaja en el móvil.
+  const soloTaller = ["Jefe de Taller"].includes(getSession()?.userRole || "");
   const bloqueado = soloTaller && isEdit;
 
   const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
@@ -398,7 +399,9 @@ export default function OrdenTrabajoEditor({ backPath, mode = "create" }) {
           </Field>
           <Field label="KM ingreso"><input type="number" className={inputMono} readOnly={bloqueado} value={form.km_ingreso} onChange={(e) => set("km_ingreso", e.target.value)} /></Field>
           <Field label="Técnico asignado">
-            <select className={inputMono} disabled={soloTaller && getSession()?.userRole === "Tecnico Mecanico"} value={form.tecnico_servicio} onChange={(e) => set("tecnico_servicio", e.target.value)}>
+            {/* El técnico ya no entra al panel, así que aquí nunca hay uno mirando: quien
+                asigna es el jefe de taller o administración. */}
+            <select className={inputMono} value={form.tecnico_servicio} onChange={(e) => set("tecnico_servicio", e.target.value)}>
               <option value="">Sin asignar</option>
               {encargadoOpts.map((p) => <option key={p.id} value={p.name}>{p.name}</option>)}
             </select>

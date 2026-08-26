@@ -6,12 +6,25 @@
 import { describe, it, expect } from "vitest";
 import {
   ROLES, EMPLOYEE_ROLES, ROLES_VALIDOS, esAdmin,
-  puedeEntrarAlPanel, puedeVerModulo, puedeVerRuta, moduloDeRuta,
+  puedeEntrarAlPanel, puedeVerModulo, puedeVerRuta, moduloDeRuta, ROLES_PANEL,
 } from "../lib/roles";
 
 describe("quién entra al panel", () => {
-  it("todo el personal del taller", () => {
-    for (const rol of EMPLOYEE_ROLES) expect(puedeEntrarAlPanel(rol)).toBe(true);
+  it("el personal de oficina y taller, salvo el técnico", () => {
+    for (const rol of ROLES_PANEL) expect(puedeEntrarAlPanel(rol), rol).toBe(true);
+  });
+
+  it("el técnico no: su herramienta es la app móvil", () => {
+    // En el panel solo podía MIRAR — cerrar una falla exige escribir `Tiempo_finalizado` y
+    // `Comentarios_finalizado`, y el panel no los escribe. Dos puertas para lo mismo solo
+    // servían para que las dos versiones de «mis órdenes» se desincronizaran.
+    expect(puedeEntrarAlPanel(ROLES.TECNICO)).toBe(false);
+  });
+
+  it("pero el técnico sigue siendo personal a todos los demás efectos", () => {
+    // Su rol tiene que seguir siendo válido: aparece en el desplegable de asignación, se le
+    // sincroniza el claim, y las reglas de Firestore le dejan trabajar desde el móvil.
+    expect(EMPLOYEE_ROLES).toContain(ROLES.TECNICO);
   });
 
   it("el cliente no: tiene su propio micrositio", () => {

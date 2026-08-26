@@ -40,10 +40,22 @@ export function esAdmin(rol) {
   return ROLES_ADMIN.includes(rol);
 }
 
-// El panel es para el personal del taller. Un Cliente tiene su propio micrositio y no pinta
-// nada aquí: hoy hay 11 cuentas de cliente que pueden entrar y ver casi todo.
+// Quién puede entrar al PANEL. No es lo mismo que ser personal del taller.
+//
+// Un Cliente tiene su propio micrositio y no pinta nada aquí: hoy hay 11 cuentas de cliente
+// que podían entrar y ver casi todo.
+//
+// El Técnico Mecánico queda fuera por decisión de producto: su herramienta es la app móvil,
+// donde tiene «Mis órdenes» y puede reportar su avance. En el panel solo PODÍA MIRAR —cerrar
+// una falla exige escribir `Tiempo_finalizado` y `Comentarios_finalizado`, y el panel no los
+// escribe—, así que tener las dos puertas abiertas solo servía para que las dos versiones de
+// «mis órdenes» se desincronizaran. Sigue siendo personal a todos los demás efectos: aparece
+// en el desplegable de asignación, conserva su rol y las reglas de Firestore le siguen
+// dejando trabajar, porque de eso vive la app móvil.
+export const ROLES_PANEL = EMPLOYEE_ROLES.filter((r) => r !== ROLES.TECNICO);
+
 export function puedeEntrarAlPanel(rol) {
-  return EMPLOYEE_ROLES.includes(rol);
+  return ROLES_PANEL.includes(rol);
 }
 
 // ── Permisos por módulo ───────────────────────────────────────────────────────

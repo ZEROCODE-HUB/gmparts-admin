@@ -32,7 +32,11 @@ export async function login(email, password) {
         ok: false,
         error: session.userRole === "Cliente"
           ? "Esta cuenta es de cliente. Use el enlace que le enviamos para ver su vehículo."
-          : "Su usuario no tiene un rol asignado en el taller. Contacte con administración.",
+          : session.userRole === "Tecnico Mecanico"
+            // Decirle «no tienes permiso» sería falso y le haría llamar a administración: sí
+            // tiene sitio, pero es otro.
+            ? "Los técnicos trabajan desde la app móvil: ahí tienes «Mis órdenes» para ver tu trabajo y reportar el avance."
+            : "Su usuario no tiene un rol asignado en el taller. Contacte con administración.",
       };
     }
 
