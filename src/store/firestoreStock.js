@@ -43,7 +43,7 @@ function fechaComoTimestamp(valor) {
   return isNaN(d.getTime()) ? Timestamp.fromDate(new Date()) : Timestamp.fromDate(d);
 }
 
-function toRecepcionSchema(payload) {
+export function toRecepcionSchema(payload) {
   const docNum = String(payload.clienteDoc || "").replace(/\D/g, "");
   const esRuc = docNum.length === 11;
   const out = {
@@ -73,6 +73,24 @@ function toRecepcionSchema(payload) {
   if (payload.correo || payload.Correo_electronico) {
     out.Correo_electronico = payload.correo || payload.Correo_electronico;
   }
+  // Etapas 01 y 07 del Excel. Van aquí y no en el editor por lo mismo que aprendimos con
+  // `tecnicoservicioRef`: esta función es una LISTA BLANCA, y lo que no esté nombrado se
+  // pierde al guardar sin decir nada.
+  if (payload.bahia !== undefined) out.bahia = payload.bahia || "";
+
+  const aTimestamp = (valor) => {
+    if (!valor) return null;
+    const d = typeof valor === "string"
+      ? new Date(valor.length === 10 ? valor + "T00:00:00" : valor)
+      : valor;
+    return d instanceof Date && !isNaN(d.getTime()) ? Timestamp.fromDate(d) : null;
+  };
+
+  // Se distingue «no venía en el formulario» de «lo dejaron en blanco a propósito»: lo
+  // segundo tiene que poder borrar una fecha ya guardada.
+  if (payload.fechaProgramada !== undefined) out.fechaProgramada = aTimestamp(payload.fechaProgramada);
+  if (payload.fechaCita !== undefined) out.fechaCita = aTimestamp(payload.fechaCita);
+
   const fc = payload.fecha_creacion;
   if (fc) {
     const d = typeof fc === "string" ? new Date(fc.length === 10 ? fc + "T00:00:00" : fc) : fc;

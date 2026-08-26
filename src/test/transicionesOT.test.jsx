@@ -13,14 +13,32 @@ import { transicionPermitida, estadosDisponibles } from "../pages/ventas/servici
 
 describe("avance normal del ciclo", () => {
   it("permite el recorrido completo paso a paso", () => {
-    expect(transicionPermitida("Recepción", "Diagnóstico")).toBe(true);
-    expect(transicionPermitida("Diagnóstico", "Cotización")).toBe(true);
-    expect(transicionPermitida("Cotización", "Reparación")).toBe(true);
-    expect(transicionPermitida("Reparación", "Finalizado")).toBe(true);
+    // El ciclo del Excel entero, cita incluida. «Cotización» ya no salta a «Reparación»:
+    // entre enviar la propuesta y tener el coche en el elevador hay dos pasos que antes se
+    // confundían en uno — esperar al cliente, y asignar técnico, bahía y fecha.
+    const ciclo = ["Cita programada", "Recepción", "Diagnóstico", "Cotización",
+      "Esperando aprobación", "Programado", "Reparación", "Listo para entrega", "Finalizado"];
+    for (let i = 0; i < ciclo.length - 1; i++) {
+      expect(transicionPermitida(ciclo[i], ciclo[i + 1]), `${ciclo[i]} -> ${ciclo[i + 1]}`).toBe(true);
+    }
+  });
+
+  it("no se salta pasos del ciclo", () => {
+    expect(transicionPermitida("Cotización", "Reparación")).toBe(false);
+    expect(transicionPermitida("Cita programada", "Diagnóstico")).toBe(false);
+    expect(transicionPermitida("Esperando aprobación", "Reparación")).toBe(false);
+  });
+
+  it("se puede anular desde cualquier punto salvo una vez cerrada", () => {
+    for (const e of ["Cita programada", "Recepción", "Diagnóstico", "Cotización",
+      "Esperando aprobación", "Programado", "Reparación", "Listo para entrega"]) {
+      expect(transicionPermitida(e, "Anulado"), e).toBe(true);
+    }
   });
 
   it("permite quedarse en el mismo estado al editar otros campos", () => {
-    for (const e of ["Recepción", "Diagnóstico", "Cotización", "Reparación", "Finalizado"]) {
+    for (const e of ["Cita programada", "Recepción", "Diagnóstico", "Cotización",
+      "Esperando aprobación", "Programado", "Reparación", "Listo para entrega", "Finalizado"]) {
       expect(transicionPermitida(e, e)).toBe(true);
     }
   });
@@ -61,7 +79,7 @@ describe("opciones que ve el usuario", () => {
   it("el desplegable solo ofrece destinos alcanzables", () => {
     expect(estadosDisponibles("Recepción")).toEqual(["Recepción", "Diagnóstico"]);
     expect(estadosDisponibles("Reparación")).toEqual(
-      ["Cotización", "Reparación", "Listo para entrega", "Finalizado"]);
+      ["Programado", "Reparación", "Listo para entrega", "Finalizado"]);
   });
 
   it("nunca ofrece estados que no existen en la base", () => {

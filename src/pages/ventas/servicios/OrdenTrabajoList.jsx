@@ -33,9 +33,12 @@ const ffecha = (ts) => {
 };
 
 const estadoColor = (e) => ({
+  "Cita programada": "bg-slate-100 text-slate-700",
   "Recepción": "bg-gray-100 text-gray-700",
   "Diagnóstico": "bg-blue-100 text-blue-700",
   "Cotización": "bg-purple-100 text-purple-700",
+  "Esperando aprobación": "bg-indigo-100 text-indigo-700",
+  "Programado": "bg-cyan-100 text-cyan-700",
   "Reparación": "bg-amber-100 text-amber-700",
   "Listo para entrega": "bg-teal-100 text-teal-700",
   "Finalizado": "bg-green-100 text-green-700",
@@ -58,6 +61,19 @@ export default function OrdenTrabajoList() {
   const sesion = getSession();
   const esTecnico = sesion?.userRole === "Tecnico Mecanico";
   const [soloMias, setSoloMias] = useState(esTecnico);
+
+  // Agenda: las citas de la etapa 01, ordenadas por el día acordado y no por la fecha en que
+  // se apuntaron. Es la pregunta que un taller hace cada mañana —«¿qué tenemos hoy?»— y no se
+  // podía responder: las citas quedaban mezcladas con las 48 órdenes en curso.
+  const [soloAgenda, setSoloAgenda] = useState(false);
+
+  const aFecha = (v) => {
+    if (!v) return "";
+    if (typeof v === "string") return v.slice(0, 10);
+    if (v.seconds) return new Date(v.seconds * 1000).toISOString().slice(0, 10);
+    if (typeof v.toDate === "function") return v.toDate().toISOString().slice(0, 10);
+    return "";
+  };
 
   const esMia = useCallback((c) => {
     if (!sesion) return true;
@@ -91,7 +107,10 @@ export default function OrdenTrabajoList() {
       if (fechaHasta && (c.fecha_creacion || "") > fechaHasta) return false;
       return (`${c.nombre_cliente || c.Razon_social || ""} ${c.codeCT || ""} ${c.numeroorden || ""} ${c.placa || ""}`).toLowerCase().includes(q.toLowerCase());
     })
+    .filter((c) => !soloAgenda || c.status === "Cita programada")
     .sort((a, b) => {
+      // En la agenda manda el día acordado: lo demás da igual.
+      if (soloAgenda) return aFecha(a.fechaCita).localeCompare(aFecha(b.fechaCita));
       if (!sortField) { const fa = a.fecha_creacion || "", fb = b.fecha_creacion || ""; return fa > fb ? -1 : fa < fb ? 1 : 0; }
       const va = a[sortField] ?? "", vb = b[sortField] ?? "";
       const cmp = typeof va === "number" ? va - vb : String(va).localeCompare(String(vb));
@@ -116,6 +135,10 @@ export default function OrdenTrabajoList() {
       <Toolbar title="Orden de Trabajo" count={rows.length} onNew={() => navigate("/vs-orden/nuevo")} onExport={() => exportToExcel(rows, "OrdenesTrabajo")} />
       <SearchBox value={q} onChange={setQ} />
       <DateRangeFilter fechaDesde={fechaDesde} fechaHasta={fechaHasta} onChange={(d, h) => { setFechaDesde(d); setFechaHasta(h); }} />
+      <label className="flex items-center gap-2 text-sm text-[var(--muted)] mb-3 cursor-pointer select-none">
+        <input type="checkbox" checked={soloAgenda} onChange={(e) => setSoloAgenda(e.target.checked)} />
+        Ver solo la agenda (citas programadas, por día)
+      </label>
       {esTecnico && (
         <label className="flex items-center gap-2 text-sm text-[var(--muted)] mb-3 cursor-pointer select-none">
           <input type="checkbox" checked={soloMias} onChange={(e) => setSoloMias(e.target.checked)} />

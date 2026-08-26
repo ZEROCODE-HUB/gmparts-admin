@@ -48,9 +48,12 @@ const previewFieldsPanel = [
 ];
 
 const estadoColor = (e) => ({
+  "Cita programada": "bg-slate-100 text-slate-700",
   "Recepción": "bg-yellow-100 text-yellow-700",
   "Diagnóstico": "bg-blue-100 text-blue-700",
   "Cotización": "bg-purple-100 text-purple-700",
+  "Esperando aprobación": "bg-indigo-100 text-indigo-700",
+  "Programado": "bg-cyan-100 text-cyan-700",
   "Reparación": "bg-orange-100 text-orange-700",
   "Listo para entrega": "bg-teal-100 text-teal-700",
   "Finalizado": "bg-green-100 text-green-700",
@@ -66,8 +69,9 @@ const ffecha = (ts) => {
 
 // Este filtro va contra el servidor: un estado que falte aquí deja las órdenes
 // INVISIBLES en esta pantalla, sin ningún aviso.
-const ESTADOS_TALLER = ["Reparación", "Listo para entrega", "Finalizado",
-  "Cotización", "Recepción"];
+const ESTADOS_TALLER = ["Cita programada", "Recepción", "Diagnóstico", "Cotización",
+  "Esperando aprobación", "Programado", "Reparación", "Listo para entrega",
+  "Finalizado"];
 
 export default function CotizacionServicioList() {
   const navigate = useNavigate();

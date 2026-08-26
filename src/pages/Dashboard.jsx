@@ -13,6 +13,9 @@ const DAYS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sab"];
 // que el cliente lo recoge— pero no es lo mismo que estar en el elevador, y el color es
 // lo único que lo distingue de un vistazo.
 const TONO_ESTADO = {
+  "Cita programada": "neutral",
+  "Esperando aprobación": "amber",
+  "Programado": "accent",
   "Reparación": "info",
   "Listo para entrega": "success",
 };

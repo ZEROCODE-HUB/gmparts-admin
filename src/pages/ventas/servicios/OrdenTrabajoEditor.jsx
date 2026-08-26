@@ -15,8 +15,11 @@ import { getSession } from "../../../store/auth";
 // Firestore. El editor ofrecía "Listo para entrega" y "Entregado", que no existen en
 // ningún documento, y NO ofrecía "Finalizado", que es el estado más común (20 de 48
 // recepciones). Elegir uno inexistente dejaba la orden fuera de todos los filtros.
-const ESTADOS = ["Recepción", "Diagnóstico", "Cotización", "Reparación",
-  "Listo para entrega", "Finalizado"];
+// El ciclo del Excel, en orden. «Control de calidad» no es un estado a proposito: se
+// decidio que las tres respuestas son informacion para el taller, no una barrera.
+const ESTADOS = ["Cita programada", "Recepción", "Diagnóstico", "Cotización",
+  "Esperando aprobación", "Programado", "Reparación", "Listo para entrega",
+  "Finalizado"];
 
 // Transiciones permitidas. Antes se podía saltar de "Recepción" a "Finalizado" sin pasar
 // por diagnóstico ni reparación, y quedaba una orden facturable sin trabajo registrado.
@@ -31,10 +34,17 @@ const ESTADOS = ["Recepción", "Diagnóstico", "Cotización", "Reparación",
 // Se deja «Reparación» → «Finalizado» directo a propósito: facturar una orden ya la cierra
 // (marcarRecepcionFacturada) y no tiene por qué obligar a pasar por el estado intermedio.
 const TRANSICIONES = {
+  // Una cita es una recepcion que aun no ha ocurrido: cuando el coche llega, se completa.
+  "Cita programada": ["Recepción", "Anulado"],
   "Recepción": ["Diagnóstico", "Anulado"],
   "Diagnóstico": ["Cotización", "Recepción", "Anulado"],
-  "Cotización": ["Reparación", "Diagnóstico", "Anulado"],
-  "Reparación": ["Listo para entrega", "Finalizado", "Cotización", "Anulado"],
+  // Enviar la cotizacion al cliente y que la apruebe son dos cosas distintas, y entre una y
+  // otra es donde una orden pasa mas dias parada.
+  "Cotización": ["Esperando aprobación", "Diagnóstico", "Anulado"],
+  "Esperando aprobación": ["Programado", "Cotización", "Anulado"],
+  // Aprobada pero sin tecnico, bahia ni fecha. Sale de aqui cuando el jefe de taller asigna.
+  "Programado": ["Reparación", "Esperando aprobación", "Anulado"],
+  "Reparación": ["Listo para entrega", "Finalizado", "Programado", "Anulado"],
   "Listo para entrega": ["Finalizado", "Reparación", "Anulado"],
   "Finalizado": ["Listo para entrega", "Reparación"],
   "Anulado": [],
@@ -82,6 +92,11 @@ export default function OrdenTrabajoEditor({ backPath, mode = "create" }) {
     numeroorden: "", cliente: "", clienteDoc: "", placa: "", marca: "", modelo: "",
     km_ingreso: "", tecnico_servicio: "", tipoServicio: "", motivo_ingreso: "", observaciones: "",
     correo: "", telefono: "",
+    // Etapa 07 del Excel: asignar es decir QUIEN, DONDE y CUANDO. El técnico ya estaba;
+    // faltaban los otros dos, y sin ellos «Programado» no significa nada.
+    bahia: "", fechaProgramada: "",
+    // Etapa 01: día y hora acordados. Una cita es una recepción que aún no ha ocurrido.
+    fechaCita: "",
     estado: "Recepción", fecha_creacion: new Date().toISOString().split("T")[0],
   });
   const [diagnosticos, setDiagnosticos] = useState([]);
@@ -142,6 +157,9 @@ export default function OrdenTrabajoEditor({ backPath, mode = "create" }) {
           tipoServicio: data.tipo_servicio ?? data.tipoServicio ?? "",
           motivo_ingreso: data.motivo_ingreso || "",
           observaciones: data.Observaciones_adicionales ?? data.observaciones ?? "",
+          bahia: data.bahia || "",
+          fechaProgramada: fechaAInput(data.fechaProgramada) || "",
+          fechaCita: fechaAInput(data.fechaCita) || "",
           estado: data.status || data.estado || "Recepción",
           facturado: data.facturado === true,
           fecha_creacion: fechaAInput(data.fecha_creacion) || prev.fecha_creacion,
@@ -285,6 +303,18 @@ export default function OrdenTrabajoEditor({ backPath, mode = "create" }) {
       setError("Faltan los datos del cliente — no se puede avanzar sin nombre y documento completos");
       return;
     }
+    // Una cita sin fecha no es una cita: es una orden a la que nadie sabe cuándo atender.
+    if (form.estado === "Cita programada" && !form.fechaCita) {
+      setError("Una cita necesita fecha: indica el día acordado con el cliente.");
+      return;
+    }
+    // Pasar a «Reparación» es decir que el trabajo empieza. Si no consta quién lo hace ni
+    // cuándo, la etapa 07 del Excel no ha ocurrido y el estado miente.
+    if (estadoOriginal === "Programado" && form.estado === "Reparación"
+        && (!form.tecnico_servicio || !form.fechaProgramada)) {
+      setError("Antes de empezar la reparación hay que asignar técnico y fecha programada.");
+      return;
+    }
     setError("");
     setSaving(true);
     // `numeroorden` lo asigna firestoreSaveDocument con el correlativo atómico de LastCode
@@ -372,6 +402,15 @@ export default function OrdenTrabajoEditor({ backPath, mode = "create" }) {
               <option value="">Sin asignar</option>
               {encargadoOpts.map((p) => <option key={p.id} value={p.name}>{p.name}</option>)}
             </select>
+          </Field>
+          <Field label="Bahía">
+            <input className={inputMono} value={form.bahia} onChange={(e) => set("bahia", e.target.value)} placeholder="Ejem: B-2" />
+          </Field>
+          <Field label="Programado para">
+            <input type="date" className={inputMono} value={form.fechaProgramada} onChange={(e) => set("fechaProgramada", e.target.value)} />
+          </Field>
+          <Field label="Fecha de la cita">
+            <input type="date" className={inputMono} value={form.fechaCita} onChange={(e) => set("fechaCita", e.target.value)} />
           </Field>
           <Field label="Tipo de servicio"><input className={inputMono} value={form.tipoServicio} onChange={(e) => set("tipoServicio", e.target.value)} /></Field>
           <Field label="Estado">
