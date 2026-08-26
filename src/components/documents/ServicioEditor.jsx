@@ -13,7 +13,7 @@ import { showToast, dismissAll } from "../ui/Toast";
 import { serieSugerida, esDocumentoFiscal } from "../../lib/series";
 import * as db from "../../store/db";
 import { searchArticles, firestoreSaveDocument, marcarRecepcionFacturada } from "../../store/firestoreStock";
-import { desglosarIgv } from "../../lib/igv";
+import { desglosarIgv, baseIgvDeOrden } from "../../lib/igv";
 
 const COSTO_HORA = 60;
 
@@ -336,29 +336,14 @@ export default function ServicioEditor({ title, backPath, onSave, mode = "create
       set("combustible", cot.combustible || cot.TipoCombustible || (veh && (veh.TipoCombustible || veh.Combustible)) || "");
       set("kilometraje", cot.kilometraje || cot.Kilometraje || cot.km_ingreso || (veh && (veh.Kilometraje || veh.km || veh.km_ingreso)) || "");
       set("anioFabricacion", cot.anioFabricacion || cot.anio_de_fabricion || cot.AnioFabricacion || cot.Ano_fabricacion || cot.ano_fabricacion || (veh && (veh.anio_de_fabricion || veh.AnioFabricacion || veh.anio)) || "");
-      // Base del IGV: la decide la orden, no el valor por defecto del formulario.
-      //
-      // La app movil guarda en la recepcion `Subtotal`, `IGV` y `Total`, y trata los
-      // importes de mano de obra y repuestos como NETOS: 830 de base, 149.40 de IGV, 979.40
-      // en total. Eso es lo que se le ensena al cliente en el micrositio y lo que aprueba.
-      // El editor, en cambio, arrancaba siempre en «INCLUIDO IGV», asi que interpretaba esos
-      // mismos 830 como precio final y emitia la boleta por 830: S/149.40 menos de lo que el
-      // cliente habia aceptado, en TODA orden facturada desde aqui. Verificado con la orden
-      // CT001-0000230, aprobada por 979.40 y facturada por 830.
-      //
-      // En vez de fijar «MAS IGV» a ciegas se compara la suma de las lineas con lo que la
-      // orden guarda: si coincide con el Subtotal, las lineas son netas; si coincide con el
-      // Total, ya llevan el IGV dentro. Asi la regla se verifica sola con cada documento y
-      // no se rompe si manana la app cambia de criterio.
-      const sumaLineas = mapped.reduce((acc, it) => acc + (Number(it.total) || 0), 0);
-      const subtotalOT = Number(cot.Subtotal ?? cot.subtotal ?? 0) || 0;
-      const totalOT = Number(cot.Total ?? cot.total ?? 0) || 0;
-      const cerca = (a, b) => a > 0 && b > 0 && Math.abs(a - b) < 0.05;
-      if (cerca(sumaLineas, subtotalOT) && totalOT > subtotalOT) {
-        set("tipoIgv", "MAS");
-      } else if (cerca(sumaLineas, totalOT)) {
-        set("tipoIgv", "INCLUIDO");
-      }
+      // La base del IGV la decide la orden, no el valor por defecto del formulario.
+      // El porqué y la regla, en `baseIgvDeOrden` (src/lib/igv.js).
+      const base = baseIgvDeOrden(
+        mapped.reduce((acc, it) => acc + (Number(it.total) || 0), 0),
+        cot.Subtotal ?? cot.subtotal,
+        cot.Total ?? cot.total
+      );
+      if (base) set("tipoIgv", base);
 
       setOtId(cot.id || null);
       setOrigen({ tipo: "cotizacion", ref: cot.codeCT || cot.id || "" });

@@ -13,6 +13,13 @@ export default defineConfig({
     // Las reglas de Firestore se prueban contra el emulador, que no siempre está
     // levantado. Van aparte, con `npm run test:reglas`, para que `npm run check` no
     // dependa de tener Java y el emulador instalados.
-    exclude: ["**/node_modules/**", "dist/**", "src/test/reglas.test.js"],
+    // Igual que las reglas: la de facturación habla con la API real de Factiliza y emite
+    // documentos de verdad. Va aparte, con `npm run test:facturacion`, para que
+    // `npm run check` no dependa de tener red ni token.
+    exclude: [
+      "**/node_modules/**", "dist/**",
+      "src/test/reglas.test.js",
+      "src/test/facturacionQA.test.js",
+    ],
   },
 });

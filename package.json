@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "check": "npm run lint && npm run build && npm test",
-    "test:reglas": "firebase emulators:exec --only firestore --project reglas-gmparts \"vitest run src/test/reglas.test.js --config vitest.reglas.config.js\""
+    "test:reglas": "firebase emulators:exec --only firestore --project reglas-gmparts \"vitest run src/test/reglas.test.js --config vitest.reglas.config.js\"",
+    "test:facturacion": "vitest run src/test/facturacionQA.test.js --config vitest.facturacion.config.js"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
